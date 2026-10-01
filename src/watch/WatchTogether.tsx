@@ -20,6 +20,29 @@ export function WatchTogether({ onClose, displayName = '', signedIn = false }: {
   const { t } = useLocale()
   const stageElement = useRef<HTMLDivElement>(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  async function enterFullscreen() {
+    const stage = stageElement.current
+    if (!stage) return
+    if (stage.requestFullscreen) {
+      try { await stage.requestFullscreen(); return } catch { /* Use an in-page fullscreen view. */ }
+    }
+    const media = stage.querySelector('video') as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null
+    if (media?.webkitEnterFullscreen) {
+      try { media.webkitEnterFullscreen(); return } catch { /* Embedded players use the viewport fallback. */ }
+    }
+    setExpanded(true)
+  }
+  function exitFullscreen() {
+    setExpanded(false)
+    if (document.fullscreenElement) void document.exitFullscreen()
+  }
+  useEffect(() => {
+    if (!expanded) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setExpanded(false) }
+    document.addEventListener('keydown', close)
+    return () => document.removeEventListener('keydown', close)
+  }, [expanded])
   const [participantsOpen, setParticipantsOpen] = useState(false)
   const [volume, setVolume] = useState(1)
   const [changeVideo, setChangeVideo] = useState(false)
@@ -148,7 +171,7 @@ export function WatchTogether({ onClose, displayName = '', signedIn = false }: {
     try { await navigator.clipboard.writeText(link.href); setNotice('Invite link copied. Send your room code separately.') } catch { setNotice(link.href) }
   }
   const externalPage = state ? watchMedia(state.url).kind === 'external' : false
-  return <div className="watch-backdrop"><section className={`watch-panel ${state ? 'watch-cinema' : ''}${chat ? ' history-visible' : ''}`} role="region" aria-label={t("Moviesync 1.0")}>
+  return <div className={`watch-backdrop${expanded ? ' watch-expanded' : ''}`}><section className={`watch-panel ${state ? 'watch-cinema' : ''}${chat ? ' history-visible' : ''}`} role="region" aria-label={t("Moviesync 1.0")}>
     <header className="watch-header"><div><span className="watch-eyebrow">{t("robaqAI · ONLINE SKILL")}</span><h2>{t("Moviesync 1.0")}</h2></div><div className="watch-header-actions">{state && <button className="modal-btn ghost" onClick={() => void copyLink()}>{t(notice === 'Invite link copied. Send your room code separately.' ? 'Copied' : 'Copy invite link')}</button>}<button className="modal-btn ghost" onClick={() => void leave()}>{t(state?.host ? 'End room' : state ? 'Leave room' : 'Close')}</button></div></header><div className="watch-participant-row">{state && <button className="modal-btn ghost watch-participant-toggle" aria-expanded={participantsOpen} aria-controls="moviesync-participants" onClick={() => setParticipantsOpen(!participantsOpen)}><span aria-hidden="true">{participantsOpen ? '‹' : '›'}</span>{t('Participants')} · {state.members.length}/8</button>}</div>
     {!state ? <div className="watch-setup"><div className="watch-tabs"><button className={mode === 'create' ? 'selected' : ''} onClick={() => { setMode('create'); setError('') }}>{t("Create room")}</button><button className={mode === 'join' ? 'selected' : ''} onClick={() => { setMode('join'); setError('') }}>{t("Join room")}</button></div>
     <form onSubmit={e => { e.preventDefault(); void enter() }} className="watch-form">
@@ -168,15 +191,15 @@ export function WatchTogether({ onClose, displayName = '', signedIn = false }: {
     }} onDoubleClick={() => { if (state.host && performance.now() >= suppressClickUntil.current) void like() }} onClick={event => {
       if (performance.now() < suppressClickUntil.current) return
       if (event.detail > 1) { window.clearTimeout(clickTimer.current); return }
-      if (fullscreen && state.host && connected) {
+      if ((fullscreen || expanded) && state.host && connected) {
         window.clearTimeout(clickTimer.current)
         clickTimer.current = window.setTimeout(() => { if (!externalPage && !state.playing) void video.current?.play().catch(() => setNeedsPlay(true)); void control(!state.playing) }, 320)
       }
     }} />}
-    {fullscreen && <button className="watch-exit-fullscreen modal-btn" onClick={() => void document.exitFullscreen()}>{t("Exit fullscreen")}</button>}
+    {(fullscreen || expanded) && <button className="watch-exit-fullscreen modal-btn" onClick={exitFullscreen}>{t("Exit fullscreen")}</button>}
 
     </div>
-    </div><div className="watch-controls">{state.host && <button className="modal-btn primary" title={externalPage ? t(state.frame.locked ? "Play shares only the locked player area; Pause stops sharing." : "Lock the frame before pressing Play.") : undefined} disabled={!connected || broadcast.starting || (externalPage && !state.frame.locked)} onClick={() => { if (!externalPage && !state.playing) void video.current?.play().catch(() => setNeedsPlay(true)); void control(!state.playing) }}>{t(state.playing ? 'Pause' : 'Play')}</button>}{needsPlay && <button className="modal-btn" onClick={() => { void video.current?.play().then(() => { setNeedsPlay(false); sync() }).catch(() => setError('Playback was blocked. Check the video link.')) }}>{t("Enable playback")}</button>}<input aria-label={t("Playback position")} type="range" min={0} max={Number.isFinite(duration) ? duration : 0} step={0.1} value={time} disabled={externalPage || !state.host || !connected} onChange={e => { const value = Number(e.target.value); setTime(value); if (video.current) video.current.currentTime = value }} onPointerDown={() => { dragging.current = true }} onPointerUp={() => { dragging.current = false; void control(state.playing) }} onPointerCancel={() => { dragging.current = false }} onKeyDown={() => { dragging.current = true }} onKeyUp={() => { dragging.current = false; void control(state.playing) }} /><label>{t("Volume")}<input aria-label={t("Volume")} disabled={externalPage && state.host} type="range" min={0} max={1} step={0.05} value={volume} onChange={e => { const next = Number(e.target.value); setVolume(next); if (video.current) video.current.volume = next }} /></label><button className="modal-btn ghost" onClick={() => void stageElement.current?.requestFullscreen().catch(() => setNotice('Fullscreen is unavailable in this browser.'))}>⛶</button></div>
+    </div><div className="watch-controls">{state.host && <button className="modal-btn primary" title={externalPage ? t(state.frame.locked ? "Play shares only the locked player area; Pause stops sharing." : "Lock the frame before pressing Play.") : undefined} disabled={!connected || broadcast.starting || (externalPage && !state.frame.locked)} onClick={() => { if (!externalPage && !state.playing) void video.current?.play().catch(() => setNeedsPlay(true)); void control(!state.playing) }}>{t(state.playing ? 'Pause' : 'Play')}</button>}{needsPlay && <button className="modal-btn" onClick={() => { void video.current?.play().then(() => { setNeedsPlay(false); sync() }).catch(() => setError('Playback was blocked. Check the video link.')) }}>{t("Enable playback")}</button>}<input aria-label={t("Playback position")} type="range" min={0} max={Number.isFinite(duration) ? duration : 0} step={0.1} value={time} disabled={externalPage || !state.host || !connected} onChange={e => { const value = Number(e.target.value); setTime(value); if (video.current) video.current.currentTime = value }} onPointerDown={() => { dragging.current = true }} onPointerUp={() => { dragging.current = false; void control(state.playing) }} onPointerCancel={() => { dragging.current = false }} onKeyDown={() => { dragging.current = true }} onKeyUp={() => { dragging.current = false; void control(state.playing) }} /><label>{t("Volume")}<input aria-label={t("Volume")} disabled={externalPage && state.host} type="range" min={0} max={1} step={0.05} value={volume} onChange={e => { const next = Number(e.target.value); setVolume(next); if (video.current) video.current.volume = next }} /></label><button className="modal-btn ghost" aria-label={t('Fullscreen')} title={t('Fullscreen')} onClick={() => void enterFullscreen()}>⛶</button></div>
     {externalPage && <p className="watch-external-note">{t(state.host ? "Align the website, lock the frame, then press Play. Select this robaqAI tab and enable tab audio. Only the player area is sent to guests. Pause stops sharing." : "You are watching the host’s player. Only the host controls the website.")} <a href={state.url} target="_blank" rel="noopener noreferrer">{t('Open website')}</a></p>}
     <VoiceReactions volume={volume} voices={state.voices ?? []} memberId={state.memberId} disabled={state.muted || !connected} send={async value => { if (ticket) await request('voice', value, ticket) }} load={async id => request('voice-get', { id }, ticket!)} />
     <aside className="watch-chat watch-chat-compact"><div className="watch-compose-row"><form className="watch-composer" onSubmit={e => { e.preventDefault(); void send() }}><input aria-label={t("Message")} maxLength={1000} placeholder={t("Write a message…")} value={message} onChange={e => setMessage(e.target.value)} /><button aria-label={t("Send message")} disabled={!connected || !message.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6" /></svg></button></form><div className="watch-compose-actions">{state.host && <button className="modal-btn ghost watch-history-toggle" aria-expanded={changeVideo} onClick={() => setChangeVideo(!changeVideo)}>{t("Change video")}</button>}<button className="modal-btn ghost watch-history-toggle" aria-expanded={chat} aria-controls="moviesync-history" onClick={() => { if (!chat && state.host && broadcast.sharing) void broadcast.stop(); setChat(!chat) }}>{t("Chat history")}{state.messages.length > 0 && <span>{state.messages.length}</span>}</button></div></div>
