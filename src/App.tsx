@@ -1,3 +1,4 @@
+import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
 import { WatchTogether } from './watch/WatchTogether'
 import { DesktopModels } from './offline/DesktopModels'
@@ -43,7 +44,7 @@ import './ostra.css'
 import { IntelligenceOrb as LivingCell } from './components/IntelligenceOrb'
 
 const INTRO_OFFLINE = "Hello, how can I help you?"
-/** Chat welcome: human online vibe when API is on; classic Smartass line when off. */
+/** Chat welcome: human online vibe when API is on; classic robaq AI line when off. */
 function getWelcomeText(hasApi: boolean): string {
   if (!hasApi) return INTRO_OFFLINE
   return "We're online! Good to have you here. Ask me anything — I'm right here with you."
@@ -281,6 +282,7 @@ function AppContent() {
   const { t, locale, setLocale } = useLocale()
 
   const [session, setSession] = useState<Session | null>(null)
+  const guestCount = useGuestPresence(!session)
   const [chats, setChats] = useState<Conversation[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(() => {
@@ -316,8 +318,7 @@ function AppContent() {
   const [translationStatus, setTranslationStatus] = useState('Offline')
   const [translationMode, setTranslationMode] = useState(() => { try { return !localStorage.getItem('rai-local-model') } catch { return true } })
   const [chatColor, setChatColor] = useState(() => { try { const saved = localStorage.getItem('ostra-chat-color'); return saved === 'white' ? saved : 'default' } catch { return 'default' } })
-  const [pendingChatColor, setPendingChatColor] = useState(chatColor)
-  const applyChatColor = () => { setChatColor(pendingChatColor); try { localStorage.setItem('ostra-chat-color', pendingChatColor) } catch { /* Keep this session's color. */ } }
+
   const [apiOpen, setApiOpen] = useState(false)
   const [apiKey, setApiKey] = useState(() => loadStoredCredentials().apiKey)
   const [provider, setProvider] = useState<ProviderId | null>(() => loadStoredCredentials().provider)
@@ -349,14 +350,7 @@ function AppContent() {
   const [localModel, setLocalModel] = useState(() => { try { return localStorage.getItem('rai-local-model') ?? '' } catch { return '' } })
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const birdPalette = (translatorReady || localModels.length > 0) ? 'mixed' : 'default'
-  const birdColors = [
-    ...Array.from({ length: 5 }, () => 'stock'),
-    ...(translatorReady ? Array.from({ length: 10 }, (_, index) => ['rainbow-pink', 'rainbow-gold', 'rainbow-green', 'rainbow-blue', 'rainbow-purple'][index % 5]) : []),
-    ...(localModels.includes('qwen3-06') ? Array.from({ length: 12 }, () => 'gold') : []),
-    ...(localModels.includes('qwen3-17') ? Array.from({ length: 14 }, () => 'purple') : []),
-    ...(localModels.includes('qwen3.5:9b') ? Array.from({ length: 18 }, () => 'gold') : []),
-    ...(localModels.includes('qwen35-2') ? Array.from({ length: 16 }, () => 'green') : []),
-  ]
+  const birdColors = ['stock', 'stock', ...(translatorReady ? ['translator'] : []), ...(localModels.length > 0 ? ['rainbow-blue'] : [])]
   const [displayBirdColors, setDisplayBirdColors] = useState<string[]>(birdColors)
   useEffect(() => {
     const target = birdColors
@@ -1296,7 +1290,7 @@ function AppContent() {
               listening={voiceMode && listening && !speaking}
               voiceLevel={voiceMode && listening && !speaking ? voiceLevel : 0}
               subtitle={voiceMode ? voiceCaption : ''}
-              movieSyncActive={movieSyncStage === 'active'}
+              guestCount={guestCount} movieSyncActive={movieSyncStage === 'active'}
               birdCount={displayBirdColors.length}
               birdPalette={birdPalette}
               birdColors={displayBirdColors}
@@ -1306,7 +1300,7 @@ function AppContent() {
         </div>
       </div>
 
-      {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('Smartass is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
+      {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaq AI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
       <Navigation movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
@@ -1321,7 +1315,7 @@ function AppContent() {
           <div className="chat-intelligence">
             {session && !historyOpen && <button type="button" className="history-corner-toggle" onClick={() => setHistoryOpen(true)} aria-label={t("Expand chat sidebar")} title={t("Expand chat sidebar")}>→</button>}
             <div className="chat-intelligence-label">
-              <span>Smartass</span>
+              <span>robaq AI</span>
             </div>
           </div>
           <div className="panel-actions">
@@ -1363,7 +1357,7 @@ function AppContent() {
                   streaming ? ' is-streaming' : ''
                 }`}
               >
-                {m.role === 'assistant' ? m.text.replace(/R\.A\.?I|Birdoff/gi, 'Smartass') : m.text}
+                {m.role === 'assistant' ? m.text.replace(/R\.A\.?I|Birdoff|Smartass|Ostra/gi, 'robaq AI') : m.text}
                 {streaming && <span className="stream-caret" aria-hidden />}
               </div>
             )
@@ -1383,7 +1377,7 @@ function AppContent() {
         {voiceMode && (
           <div className="voice-conversation-status" role="status">
             <span className="voice-status-dot" aria-hidden />
-            <span>{speaking ? t("Smartass is speaking…") : thinking ? t("Thinking…") : listening ? t("Listening…") : t("Voice conversation")}</span>
+            <span>{speaking ? t("robaq AI is speaking…") : thinking ? t("Thinking…") : listening ? t("Listening…") : t("Voice conversation")}</span>
           </div>
         )}
         {voiceMode && listening && voiceCaption && (
@@ -1417,7 +1411,7 @@ function AppContent() {
           data-voice-moving={hasApiKey && voiceMode && (listening || speaking) ? 'true' : 'false'}
           onSubmit={onSubmit}>
           <div className="composer-left">
-            {translatorReady && <button type="button" className={`translator-composer-btn${translationMode ? ' is-on' : ''}`} disabled={thinking || Boolean(streamingId)} aria-label="#Translator" title={translationMode ? 'Translator ON' : 'Translator OFF'} aria-pressed={translationMode} onClick={() => setTranslationMode(enabled => !enabled)}><IconTranslator /></button>}
+            {translatorReady && <button type="button" className={`translator-composer-btn${translationMode ? ' is-on' : ''}`} disabled={thinking || Boolean(streamingId)} aria-label="#Translator" title={t(translationMode ? 'Translator ON' : 'Translator OFF')} aria-pressed={translationMode} onClick={() => setTranslationMode(enabled => !enabled)}><IconTranslator /></button>}
             {hasApiKey && (
               <>
                 <input
@@ -1472,7 +1466,7 @@ function AppContent() {
               {modelMenuOpen && <div className="offline-model-popover" role="menu">{[...MODELS.filter(m => m.id === 'qwen35-2' || localModels.includes(m.id)), ...DESKTOP_MODELS.filter(m => m.kind === 'chat')].map(model => {
                 const installed = localModels.includes(model.id)
                 const active = localModel === model.id
-                return <div className="offline-model-menu-row" key={model.id}><span>{model.name}</span>{active ? <span className="offline-model-status active">Active</span> : installed ? <button type="button" className="offline-model-use" onClick={() => { setLocalModel(model.id); setTranslationMode(false); setModelMenuOpen(false) }}>Use</button> : <button type="button" className="offline-model-use download" onClick={() => { setModelMenuOpen(false); openLandingPanel('store') }}>Download</button>}</div>
+                return <div className="offline-model-menu-row" key={model.id}><span>{model.name}</span>{active ? <span className="offline-model-status active">{t('Active')}</span> : installed ? <button type="button" className="offline-model-use" onClick={() => { setLocalModel(model.id); setTranslationMode(false); setModelMenuOpen(false) }}>{t('Use')}</button> : <button type="button" className="offline-model-use download" onClick={() => { setModelMenuOpen(false); openLandingPanel('store') }}>{t('Download')}</button>}</div>
               })}</div>}
             </div>}
             {(thinking || Boolean(streamingId)) ? <button type="button" className="send-btn generation-stop-btn" aria-label={t('Stop generating')} title={t('Stop generating')} onClick={() => { cancelTyping(); sendGen.current += 1; stopTranslationWorker(); cancelDesktopReply(); cancelOfflineReply(); streamGen.current += 1; setThinking(false); setStreamingId(null) }}><IconStop /></button> : <button type="submit" className="send-btn" disabled={!canSend} aria-label={t("Send")}><IconSendUp /></button>}
@@ -1553,8 +1547,7 @@ function AppContent() {
             <h2 id="settings-title">{t("Settings")}</h2>
             <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option><option value="ka">ქართული</option><option value="ru">Русский</option></select></label>
             <p className="modal-help">{t("API credentials and updates.")}</p>
-            <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={pendingChatColor === color} onChange={() => setPendingChatColor(color)} /><span aria-hidden="true" />{t(color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
-            {pendingChatColor !== chatColor && <button type="button" className="modal-btn primary settings-apply" onClick={applyChatColor}>{t('Apply')}</button>}
+            <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={chatColor === color} onChange={() => { setChatColor(color); try { localStorage.setItem('ostra-chat-color', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
             {localModels.length > 0 && <label className="settings-language">{t('Active offline AI')}<select value={localModel} onChange={event => { setLocalModel(event.target.value); setTranslationMode(false) }}><option value="">{t('Default')}</option>{[...MODELS, ...DESKTOP_MODELS.filter(m => m.kind === 'chat')].filter(model => localModels.includes(model.id)).map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>}
             <div className="settings-menu-list" role="menu">
               <button
@@ -1675,9 +1668,12 @@ function AppContent() {
               <h2 id="store-title">{t("AI Lab")}</h2>
               <small className="version-label">{t('Version')} {currentVersion}</small>
             </div>
-            <p className="modal-help"> Translators, offline models and connected skills — all in one place. </p>
+            <p className="modal-help"> {t('Translators, offline models and connected skills — all in one place.')} </p>
 
-            <h3 className="store-section-title" id="offline-skills-title">Translators</h3>
+            <h3 className="store-section-title">{t('AI Skills')}</h3>
+            <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
+
+            <h3 className="store-section-title" id="offline-skills-title">{t('Translators')}</h3>
             <TranslatorStore onBusyChange={setTranslatorBusy} />
             <DesktopModels selectedChat={localModel} selectedTranslator={desktopTranslator} disabled={thinking || Boolean(streamingId)} onChange={id => {
               if (id && DESKTOP_MODELS.find(m => m.id === id)?.kind === 'translation') {
@@ -1689,8 +1685,7 @@ function AppContent() {
             <h3 className="store-section-title store-section-title-info">{t("Offline AI")}<details className="store-info inline-store-info"><summary aria-label="Offline AI information">?</summary><p className="modal-help">{t('Download once, then chat offline. Keep AI Lab open during installation.')}</p></details></h3>
             <ModelStore installed={localModels} selected={localModel} onChange={refreshModels} disabled={thinking || Boolean(streamingId)} />
 
-            <h3 className="store-section-title">AI Skills</h3>
-            <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
+
 
 
 
@@ -1717,10 +1712,11 @@ function AppContent() {
 
       {landingPanel === 'account' && <AccountDialog session={session} onProfileUpdate={setSession} onDeleted={() => {
         clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false); setLocalModels([]); setLocalModel(''); setM2mReady(false); setDesktopTranslator(''); setChatColor('default'); setLocale('en'); setHistoryOpen(true); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
-      }} onGuest={() => { setLandingPanel(null); openChat() }} onClose={() => setLandingPanel(null)} onSignedIn={(account, history) => {
+      }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={(account, history) => {
         clearChat()
         messagesRef.current = []
         setSession(account)
+        setWatchOpen(false)
         setChats(history)
         setActiveChatId(crypto.randomUUID())
         setChatOpen(false)
@@ -1743,9 +1739,9 @@ function AppContent() {
             aria-labelledby="about-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="about-title">{t("About Smartass")}</h2>
+            <h2 id="about-title">{t("About robaq AI")}</h2>
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
-            <p className="modal-help">{t('Smartass helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.')}</p>
+            <p className="modal-help">{t('robaq AI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.')}</p>
             <p className="modal-help">{t('Your local account keeps chat history on this device. You choose the tools, the model and when to connect.')}</p>
             <p className="about-credit">{t('Created by')} <strong>Nodar Robakidze</strong></p>
             <div className="modal-actions">
@@ -1768,7 +1764,7 @@ function AppContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="donate-title">{t("Donation help project")}</h2>
-            <p className="modal-help"> {t("Support Smartass development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.")} </p>
+            <p className="modal-help"> {t("Support robaq AI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.")} </p>
             <p className="modal-help"> {t("Placeholder: donation links and payment options will appear here.")} </p>
             <div className="modal-actions">
               <button

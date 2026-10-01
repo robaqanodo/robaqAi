@@ -21,6 +21,6 @@ export function boundedMessages(history: { role: 'user' | 'assistant'; text: str
     result.unshift({role: item.role, content: item.text}); remaining -= item.text.length
   }
   while (result[0].role === 'assistant') result.shift()
-  result.unshift({role: 'system', content: 'You are Smartass, a helpful offline assistant. Answer concisely in the user’s language.'})
+  result.unshift({role: 'system', content: 'You are robaq AI, a helpful offline assistant. Answer concisely in the user’s language.'})
   return result
 }

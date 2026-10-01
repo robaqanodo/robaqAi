@@ -23,9 +23,9 @@
     "ვფიქრობ…",
     "Думаю…"
   ],
-  "Smartass is speaking…": [
-    "Smartass საუბრობს…",
-    "Smartass говорит…"
+  "robaq AI is speaking…": [
+    "robaq AI საუბრობს…",
+    "robaq AI говорит…"
   ],
   "Listening…": [
     "გისმენ…",
@@ -112,7 +112,7 @@
     "Сохранить"
   ],
   "Settings": [
-    "Settings",
+    "პარამეტრები",
     "Настройки"
   ],
   "API credentials and updates.": [
@@ -235,13 +235,13 @@
     "მაღაზიაში დაბრუნება",
     "Вернуться в магазин"
   ],
-  "About Smartass": [
-    "Smartass-ის შესახებ",
-    "О Smartass"
+  "About robaq AI": [
+    "robaq AI-ის შესახებ",
+    "О robaq AI"
   ],
-  "Smartass brings local AI tools and connected conversations into one calm workspace. Install offline language packs from the AI Lab, translate on your device, or connect your own Gemini, OpenAI, or Anthropic API key.": [
-    "Smartass აერთიანებს ლოკალურ AI ინსტრუმენტებსა და ონლაინ საუბრებს ერთ სამუშაო სივრცეში. AI Lab-იდან დააყენეთ ოფლაინ ენის პაკეტები, თარგმნეთ თქვენს მოწყობილობაზე ან დაამატეთ Gemini, OpenAI თუ Anthropic-ის საკუთარი API გასაღები.",
-    "Smartass объединяет локальные инструменты ИИ и онлайн-общение в одном рабочем пространстве. Устанавливайте офлайн-языковые пакеты из библиотеки, переводите на своём устройстве или подключайте свой ключ API Gemini, OpenAI или Anthropic."
+  "robaq AI brings local AI tools and connected conversations into one calm workspace. Install offline language packs from the AI Lab, translate on your device, or connect your own Gemini, OpenAI, or Anthropic API key.": [
+    "robaq AI აერთიანებს ლოკალურ AI ინსტრუმენტებსა და ონლაინ საუბრებს ერთ სამუშაო სივრცეში. AI Lab-იდან დააყენეთ ოფლაინ ენის პაკეტები, თარგმნეთ თქვენს მოწყობილობაზე ან დაამატეთ Gemini, OpenAI თუ Anthropic-ის საკუთარი API გასაღები.",
+    "robaq AI объединяет локальные инструменты ИИ и онлайн-общение в одном рабочем пространстве. Устанавливайте офлайн-языковые пакеты из библиотеки, переводите на своём устройстве или подключайте свой ключ API Gemini, OpenAI или Anthropic."
   ],
   "Offline translation runs on your device. Connected chat sends your messages to the AI provider you choose. Created by Nodar Robakidze, with a focus on a simple, personal experience.": [
     "ოფლაინ თარგმანი სრულდება თქვენს მოწყობილობაზე. ონლაინ ჩათი შეტყობინებებს თქვენ მიერ არჩეულ AI პროვაიდერს უგზავნის. ავტორი: Nodar Robakidze. შექმნილია მარტივი და პირადი გამოცდილებისთვის.",
@@ -251,9 +251,9 @@
     "პროექტის მხარდაჭერა",
     "Поддержать проект"
   ],
-  "Support Smartass development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.": [
-    "მხარი დაუჭირეთ Smartass-ის განვითარებას — მოდელებს, ოფლაინ პაკეტებსა და ანიმაციურ ინტერფეისს. თითოეული წვლილი პროექტის განვითარებას ეხმარება.",
-    "Поддержите развитие Smartass: модели, офлайн-пакеты и анимированный интерфейс. Каждый вклад помогает проекту развиваться."
+  "Support robaq AI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.": [
+    "მხარი დაუჭირეთ robaq AI-ის განვითარებას — მოდელებს, ოფლაინ პაკეტებსა და ანიმაციურ ინტერფეისს. თითოეული წვლილი პროექტის განვითარებას ეხმარება.",
+    "Поддержите развитие robaq AI: модели, офлайн-пакеты и анимированный интерфейс. Каждый вклад помогает проекту развиваться."
   ],
   "Placeholder: donation links and payment options will appear here.": [
     "მხარდაჭერის ბმულები და გადახდის მეთოდები აქ მოგვიანებით გამოჩნდება.",
@@ -375,9 +375,9 @@
     "დაშიფრულია · ინახება ამ მოწყობილობაზე",
     "Зашифровано · Хранится на этом устройстве"
   ],
-  "Welcome to Smartass": [
-    "მოგესალმებით Smartass-ში",
-    "Добро пожаловать в Smartass"
+  "Welcome to robaq AI": [
+    "მოგესალმებით robaq AI-ში",
+    "Добро пожаловать в robaq AI"
   ],
   "Create your account": [
     "შექმენით ანგარიში",
@@ -591,9 +591,9 @@
     "ოფლაინ თარგმანის ძრავის შემოწმება…",
     "Проверка движка офлайн-перевода…"
   ],
-  "This is not an Smartass translation pack.": [
-    "ეს არ არის Smartass-ის თარგმანის პაკეტი.",
-    "Это не языковой пакет Smartass."
+  "This is not an robaq AI translation pack.": [
+    "ეს არ არის robaq AI-ის თარგმანის პაკეტი.",
+    "Это не языковой пакет robaq AI."
   ],
   "Invalid translation pack header.": [
     "თარგმანის პაკეტის სათაური არასწორია.",
@@ -627,9 +627,9 @@
     "ჩამოტვირთვა არასრულია. სცადეთ „ფაილიდან დაყენება“.",
     "Загрузка не завершена. Попробуйте «Установить из файла»."
   ],
-  "Offline knowledge pack — Smartass / Georgian AI demo": [
-    "ოფლაინ ცოდნის პაკეტი — Smartass / ქართული AI-ის დემო",
-    "Офлайн-пакет знаний — Smartass / демо грузинского ИИ"
+  "Offline knowledge pack — robaq AI / Georgian AI demo": [
+    "ოფლაინ ცოდნის პაკეტი — robaq AI / ქართული AI-ის დემო",
+    "Офлайн-пакет знаний — robaq AI / демо грузинского ИИ"
   ],
   "Update checking is not configured yet. Please try again once an update server is connected.": [
     "განახლების შემოწმება ჯერ არ არის გამართული. სცადეთ განახლების სერვერის დაკავშირების შემდეგ.",
@@ -843,9 +843,9 @@
     "წავშალოთ პროფილი სამუდამოდ?",
     "Удалить профиль навсегда?"
   ],
-  "Your profile and chat history will be permanently deleted. All Smartass settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.": [
-    "თქვენი პროფილი და ჩატის ისტორია სამუდამოდ წაიშლება. ამ მოწყობილობაზე ასევე გასუფთავდება Smartass-ის ყველა პარამეტრი, შენახული API გასაღები და ჩამოტვირთული ფაილი, მათ შორის საერთო AI მოდელები და თარგმანის პაკეტი. აღდგენა შეუძლებელია. სხვა ლოკალური ანგარიშები დარჩება. აპის გარეთ შენახული ფაილები არ წაიშლება.",
-    "Ваш профиль и история чатов будут удалены навсегда. Все настройки Smartass, сохранённые API-ключи и загруженные файлы на этом устройстве, включая общие модели ИИ и пакет перевода, также будут удалены. Отменить это нельзя. Другие локальные аккаунты сохранятся. Файлы вне приложения не затрагиваются."
+  "Your profile and chat history will be permanently deleted. All robaq AI settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.": [
+    "თქვენი პროფილი და ჩატის ისტორია სამუდამოდ წაიშლება. ამ მოწყობილობაზე ასევე გასუფთავდება robaq AI-ის ყველა პარამეტრი, შენახული API გასაღები და ჩამოტვირთული ფაილი, მათ შორის საერთო AI მოდელები და თარგმანის პაკეტი. აღდგენა შეუძლებელია. სხვა ლოკალური ანგარიშები დარჩება. აპის გარეთ შენახული ფაილები არ წაიშლება.",
+    "Ваш профиль и история чатов будут удалены навсегда. Все настройки robaq AI, сохранённые API-ключи и загруженные файлы на этом устройстве, включая общие модели ИИ и пакет перевода, также будут удалены. Отменить это нельзя. Другие локальные аккаунты сохранятся. Файлы вне приложения не затрагиваются."
   ],
   "IP shows your current internet connection, when available. It is not saved to your profile.": [
     "IP აჩვენებს მიმდინარე ინტერნეტკავშირის მისამართს, როცა ის ხელმისაწვდომია. პროფილში არ ინახება.",
@@ -855,17 +855,17 @@
     "მოქმედება ვერ დასრულდა. სცადეთ ხელახლა.",
     "Не удалось завершить действие. Повторите попытку."
   ],
-  "Think, write and translate with Smartass. Chat with downloaded AI models without internet, or connect your own API key for online chat and voice. Find models and language packs in AI Lab.": [
-    "Smartass დაგეხმარებათ იდეების განვითარებაში, წერასა და თარგმანში. ჩამოტვირთულ AI მოდელებს ინტერნეტის გარეშე ესაუბრეთ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ ჩატისა და ხმოვანი საუბრისთვის. მოდელები და ენის პაკეტები AI Lab-შია.",
-    "Развивайте идеи, пишите и переводите с Smartass. Общайтесь со скачанными моделями ИИ без интернета или подключите свой API-ключ для онлайн-чата и голосовых разговоров. Модели и языковые пакеты — в AI Lab."
+  "Think, write and translate with robaq AI. Chat with downloaded AI models without internet, or connect your own API key for online chat and voice. Find models and language packs in AI Lab.": [
+    "robaq AI დაგეხმარებათ იდეების განვითარებაში, წერასა და თარგმანში. ჩამოტვირთულ AI მოდელებს ინტერნეტის გარეშე ესაუბრეთ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ ჩატისა და ხმოვანი საუბრისთვის. მოდელები და ენის პაკეტები AI Lab-შია.",
+    "Развивайте идеи, пишите и переводите с robaq AI. Общайтесь со скачанными моделями ИИ без интернета или подключите свой API-ключ для онлайн-чата и голосовых разговоров. Модели и языковые пакеты — в AI Lab."
   ],
   "A little space for bigger ideas.": [
     "პატარა სივრცე დიდი იდეებისთვის.",
     "Небольшое пространство для больших идей."
   ],
-  "Smartass helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.": [
-    "Smartass დაგეხმარებათ იდეების განვითარებაში, წერაში, თარგმანსა და AI-სთან საუბარში. AI Lab-იდან ჩამოტვირთეთ მოდელები ინტერნეტის გარეშე სამუშაოდ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ საუბრებისთვის.",
-    "Smartass помогает развивать идеи, писать, переводить и общаться с ИИ. Скачайте модели в AI Lab для работы без интернета или подключите свой API-ключ для онлайн-общения."
+  "robaq AI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.": [
+    "robaq AI დაგეხმარებათ იდეების განვითარებაში, წერაში, თარგმანსა და AI-სთან საუბარში. AI Lab-იდან ჩამოტვირთეთ მოდელები ინტერნეტის გარეშე სამუშაოდ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ საუბრებისთვის.",
+    "robaq AI помогает развивать идеи, писать, переводить и общаться с ИИ. Скачайте модели в AI Lab для работы без интернета или подключите свой API-ключ для онлайн-общения."
   ],
   "Your local account keeps chat history on this device. You choose the tools, the model and when to connect.": [
     "ლოკალური ანგარიში ჩატის ისტორიას ამ მოწყობილობაზე ინახავს. თავად ირჩევთ ხელსაწყოებს, მოდელს და ინტერნეტთან დაკავშირების დროს.",
@@ -927,9 +927,9 @@
     "პროფილის რედაქტირება",
     "Редактировать профиль"
   ],
-  "SMARTASS · ONLINE SKILL": [
-    "SMARTASS · ონლაინ სკილი",
-    "SMARTASS · Онлайн-навык"
+  "robaq AI · ONLINE SKILL": [
+    "robaq AI · ონლაინ სკილი",
+    "robaq AI · Онлайн-навык"
   ],
   "One film. The same moment. Watch a video together, with playback controlled by your host.": [
     "ერთი ფილმი, ერთი მომენტი. უყურეთ ერთად — ვიდეოს მასპინძელი მართავს.",
@@ -1040,11 +1040,11 @@
     "Смотрите фильмы с друзьями, даже находясь в разных местах."
   ],
   "Installing…": [
-    "ინსტალაცია…",
+    "ინსტალირდება…",
     "Установка…"
   ],
   "Active": [
-    "აქტიური",
+    "აქტიურია",
     "Активно"
   ],
   "End room": [
@@ -1104,7 +1104,7 @@
     "Воспроизведение заблокировано. Проверьте ссылку."
   ],
   "Could not prepare MovieSync. Please try again.": [
-    "MovieSync-ის მომზადება ვერ მოხერხდა. სცადეთ თავიდან.",
+    "MovieSync ვერ მომზადდა. სცადეთ ხელახლა.",
     "Не удалось подготовить MovieSync. Повторите попытку."
   ],
   "Enter your display name.": [
@@ -1211,17 +1211,17 @@
     "სერვერი გადატვირთულია. სცადეთ მოგვიანებით.",
     "Сервер заполнен. Попробуйте позже."
   ],
-  "Moviesync 1.0 needs the Smartass server. Start it with npm run dev.": [
-    "Moviesync 1.0-ს Smartass-ის სერვერი სჭირდება. გაუშვით npm run dev.",
-    "Moviesync 1.0 нужен сервер Smartass. Запустите npm run dev."
+  "Moviesync 1.0 needs the robaq AI server. Start it with npm run dev.": [
+    "Moviesync 1.0-ს robaq AI-ის სერვერი სჭირდება. გაუშვით npm run dev.",
+    "Moviesync 1.0 нужен сервер robaq AI. Запустите npm run dev."
   ],
   "Create a room, copy the invite link and send your chosen code to friends. Only the host can play, pause, seek or change the video. Guests can control their own volume and chat. Messages briefly appear over the video. Open Chat history beside the message field to read the full conversation until the room ends.": [
     "შექმენით ოთახი და მეგობრებს გაუგზავნეთ ბმული და კოდი. ვიდეოს გაშვება, დაპაუზება, გადახვევა და შეცვლა მხოლოდ მასპინძელს შეუძლია. სტუმრები მართავენ საკუთარ ხმას და წერენ ჩათში. მესიჯები დროებით ჩნდება ვიდეოზე. სრული მიმოწერა „ჩათის ისტორიაში“ ოთახის დასრულებამდე ინახება.",
     "Создайте комнату и отправьте друзьям ссылку и код. Только ведущий запускает, ставит на паузу, перематывает и меняет видео. Гости управляют своей громкостью и пишут в чат. Сообщения ненадолго появляются поверх видео. Полная переписка доступна в истории чата до завершения комнаты."
   ],
-  "For friends outside your network, Smartass must run on a shared public HTTPS address. A localhost link only works on this computer. No AI API key is needed.": [
-    "სხვა ქსელში მყოფ მეგობრებთან დასაკავშირებლად Smartass-ს საჯარო HTTPS მისამართი სჭირდება. localhost ბმული მხოლოდ ამ კომპიუტერზე მუშაობს. AI API გასაღები საჭირო არ არის.",
-    "Для друзей в другой сети Smartass нужен общий публичный HTTPS-адрес. Ссылка localhost работает только на этом компьютере. Ключ AI API не нужен."
+  "For friends outside your network, robaq AI must run on a shared public HTTPS address. A localhost link only works on this computer. No AI API key is needed.": [
+    "სხვა ქსელში მყოფ მეგობრებთან დასაკავშირებლად robaq AI-ს საჯარო HTTPS მისამართი სჭირდება. localhost ბმული მხოლოდ ამ კომპიუტერზე მუშაობს. AI API გასაღები საჭირო არ არის.",
+    "Для друзей в другой сети robaq AI нужен общий публичный HTTPS-адрес. Ссылка localhost работает только на этом компьютере. Ключ AI API не нужен."
   ],
   "Up to 8 people. Rooms and messages are temporary: ending the room or restarting the server removes them. YouTube and Vimeo videos must allow embedding. Subscription-service pages and other unsupported sites cannot be played here.": [
     "მაქსიმუმ 8 ადამიანი. ოთახი და მესიჯები დროებითია: ოთახის დასრულებისას ან სერვერის გადატვირთვისას იშლება. YouTube-ისა და Vimeo-ს ვიდეოებზე ჩაშენება დაშვებული უნდა იყოს. სხვა არამხარდაჭერილი საიტების გვერდები აქ არ გაიხსნება.",
@@ -1434,5 +1434,125 @@
   "Reset": [
     "საწყისი პოზიცია",
     "Сброс"
+  ],
+  "AI Skills": [
+    "AI სკილები",
+    "AI навыки"
+  ],
+  "Translators": [
+    "მთარგმნელები",
+    "Переводчики"
+  ],
+  "Translators, offline models and connected skills — all in one place.": [
+    "მთარგმნელები, ოფლაინ მოდელები და ონლაინ სკილები — ყველაფერი ერთ სივრცეში.",
+    "Переводчики, офлайн-модели и онлайн-навыки — всё в одном месте."
+  ],
+  "Model license": [
+    "მოდელის ლიცენზია",
+    "Лицензия модели"
+  ],
+  "Model card and license": [
+    "მოდელის აღწერა და ლიცენზია",
+    "Описание и лицензия модели"
+  ],
+  "Desktop translator · EN, KA, RU": [
+    "კომპიუტერის მთარგმნელი · EN, KA, RU",
+    "Переводчик для компьютера · EN, KA, RU"
+  ],
+  "Meta NLLB-200 · CC-BY-NC 4.0. For non-commercial use.": [
+    "Meta NLLB-200 · CC-BY-NC 4.0. მხოლოდ არაკომერციული გამოყენებისთვის.",
+    "Meta NLLB-200 · CC-BY-NC 4.0. Для некоммерческого использования."
+  ],
+  "Retry": [
+    "ხელახლა ცდა",
+    "Повторить"
+  ],
+  "Download once, then chat offline. Keep AI Lab open during installation.": [
+    "ჩამოტვირთეთ ერთხელ და ისაუბრეთ ინტერნეტის გარეშე. ინსტალაციის დასრულებამდე AI Lab ღია დატოვეთ.",
+    "Скачайте один раз и общайтесь офлайн. Не закрывайте AI Lab во время установки."
+  ],
+  "The same pack enables all three skills. Keep this screen open during installation.": [
+    "ერთი პაკეტი სამივე ენას ააქტიურებს. ინსტალაციის დასრულებამდე ეს ფანჯარა ღია დატოვეთ.",
+    "Один пакет активирует все три языка. Не закрывайте это окно во время установки."
+  ],
+  "Start broadcast": [
+    "ტრანსლაციის დაწყება",
+    "Начать трансляцию"
+  ],
+  "Stop broadcast": [
+    "ტრანსლაციის შეწყვეტა",
+    "Остановить трансляцию"
+  ],
+  "Enable broadcast playback": [
+    "ტრანსლაციის ჩართვა",
+    "Включить трансляцию"
+  ],
+  "Connecting to the host broadcast…": [
+    "ჰოსტის ტრანსლაციასთან დაკავშირება…",
+    "Подключение к трансляции…"
+  ],
+  "Waiting for the host to start broadcasting. You can chat or send a voice reaction.": [
+    "ველოდებით ჰოსტის ტრანსლაციას. მანამდე შეგიძლიათ ჩატით ან ხმოვანი შეტყობინებით ისარგებლოთ.",
+    "Ожидаем трансляцию ведущего. Пока можно общаться в чате или отправлять голосовые реакции."
+  ],
+  "Lock the frame, start the video, then share its tab or window. Only the selected surface is broadcast.": [
+    "ჩაკეტეთ ჩარჩო, ჩართეთ ვიდეო და გააზიარეთ მისი ჩანართი ან ფანჯარა. გადაიცემა მხოლოდ არჩეული ეკრანი.",
+    "Закрепите рамку, включите видео и поделитесь вкладкой или окном. Передаётся только выбранная область."
+  ],
+  "YouTube, Vimeo and direct MP4/WebM links support synchronized playback. ge.movie, mykadri.tv, Setanta and Liveball use experimental website previews; the site may block embedding.": [
+    "YouTube, Vimeo და პირდაპირი MP4/WebM ბმულები სინქრონულ დაკვრას უჭერს მხარს. ge.movie, mykadri.tv, Setanta და Liveball საცდელი ჩაშენებული ფანჯრით იხსნება; საიტმა შესაძლოა ჩაშენება დაბლოკოს.",
+    "YouTube, Vimeo и прямые ссылки MP4/WebM поддерживают синхронное воспроизведение. ge.movie, mykadri.tv, Setanta и Liveball открываются в пробном встроенном окне; сайт может блокировать встраивание."
+  ],
+  "Host: position the website with Move frame and zoom, then Lock frame. Start the video manually and choose Start broadcast. Select the video tab or window and enable audio sharing if available. Guests wait for the broadcast and cannot control the player.": [
+    "ჰოსტი: მოარგეთ საიტი ჩარჩოს გადაადგილებითა და მასშტაბით, შემდეგ ჩაკეტეთ ჩარჩო. ხელით ჩართეთ ვიდეო და დააჭირეთ ტრანსლაციის დაწყებას. აირჩიეთ ვიდეოს ჩანართი ან ფანჯარა და, თუ შესაძლებელია, ხმის გაზიარებაც ჩართეთ. სტუმრები ტრანსლაციას ელოდებიან და პლეერს ვერ მართავენ.",
+    "Ведущий: настройте положение и масштаб сайта, закрепите рамку. Запустите видео вручную и начните трансляцию. Выберите вкладку или окно с видео и включите передачу звука, если доступно. Гости ожидают трансляцию и не управляют плеером."
+  ],
+  "Screen sharing depends on browser support. Protected video may appear black. Sound sharing may be unavailable. Remote viewing requires public HTTPS hosting; some networks also require a TURN relay.": [
+    "ეკრანისა და ხმის გაზიარება ბრაუზერის მხარდაჭერაზეა დამოკიდებული. დაცული ვიდეო შესაძლოა შავად გამოჩნდეს. დისტანციურ ყურებას საჯარო HTTPS სერვერი სჭირდება, ზოგ ქსელში კი დამატებით TURN სერვერიც.",
+    "Передача экрана и звука зависит от браузера. Защищённое видео может отображаться чёрным. Для удалённого просмотра нужен публичный HTTPS-сервер, а в некоторых сетях — TURN-сервер."
+  ],
+  "Choose a password of at least 6 characters. Copy the invite link beside End room and send the password separately. Chat and 10-second voice reactions remain available while waiting.": [
+    "აირჩიეთ მინიმუმ 6-სიმბოლოიანი პაროლი. მოწვევის ბმული ოთახის დასრულების ღილაკთან დააკოპირეთ, პაროლი კი ცალკე გაუგზავნეთ. ლოდინის დროს ჩატი და 10-წამიანი ხმოვანი შეტყობინებები ხელმისაწვდომია.",
+    "Выберите пароль от 6 символов. Скопируйте приглашение рядом с кнопкой завершения комнаты и отправьте пароль отдельно. Во время ожидания доступны чат и голосовые реакции до 10 секунд."
+  ],
+  "Screen sharing is unavailable in this browser. Use a desktop browser.": [
+    "ამ ბრაუზერში ეკრანის გაზიარება მიუწვდომელია. გამოიყენეთ კომპიუტერის ბრაუზერი.",
+    "Передача экрана недоступна в этом браузере. Используйте браузер на компьютере."
+  ],
+  "Screen sharing started without audio. To share sound, choose a browser tab with audio sharing enabled.": [
+    "ეკრანი ხმის გარეშე ზიარდება. ხმისთვის აირჩიეთ ბრაუზერის ჩანართი და ჩართეთ ხმის გაზიარება.",
+    "Экран передаётся без звука. Выберите вкладку браузера с включённой передачей звука."
+  ],
+  "Screen sharing was cancelled or denied.": [
+    "ეკრანის გაზიარება გაუქმდა ან ნებართვა არ მიეცა.",
+    "Передача экрана отменена или разрешение отклонено."
+  ],
+  "Could not start screen sharing.": [
+    "ეკრანის გაზიარება ვერ დაიწყო.",
+    "Не удалось начать передачу экрана."
+  ],
+  "Broadcast connection failed. This network may require a TURN relay.": [
+    "ტრანსლაცია ვერ დაუკავშირდა. ამ ქსელს შესაძლოა TURN სერვერი სჭირდებოდეს.",
+    "Не удалось подключить трансляцию. Возможно, этой сети нужен TURN-сервер."
+  ],
+  "Broadcast connection interrupted. Check your connection.": [
+    "ტრანსლაციის კავშირი შეფერხდა. შეამოწმეთ ინტერნეტი.",
+    "Соединение трансляции прервано. Проверьте подключение."
+  ],
+  "Sharing the entire selected tab or window. Automatic player-only cropping is unavailable for this selection.": [
+    "ზიარდება მთლიანად არჩეული ჩანართი ან ფანჯარა. ამ არჩევანისთვის მხოლოდ პლეერის ავტომატური ამოჭრა მიუწვდომელია.",
+    "Передаётся вся выбранная вкладка или окно. Автоматическое выделение только плеера недоступно для этого выбора."
+  ],
+  "Translator ON": [
+    "მთარგმნელი ჩართულია",
+    "Переводчик включён"
+  ],
+  "Translator OFF": [
+    "მთარგმნელი გამორთულია",
+    "Переводчик выключен"
+  ],
+  "Working…": [
+    "მუშავდება…",
+    "Обработка…"
   ]
 }

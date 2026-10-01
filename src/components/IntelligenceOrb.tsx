@@ -15,6 +15,7 @@ type OrbProps = {
   birdPalette?: 'default' | 'rainbow' | 'gold' | 'purple' | 'green' | 'mixed'
   birdColors?: string[]
   movieSyncActive?: boolean
+  guestCount?: number
 }
 
 export function orbStateLabel(state: OrbProps) {
@@ -29,6 +30,8 @@ export function orbStateLabel(state: OrbProps) {
 export function IntelligenceOrb(props: OrbProps) {
   const state = orbStateLabel(props).toLowerCase()
   const theme = props.hasApiKey ? providerThemeClass(props.provider ?? null) : ''
+  const satellites = [...(props.birdColors ?? ['stock', 'stock']), ...(props.movieSyncActive ? ['movie'] : [])]
+  const activeSatellites = satellites.filter(kind => kind !== 'stock')
   return (
     <span
       className={`living-cell intelligence-orb${props.hasApiKey ? ' has-api-key' : ''}${theme ? ` ${theme}` : ''}${props.speaking ? ' is-speaking' : ''}${props.listening ? ' is-listening' : ''}`}
@@ -38,8 +41,8 @@ export function IntelligenceOrb(props: OrbProps) {
       style={{ ['--voice-level' as string]: String(Math.max(0, Math.min(1, props.voiceLevel ?? 0))) }}
       aria-hidden="true"
     >
-      <span className={`bird-flock bird-palette-${props.birdPalette ?? 'default'}`}>{Array.from({length: Math.max(0, props.birdCount ?? 5)}, (_, bird) => <span className={`orb-bird orb-particle${props.birdColors?.[bird] ? ` orb-bird-${props.birdColors[bird]}` : ''}`} key={bird} style={{animationDelay: `${bird * -4.7}s`, animationDuration: `${25 + (bird % 5) * 2}s`}}><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><circle className="particle-highlight" cx="7" cy="7" r="2"/></svg></span>)}</span>
-      {props.movieSyncActive && <span className="movie-orbit-flock">{Array.from({ length: 8 }, (_, index) => <span className="movie-orbit" key={index} style={{ animationDelay: `${index * -5.75}s`, animationDuration: `${38 + index * 2}s` }}><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="m10 9 5 3-5 3Z"/></svg></span>)}</span>}
+      <span className="capability-orbits">{satellites.map((kind, index) => <span key={kind + index} className={`capability-satellite satellite-${kind}`} style={{ ['--satellite-angle' as string]: `${kind === 'stock' ? 90 + index * 180 : activeSatellites.indexOf(kind) * 360 / Math.max(1, activeSatellites.length)}deg` }}><svg viewBox="0 0 24 24">{kind === 'movie' ? <><rect x="3" y="5" width="18" height="14" rx="4"/><path d="m10 9 5 3-5 3Z"/></> : kind === 'translator' ? <path d="M3 5h11M8 2v3m4 0c0 6-5 9-9 10m2-8c1 4 4 6 7 7m1 7 4-11 4 11m-6-4h4"/> : <><circle cx="12" cy="12" r="7"/><circle className="satellite-highlight" cx="9" cy="9" r="2"/></>}</svg></span>)}</span>
+      <span className="guest-orbits">{Array.from({ length: props.guestCount ?? 0 }, (_, index) => <span className="guest-seed" key={index} style={{ ['--satellite-angle' as string]: `${index * 360 / Math.max(1, props.guestCount ?? 0)}deg` }} />)}</span>
       <span className="cell-ring cell-ring-outer" />
       <span className="cell-ring cell-ring-inner" />
       <span className="cell-blob" />

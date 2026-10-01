@@ -18,7 +18,7 @@ export async function packInstalled() {
   } catch { return false }
 }
 export async function validatePack(file: Blob, progress: (status: string) => void) {
-  if (file.size < 4) throw new Error('This is not an Smartass translation pack.')
+  if (file.size < 4) throw new Error('This is not an robaq AI translation pack.')
   const headerLength = new DataView(await file.slice(0, 4).arrayBuffer()).getUint32(0, true)
   if (headerLength > 65536 || headerLength < 2) throw new Error('Invalid translation pack header.')
   const header = JSON.parse(await file.slice(4, 4 + headerLength).text())

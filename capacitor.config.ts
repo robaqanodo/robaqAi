@@ -3,7 +3,7 @@ import { KeyboardResize, KeyboardStyle } from '@capacitor/keyboard'
 
 const config: CapacitorConfig = {
   appId: 'com.nodo92.rai',
-  appName: 'Smartass',
+  appName: 'robaq AI',
   webDir: 'dist',
   backgroundColor: '#050507',
   ios: {

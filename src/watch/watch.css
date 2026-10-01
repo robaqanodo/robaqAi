@@ -186,3 +186,13 @@
 .watch-browser-tools button[aria-pressed=true]{border-color:#8ddbb5;color:#8ddbb5}.watch-browser-tools input{width:70px;accent-color:#fff}
 
 .watch-browser-guest-shield{position:absolute;inset:0;z-index:4;touch-action:none}.watch-browser-window iframe[inert]{pointer-events:none!important}
+
+.watch-panel.history-visible .watch-compose-row,.watch-panel.history-visible .watch-controls,.watch-panel.history-visible .watch-voice,.watch-panel.history-visible .watch-like-total,.watch-panel.history-visible .watch-external-note,.watch-panel.history-visible .watch-change{visibility:hidden;pointer-events:none}
+.watch-panel.history-visible .watch-viewing{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}.watch-panel.history-visible .watch-stage{width:100%;height:100%;max-width:none;aspect-ratio:auto}
+.watch-stage:fullscreen{width:100vw!important;height:100dvh!important;max-width:none!important;min-height:0!important}.watch-stage:fullscreen video{width:100%;height:100%;object-fit:contain}
+
+.watch-broadcast-view{position:absolute;inset:0;background:#080a0d}.watch-broadcast-view video{width:100%;height:100%;object-fit:contain;pointer-events:none}.watch-broadcast-wait{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:#d1d5db;font-size:14px}.watch-broadcast-enable{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:12}.watch-broadcast-actions{display:flex;align-items:center;justify-content:center;gap:12px;flex-shrink:0}.watch-broadcast-actions small{font-size:10px;max-width:440px}.watch-panel.history-visible .watch-broadcast-actions{visibility:hidden}.watch-stage:fullscreen .watch-broadcast-view{inset:0}.watch-panel.history-visible .watch-history-panel{z-index:25}
+
+.watch-panel.history-visible>.watch-header,.watch-panel.history-visible>.watch-participant-row,.watch-panel.history-visible>.watch-corner-info,.watch-panel.history-visible .watch-participants{visibility:hidden;pointer-events:none}
+
+.watch-panel.history-visible>.modal-error{visibility:hidden}

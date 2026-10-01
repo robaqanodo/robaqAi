@@ -16,8 +16,8 @@ export function AccountDialog({ session, onSignedIn, onSignOut, onClose, onGuest
   const [error, setError] = useState('')
   return <div className="modal-backdrop" onClick={() => { if (!busy) { if (session) onClose(); else setGuestWarning(true) } }}><section className="modal-card account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title" onClick={e => e.stopPropagation()}>
     <button type="button" className="account-top-close" disabled={busy} onClick={() => { if (session) onClose(); else setGuestWarning(true) }} aria-label={t('Close')}>×</button>
-    <h2 id="account-title">{session ? t("Your account") : mode === 'signin' ? t("Welcome to Smartass") : t("Create your account")}</h2>
-    {!session && <p className="welcome-purpose">{t('Think, write and translate with Smartass. Chat with downloaded AI models without internet, or connect your own API key for online chat and voice. Find models and language packs in AI Lab.')}</p>}
+    <h2 id="account-title">{session ? t("Your account") : mode === 'signin' ? t("Welcome to robaq AI") : t("Create your account")}</h2>
+    {!session && <p className="welcome-purpose">{t('Think, write and translate with robaq AI. Chat with downloaded AI models without internet, or connect your own API key for online chat and voice. Find models and language packs in AI Lab.')}</p>}
     {guestWarning ? <div className="guest-warning">
       <h3>{t("Continue without saving?")}</h3>
       <p className="modal-help">{t("As a guest, your conversation is temporary. If you close, leave, or reload this site, your messages and information shared in this chat will be lost and cannot be recovered. Create an account or sign in to save your chat history on this device.")}</p>

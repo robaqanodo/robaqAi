@@ -294,3 +294,46 @@
 .app-shell.theme-white .watch-compose-row .watch-composer button{background:#171717;color:#fff}
 .app-shell.theme-white .settings-language option{color:#191919;background:#fff}
 .app-shell.theme-white :is(.settings-menu,.settings-popover,.api-popover){background:#fafafaf5;color:#202020;border-color:#0003}
+
+.orb-bird.orb-particle{width:39px;height:39px}.movie-orbit{width:66px;height:66px}.movie-orbit svg{animation:movie-rainbow 12s linear infinite}.orb-particle.orb-bird-translator{color:#72dfa1}.bird-flock .orb-bird-translator svg{fill:none;stroke:currentColor;filter:drop-shadow(0 0 4px #72dfa1)}
+@keyframes movie-rainbow{to{filter:hue-rotate(360deg) drop-shadow(0 0 5px #a9d7ff)}}
+
+.intelligence-orb .bird-flock .orb-particle svg{stroke:var(--particle-color)!important;filter:drop-shadow(0 0 4px var(--particle-color))!important}.intelligence-orb .bird-flock .orb-bird-translator svg{stroke:currentColor!important;filter:drop-shadow(0 0 4px #72dfa1)!important}
+.movie-orbit svg{stroke:currentColor;animation:movie-rainbow-colors 12s linear infinite}.movie-orbit svg path{fill:currentColor}
+@keyframes movie-rainbow-colors{0%,100%{color:#ff6b8a}20%{color:#ffcb59}40%{color:#70e0a0}60%{color:#69c7ff}80%{color:#bf8cff}}
+@media(prefers-reduced-motion:reduce){.movie-orbit svg{animation:none;color:#88cfff}}
+
+/* The rail and all workspaces share one width, including long Georgian labels. */
+.app-shell.has-navigation{--rail-width:100px;--rail-gap:8px}
+.app-shell.has-navigation .navigation-rail>button{width:88px}
+.app-shell.has-navigation .navigation-rail>button>span{white-space:nowrap;overflow-wrap:normal;letter-spacing:0;font-size:10px}
+/* Phones use the full content width above a safe-area-aware bottom dock. */
+@media(max-width:760px), (pointer:coarse) and (max-height:500px){
+ .app-shell.has-navigation,.app-shell.has-navigation.has-history{--workspace-left:max(8px,env(safe-area-inset-left));--mobile-dock-space:calc(80px + env(safe-area-inset-bottom));padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) var(--mobile-dock-space) var(--workspace-left)}
+ .app-shell.has-navigation .navigation-rail{position:absolute;top:auto;bottom:max(8px,env(safe-area-inset-bottom));left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));width:auto;height:62px;min-height:62px;flex-direction:row;justify-content:space-evenly;align-items:center;gap:2px;padding:6px;border-radius:22px}
+ .app-shell.has-navigation .navigation-rail>button,.app-shell.has-navigation .navigation-rail .rail-bottom>button{width:auto;min-width:30px;min-height:46px;height:46px;flex:1;padding:4px;gap:0}
+ .app-shell.has-navigation .navigation-rail>button>span{display:none}
+ .app-shell.has-navigation .navigation-rail svg{width:23px;height:23px;flex-shrink:0}
+ .app-shell.has-navigation .navigation-rail .rail-bottom{display:contents}
+ .app-shell.has-navigation .navigation-rail .rail-profile{border-radius:14px;margin:0;background:transparent;border-color:transparent}
+ .app-shell.has-navigation .navigation-rail .rail-spacer{display:contents}
+ .app-shell.has-navigation .navigation-rail .rail-mic{position:relative;flex:1;width:auto;min-width:30px;height:42px;min-height:42px;margin:0;box-shadow:none;background:transparent}
+ .app-shell.has-navigation .navigation-rail .mic-dot-orbit{inset:2px;max-width:38px;margin:auto}
+ .app-shell.has-navigation .history-drawer{left:var(--workspace-left);right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));bottom:var(--mobile-dock-space);width:auto;max-width:340px;z-index:7}
+ .app-shell.has-navigation .watch-backdrop{left:var(--workspace-left);right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));bottom:var(--mobile-dock-space)}
+ .app-shell.has-navigation .landing-stage{left:var(--workspace-left);right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));bottom:var(--mobile-dock-space)}
+ .app-shell.has-navigation .landing-entry .living-cell{width:min(58vw,52dvh,300px);height:min(58vw,52dvh,300px)}
+ .app-shell.has-navigation .landing-voice-status{left:50%;bottom:calc(var(--mobile-dock-space) + 16px);max-width:calc(100% - 32px)}
+ .app-shell.has-navigation .history-save-error{left:12px;right:12px}
+}
+
+/* Equal angular spacing and one shared speed prevent capability icons bunching up. */
+.capability-orbits,.guest-orbits{position:absolute;inset:0;z-index:7;pointer-events:none;--satellite-radius:clamp(65px,12vw,145px)}
+.capability-satellite,.guest-seed{position:absolute;left:50%;top:50%;width:39px;height:39px;margin:-19.5px;animation:spaced-satellite 40s linear infinite;transform:rotate(var(--satellite-angle)) translateX(var(--orbit-radius,var(--satellite-radius))) rotate(calc(-1 * var(--satellite-angle)))}
+.capability-satellite svg{width:100%;height:100%;fill:currentColor;stroke:currentColor;stroke-width:1.3;filter:drop-shadow(0 0 4px currentColor)}
+.satellite-stock{color:#fff}.satellite-rainbow-blue{color:#65b4ff}.satellite-translator{color:#72dfa1;width:66px;height:66px;margin:-33px}.satellite-translator svg{fill:none;stroke-linecap:round;stroke-linejoin:round}.satellite-movie{width:66px;height:66px;margin:-33px}.satellite-movie svg{fill:none;animation:movie-rainbow-colors 12s linear infinite}.satellite-movie svg path{fill:currentColor;stroke:none}.satellite-highlight{fill:#fff;stroke:none;opacity:.65}
+.guest-orbits{--satellite-radius:clamp(90px,17vw,185px);z-index:8}.guest-seed{width:9px;height:9px;margin:-4.5px;background:#050505;border:1px solid #8d8d8d80;border-radius:50%;box-shadow:0 0 3px #ffffff55;animation-duration:55s}
+@keyframes spaced-satellite{from{transform:rotate(var(--satellite-angle)) translateX(var(--orbit-radius,var(--satellite-radius))) rotate(calc(-1 * var(--satellite-angle)))}to{transform:rotate(calc(var(--satellite-angle) + 360deg)) translateX(var(--orbit-radius,var(--satellite-radius))) rotate(calc(-1 * var(--satellite-angle) - 360deg))}}
+@media(prefers-reduced-motion:reduce){.capability-satellite,.guest-seed,.satellite-movie svg{animation:none}}
+
+.capability-satellite.satellite-stock{--orbit-radius:calc(var(--satellite-radius) * .7)}

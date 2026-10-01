@@ -26,7 +26,7 @@ export function Profile({session, onUpdate, onSignOut, onDeleted, onBusyChange}:
  const info = <dl className="profile-info"><div><dt>{t('Name')}</dt><dd>{[firstName, lastName].filter(Boolean).join(' ') || t('Name not set')}</dd></div><div><dt>{t('Email')}</dt><dd>{session.email}</dd></div><div><dt>{t('IP address')}</dt><dd>{t(ip)}</dd></div></dl>
  return confirm ? <div className="profile-delete-confirm">
   <h3>{t('Delete your profile permanently?')}</h3>
-  <p className="modal-help">{t('Your profile and chat history will be permanently deleted. All Smartass settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.')}</p>
+  <p className="modal-help">{t('Your profile and chat history will be permanently deleted. All robaq AI settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.')}</p>
   {status && <p role="alert" className="modal-error">{t(status)}</p>}
   <div className="modal-actions"><button className="modal-btn ghost" disabled={busy} onClick={()=>setConfirm(false)}>{t('Cancel')}</button><button className="modal-btn danger" disabled={busy} onClick={()=>void action(async()=>{await deleteProfileData(session);onDeleted()})}>{busy?t('Please wait…'):t('Agree')}</button></div>
  </div> : <div className="profile-details">

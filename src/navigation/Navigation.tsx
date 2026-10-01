@@ -15,7 +15,7 @@ export function Navigation({ movieSyncActive, onMovieSync, onHome, onLibrary, on
 
     <button onClick={onSettings} aria-label={t("Settings")} title={t("Settings")}><svg viewBox="0 0 24 24"><path d="M4 7h5m4 0h7M4 17h9m4 0h3"/><circle cx="11" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg><span>{t("Settings")}</span></button>
     <div className="rail-bottom">
-      <button onClick={onAbout} aria-label={t("About Smartass")} title={t("About Smartass")}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01"/></svg></button>
+      <button onClick={onAbout} aria-label={t("About robaq AI")} title={t("About robaq AI")}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01"/></svg></button>
       <button onClick={onAccount} aria-label={email ? t("Your account") : t("Register or sign in")} title={email ?? t("Register or sign in")} className="rail-profile">{email ? <span className="profile-initial">{email[0].toUpperCase()}</span> : <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 21v-3a7 7 0 0 1 14 0v3"/></svg>}</button>
 
     </div>

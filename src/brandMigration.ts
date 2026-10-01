@@ -1,4 +1,4 @@
-/** Preserve existing preferences when upgrading from Birdoff to Smartass. */
+/** Preserve existing preferences when upgrading from Birdoff to robaq AI. */
 export function migrateBrandPreferences() {
   try {
     for (const key of Object.keys(localStorage)) {

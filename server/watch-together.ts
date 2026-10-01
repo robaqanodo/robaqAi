@@ -7,7 +7,8 @@ type Member = { id: string; name: string; host: boolean; seen: number; lastMessa
 type Voice = { id: string; memberId: string; name: string; sentAt: number; mime: string; data: string }
 type Like = { id: string; memberId: string; color: string; sentAt: number }
 const memberColors = ['#f472b6','#60a5fa','#4ade80','#fbbf24','#c084fc','#22d3ee','#fb923c','#fb7185']
-type Room = { frame: { x: number; y: number; zoom: number; locked: boolean }; likes: Like[]; likeCount: number; locked: boolean; muteAll: boolean; voices: Voice[]; id: string; salt: string; code: Buffer; created: number; members: Map<string, Member>; url: string; position: number; playing: boolean; updated: number; messages: { id: string; name: string; text: string; memberId: string; sentAt: number; color: string }[] }
+type Signal = { from: string; to: string; session: string; data: unknown; at: number }
+type Room = { broadcast: string; signals: Signal[]; frame: { x: number; y: number; zoom: number; locked: boolean }; likes: Like[]; likeCount: number; locked: boolean; muteAll: boolean; voices: Voice[]; id: string; salt: string; code: Buffer; created: number; members: Map<string, Member>; url: string; position: number; playing: boolean; updated: number; messages: { id: string; name: string; text: string; memberId: string; sentAt: number; color: string }[] }
 const rooms = new Map<string, Room>()
 const attempts = new Map<string, { count: number; until: number }>()
 const token = () => randomBytes(24).toString('hex')
@@ -20,7 +21,7 @@ function mediaUrl(value: unknown) {
   return watchMedia(value).url
 }
 function snapshot(r: Room, member: Member) {
-  return { frame: r.frame, likes: r.likes.filter(l => Date.now() - l.sentAt < 6000), likeCount: r.likeCount, locked: r.locked, muteAll: r.muteAll, muted: member.muted || (!member.host && r.muteAll), voices: r.voices.filter(v => Date.now() - v.sentAt < 60000).map(({ data: _data, mime: _mime, ...meta }) => meta), id: r.id, host: member.host, memberId: member.id, url: r.url, position: position(r), playing: r.playing, members: [...r.members.values()].filter(m => Date.now() - m.seen < 15000).map(m => ({ id: m.id, name: m.name, color: m.color, host: m.host, muted: m.muted || (!m.host && r.muteAll) })), messages: r.messages }
+  return { broadcast: r.broadcast, frame: r.frame, likes: r.likes.filter(l => Date.now() - l.sentAt < 6000), likeCount: r.likeCount, locked: r.locked, muteAll: r.muteAll, muted: member.muted || (!member.host && r.muteAll), voices: r.voices.filter(v => Date.now() - v.sentAt < 60000).map(({ data: _data, mime: _mime, ...meta }) => meta), id: r.id, host: member.host, memberId: member.id, url: r.url, position: position(r), playing: r.playing, members: [...r.members.values()].filter(m => Date.now() - m.seen < 15000).map(m => ({ id: m.id, name: m.name, color: m.color, host: m.host, muted: m.muted || (!m.host && r.muteAll) })), messages: r.messages }
 }
 export function watchTogether(): Plugin {
   const middleware = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
@@ -36,7 +37,7 @@ export function watchTogether(): Plugin {
       for (const [key, value] of attempts) if (value.until < now) attempts.delete(key)
       const action = req.url.slice('/api/watch/'.length)
       req.setEncoding('utf8'); let raw = ''
-      for await (const chunk of req) { raw += chunk; if (raw.length > (action === 'voice' ? 360000 : 8000)) throw new Error('Request too large.') }
+      for await (const chunk of req) { raw += chunk; if (raw.length > (action === 'voice' ? 360000 : action === 'signal' ? 40000 : 8000)) throw new Error('Request too large.') }
       const body = JSON.parse(raw) as Record<string, unknown>
       if (action === 'create' || action === 'join') {
         const ip = req.socket.remoteAddress ?? 'unknown'
@@ -51,7 +52,7 @@ export function watchTogether(): Plugin {
           if (rooms.size >= 50) throw new Error('The server is full. Try later.')
           const url = mediaUrl(body.url)
           const salt = token()
-          room = { frame: { x: 0, y: 0, zoom: 1, locked: false }, likes: [], likeCount: 0, locked: false, muteAll: false, voices: [], id: randomBytes(12).toString('hex'), salt, code: scryptSync(body.code, salt, 32), created: now, members: new Map(), url, position: 0, playing: false, updated: now, messages: [] }
+          room = { broadcast: '', signals: [], frame: { x: 0, y: 0, zoom: 1, locked: false }, likes: [], likeCount: 0, locked: false, muteAll: false, voices: [], id: randomBytes(12).toString('hex'), salt, code: scryptSync(body.code, salt, 32), created: now, members: new Map(), url, position: 0, playing: false, updated: now, messages: [] }
           rooms.set(room.id, room)
         } else {
           const found = rooms.get(String(body.room))
@@ -72,7 +73,26 @@ export function watchTogether(): Plugin {
       member.seen = now
       room.voices = room.voices.filter(v => now - v.sentAt < 60000)
       room.likes = room.likes.filter(l => now - l.sentAt < 6000)
-      if (action === 'frame') {
+      if (action === 'broadcast') {
+        if (!member.host) { reply(res, 403, { error: 'Only the host controls playback.' }); return }
+        if (body.active !== true && body.active !== false) throw new Error('Invalid broadcast state.')
+        if (body.active && (!room.frame.locked || watchMedia(room.url).kind !== 'external')) throw new Error('Lock the frame before broadcasting.')
+        room.broadcast = body.active ? token() : ''; room.signals = []
+      } else if (action === 'signals') {
+        room.signals = room.signals.filter(s => now - s.at < 30000)
+        const signals = room.signals.filter(s => s.to === member.id)
+        room.signals = room.signals.filter(s => s.to !== member.id)
+        reply(res, 200, { signals }); return
+      } else if (action === 'signal') {
+        const target = [...room.members.values()].find(m => m.id === body.to)
+        const data = body.data as { type?: string; sdp?: string; candidate?: unknown }
+        if (!room.broadcast || body.session !== room.broadcast || !target || target.id === member.id || member.host === target.host) throw new Error('Invalid broadcast recipient.')
+        if (!data || !['offer','answer','candidate'].includes(String(data.type)) || (data.type === 'offer' && !member.host) || (data.type === 'answer' && member.host)) throw new Error('Invalid broadcast signal.')
+        room.signals = room.signals.filter(s => now - s.at < 30000)
+        if (room.signals.length >= 500) throw new Error('Too many broadcast signals.')
+        room.signals.push({ from: member.id, to: target.id, session: room.broadcast, data, at: now })
+        reply(res, 200, { sent: true }); return
+      } else if (action === 'frame') {
         if (!member.host) { reply(res, 403, { error: 'Only the host controls playback.' }); return }
         if (body.url !== room.url || watchMedia(room.url).kind !== 'external') throw new Error('Invalid frame source.')
         const f = body.frame as Room['frame'] | undefined
@@ -81,7 +101,7 @@ export function watchTogether(): Plugin {
       } else if (action === 'control') {
         if (!member.host) { reply(res, 403, { error: 'Only the host controls playback.' }); return }
         if (typeof body.position !== 'number' || !Number.isFinite(body.position) || body.position < 0 || body.position > 604800 || typeof body.playing !== 'boolean') throw new Error('Invalid playback state.')
-        if (body.url !== undefined && body.url !== room.url) { room.url = mediaUrl(body.url); room.frame = { x: 0, y: 0, zoom: 1, locked: false }; room.position = 0; room.playing = false }
+        if (body.url !== undefined && body.url !== room.url) { room.url = mediaUrl(body.url); room.broadcast = ''; room.signals = []; room.frame = { x: 0, y: 0, zoom: 1, locked: false }; room.position = 0; room.playing = false }
         else { room.position = body.position; room.playing = body.playing }
         room.updated = now
       } else if (action === 'like') {

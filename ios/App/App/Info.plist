@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Smartass</string>
+	<string>robaq AI</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -65,13 +65,13 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Smartass uses the microphone when you tap Voice input to dictate a message.</string>
+	<string>robaq AI uses the microphone when you tap Voice input to dictate a message.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Smartass converts your speech into message text when you use voice input.</string>
+	<string>robaq AI converts your speech into message text when you use voice input.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>Smartass can take a photo when you choose to attach one to a message.</string>
+	<string>robaq AI can take a photo when you choose to attach one to a message.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Smartass lets you choose a photo to attach to a message.</string>
+	<string>robaq AI lets you choose a photo to attach to a message.</string>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
