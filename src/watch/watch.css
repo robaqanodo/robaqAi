@@ -214,7 +214,7 @@
 .watch-cinema .watch-room-main{max-width:1740px}
 .app-shell .watch-cinema{overflow:auto}
 .watch-cinema .watch-room-main .watch-viewing{flex:none;min-height:0;margin:12px 0}
-.watch-cinema .watch-room-main .watch-stage{width:100%;max-width:1740px;max-height:none;min-width:0;min-height:0;aspect-ratio:16/9;flex-shrink:0}
+.watch-cinema .watch-room-main .watch-stage{width:33.333333%;max-width:580px;max-height:none;min-width:0;min-height:0;aspect-ratio:16/9;flex-shrink:0}
 .watch-cinema .watch-stage:has(.watch-browser){aspect-ratio:auto;overflow:visible;background:transparent}
 .watch-cinema .watch-stage .watch-browser{position:relative;inset:auto;border-radius:18px;overflow:hidden}
 .watch-cinema .watch-browser-window{flex:none;width:100%;aspect-ratio:16/9}
