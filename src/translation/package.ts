@@ -1,3 +1,4 @@
+import { downloadFile, DownloadError } from '../downloads/download'
 import manifest from './manifest.json'
 import { clearPack, readFile, writeFile } from './storage'
 import { stopTranslationWorker, translateOffline } from './client'
@@ -65,24 +66,12 @@ export async function installPack(file: Blob, progress: (status: string) => void
 /** Receive large packs in bounded chunks so mobile webviews do not buffer 611 MB at once. */
 export async function downloadPack(progress: (status: string) => void): Promise<Blob> {
   const total = 4 + new TextEncoder().encode(JSON.stringify(manifest)).length + manifest.files.reduce((sum, file) => sum + file.size, 0)
-  const chunks: Blob[] = []
-  const chunkSize = 8 * 1024 * 1024
-  for (let start = 0; start < total; start += chunkSize) {
-    const end = Math.min(total - 1, start + chunkSize - 1)
-    progress(`Downloading language pack… ${Math.floor(start / total * 100)}%`)
-    const response = await fetch(PACK_URL, { headers: { Range: `bytes=${start}-${end}` }, signal: AbortSignal.timeout(60000) })
-    if (start === 0 && (response.status === 404 || response.headers.get('content-type')?.includes('text/html'))) return downloadSourcePack(progress)
-    if (start === 0 && response.status === 200) {
-      const blob = await response.blob()
-      if (blob.size !== total) throw new Error('The translation download is incomplete. Please try again.')
-      return blob
-    }
-    if (response.status !== 206) throw new Error('Download interrupted. Please try again.')
-    const chunk = await response.blob()
-    if (chunk.size !== end - start + 1) throw new Error('The download is incomplete. Please try again.')
-    chunks.push(chunk)
+  try {
+    return await downloadFile(PACK_URL, total, new AbortController().signal, fraction => progress(`Downloading language pack… ${Math.floor(fraction * 100)}%`))
+  } catch (error) {
+    if (error instanceof DownloadError && [404,410].includes(error.status)) return downloadSourcePack(progress)
+    throw error
   }
-  return new Blob(chunks)
 }
 
 export async function removePack() {
@@ -100,12 +89,7 @@ async function downloadSourcePack(progress: (status: string) => void): Promise<B
   for (const [index, entry] of manifest.files.entries()) {
     progress(`Downloading translation file ${index + 1} / ${manifest.files.length}…`)
     const url = entry.name === 'LICENSE' ? '/translator/LICENSE' : `https://huggingface.co/${manifest.model}/resolve/${manifest.revision}/${entry.name}`
-    const response = await fetch(url, { signal: AbortSignal.timeout(600000) })
-    if (!response.ok || response.headers.get('content-type')?.includes('text/html')) {
-      throw new Error('The translation model could not be downloaded. Check your connection and try again.')
-    }
-    const blob = await response.blob()
-    if (blob.size !== entry.size) throw new Error('The translation download is incomplete. Please try again.')
+    const blob = await downloadFile(url, entry.size, new AbortController().signal, fraction => progress(`Downloading translation file ${index + 1} / ${manifest.files.length}… ${Math.floor(fraction * 100)}%`))
     parts.push(blob)
   }
   return new Blob(parts, { type: 'application/octet-stream' })

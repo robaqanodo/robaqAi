@@ -1658,5 +1658,21 @@
   "Screen sharing is disabled. Website previews play independently; some sites block embedding or require each viewer to sign in. YouTube, Vimeo and direct video links retain synchronized controls.": [
     "ეკრანის გაზიარება გამორთულია. საიტებზე ვიდეო დამოუკიდებლად ირთვება; ზოგ საიტს ჩაშენება შეზღუდული აქვს ან თითოეული მაყურებლის შესვლას მოითხოვს. YouTube, Vimeo და პირდაპირი ვიდეობმულები სინქრონულ მართვას ინარჩუნებს.",
     "Демонстрация экрана отключена. Сайты воспроизводят видео независимо; некоторые запрещают встраивание или требуют входа каждого зрителя. YouTube, Vimeo и прямые видеоссылки сохраняют синхронное управление."
+  ],
+  "Download failed (HTTP {0}). Please try again.": [
+    "ჩამოტვირთვა ვერ დასრულდა (HTTP {0}). სცადეთ ხელახლა.",
+    "Не удалось загрузить файл (HTTP {0}). Попробуйте ещё раз."
+  ],
+  "Download interrupted. Please check your connection and try again.": [
+    "ჩამოტვირთვა შეწყდა. შეამოწმეთ კავშირი და სცადეთ ხელახლა.",
+    "Загрузка прервана. Проверьте соединение и повторите."
+  ],
+  "The download link returned a webpage instead of a model.": [
+    "ჩამოტვირთვის ბმულმა მოდელის ნაცვლად ვებგვერდი დააბრუნა.",
+    "Ссылка вернула веб-страницу вместо модели."
+  ],
+  "Incorrect download size. Please try again.": [
+    "ჩამოტვირთული ფაილის ზომა არასწორია. სცადეთ ხელახლა.",
+    "Неверный размер файла. Повторите загрузку."
   ]
 }
