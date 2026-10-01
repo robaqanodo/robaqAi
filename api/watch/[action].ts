@@ -6,7 +6,7 @@ import { bodyOf, limit, redis, respond, sameOrigin, type ApiRequest } from '../.
 type StoredRoom = Omit<Room, 'code' | 'members'> & { code: string; members: [string, Room['members'] extends Map<string, infer M> ? M : never][] }
 type Stored = { version: string; room: StoredRoom }
 const saveScript = `local old=redis.call('GET',KEYS[1]); if ARGV[1]=='' then if old then return 0 end else if not old or cjson.decode(old).version~=ARGV[1] then return 0 end end; if ARGV[2]=='' then redis.call('DEL',KEYS[1]) else redis.call('SET',KEYS[1],ARGV[2],'EX',ARGV[3]) end; return 1`
-const actions = new Set(['create','join','state','control','message','leave','admin','voice','voice-get','like','signal','signals','broadcast','frame'])
+const actions = new Set(['create','join','state','control','message','leave','admin','voice','voice-get','like','signal','signals','broadcast','frame','ice'])
 export default async function handler(req: ApiRequest, res: ServerResponse) {
   if (!sameOrigin(req) || req.headers['x-ostra-watch'] !== '1') { respond(res, 403, { error: 'Same-origin requests only.' }); return }
   const action = new URL(req.url ?? '/', 'https://local.invalid').pathname.split('/').pop() ?? ''

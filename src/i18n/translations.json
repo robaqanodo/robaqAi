@@ -1706,5 +1706,33 @@
   "Some guest downloads could not be saved. Please download them again.": [
     "Guest რეჟიმში ჩამოტვირთული ზოგი ფაილი ვერ შეინახა. გთხოვთ, ხელახლა ჩამოტვირთოთ.",
     "Некоторые гостевые загрузки не удалось сохранить. Загрузите их повторно."
+  ],
+  "Player-only sharing requires desktop Chrome or Edge. Use a supported browser as host.": [
+    "მხოლოდ player-ის გასაზიარებლად ჰოსტმა კომპიუტერის Chrome ან Edge უნდა გამოიყენოს.",
+    "Для трансляции только плеера ведущему нужен Chrome или Edge на компьютере."
+  ],
+  "Select this robaqAI browser tab. Entire screens and other windows are not shared.": [
+    "აირჩიეთ robaqAI-ის ეს ჩანართი. სრული ეკრანი და სხვა ფანჯრები არ გაზიარდება.",
+    "Выберите эту вкладку robaqAI. Весь экран и другие окна не транслируются."
+  ],
+  "Align the website, lock the frame, then press Play. Select this robaqAI tab and enable tab audio. Only the player area is sent to guests. Pause stops sharing.": [
+    "მოარგეთ საიტი ჩარჩოს, ჩაკეტეთ და დააჭირეთ Play-ს. აირჩიეთ robaqAI-ის ეს ჩანართი და ჩართეთ ჩანართის ხმა. სტუმრებთან მხოლოდ player-ის არე გადაიცემა. Pause აჩერებს გაზიარებას.",
+    "Настройте сайт в рамке, заблокируйте её и нажмите Play. Выберите эту вкладку robaqAI и включите звук вкладки. Гости увидят только область плеера. Pause останавливает трансляцию."
+  ],
+  "You are watching the host’s player. Only the host controls the website.": [
+    "თქვენ ხედავთ ჰოსტის player-ს. საიტს მხოლოდ ჰოსტი მართავს.",
+    "Вы смотрите плеер ведущего. Сайтом управляет только ведущий."
+  ],
+  "Play shares only the locked player area; Pause stops sharing.": [
+    "Play აზიარებს მხოლოდ ჩაკეტილ player-ს; Pause აჩერებს გაზიარებას.",
+    "Play транслирует только область плеера; Pause останавливает трансляцию."
+  ],
+  "YouTube, Vimeo and direct MP4/WebM links support synchronized playback. Other HTTPS websites open in the host’s player; some websites block embedding or capture.": [
+    "YouTube, Vimeo და პირდაპირი MP4/WebM ბმულები სინქრონულად მუშაობს. სხვა HTTPS საიტები ჰოსტის player-ში იხსნება; ზოგმა საიტმა შეიძლება ჩაშენება ან გადაღება დაბლოკოს.",
+    "YouTube, Vimeo и прямые MP4/WebM поддерживают синхронизацию. Другие HTTPS-сайты открываются у ведущего; некоторые запрещают встраивание или захват."
+  ],
+  "Player-only sharing requires desktop Chrome or Edge as host and browser permission. Guests receive the cropped stream. Protected videos may not permit capture.": [
+    "ჰოსტს სჭირდება კომპიუტერის Chrome ან Edge და ბრაუზერის ნებართვა. სტუმრები იღებენ ამოჭრილ ნაკადს. დაცულმა ვიდეომ შესაძლოა გადაღება აკრძალოს.",
+    "Ведущему нужен Chrome или Edge на компьютере и разрешение браузера. Гости получают обрезанный поток. Защищённые видео могут запрещать захват."
   ]
 }

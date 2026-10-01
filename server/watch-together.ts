@@ -71,11 +71,15 @@ export function createWatchHandler(rooms = new Map<string, Room>(), attempts = n
       member.seen = now
       room.voices = room.voices.filter(v => now - v.sentAt < 60000)
       room.likes = room.likes.filter(l => now - l.sentAt < 6000)
+      if (action === 'ice') {
+        const iceServers = [{ urls: 'stun:stun.l.google.com:19302' }, ...(process.env.MOVIESYNC_TURN_URL ? [{ urls: process.env.MOVIESYNC_TURN_URL.split(','), username: process.env.MOVIESYNC_TURN_USERNAME, credential: process.env.MOVIESYNC_TURN_CREDENTIAL }] : [])]
+        reply(res, 200, { iceServers }); return
+      }
       if (action === 'broadcast') {
         if (!member.host) { reply(res, 403, { error: 'Only the host controls playback.' }); return }
         if (body.active !== true && body.active !== false) throw new Error('Invalid broadcast state.')
         if (body.active && (!room.frame.locked || watchMedia(room.url).kind !== 'external')) throw new Error('Lock the frame before broadcasting.')
-        room.broadcast = body.active ? token() : ''; room.signals = []
+        room.broadcast = body.active ? token() : ''; room.signals = []; room.playing = body.active; room.updated = now
       } else if (action === 'signals') {
         room.signals = room.signals.filter(s => now - s.at < 30000)
         const signals = room.signals.filter(s => s.to === member.id)
@@ -96,7 +100,7 @@ export function createWatchHandler(rooms = new Map<string, Room>(), attempts = n
         const f = body.frame as Room['frame'] | undefined
         if (!f || !Number.isFinite(f.x) || !Number.isFinite(f.y) || !Number.isFinite(f.zoom) || f.x > 0 || f.x < -2400 || f.y > 0 || f.y < -3000 || f.zoom < .4 || f.zoom > 1.5 || typeof f.locked !== 'boolean') throw new Error('Invalid frame position.')
         room.frame = { x: f.x, y: f.y, zoom: f.zoom, locked: f.locked }
-        if (!f.locked) room.playing = false
+        if (!f.locked) { room.playing = false; room.broadcast = ''; room.signals = [] }
       } else if (action === 'control') {
         if (!member.host) { reply(res, 403, { error: 'Only the host controls playback.' }); return }
         if (typeof body.position !== 'number' || !Number.isFinite(body.position) || body.position < 0 || body.position > 604800 || typeof body.playing !== 'boolean') throw new Error('Invalid playback state.')

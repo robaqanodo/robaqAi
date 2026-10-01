@@ -21,8 +21,8 @@ export function WebsitePlayer({ url, name, host, frame, save }: { url: string; n
     </div>
     <div className="watch-browser-tools watch-browser-recovery">
       <button type="button" aria-expanded={help} onClick={() => setHelp(!help)}>{t('Page not opening?')}</button>
-      <button type="button" aria-pressed={inspect} onClick={() => { setInspect(!inspect); setMoving(false) }}>{t(inspect ? 'Back to video frame' : 'View full page')}</button>
-      <button type="button" onClick={() => setReload(value => value + 1)}>{t('Reload website')}</button>
+      <button type="button" disabled={locked} aria-pressed={inspect} onClick={() => { setInspect(!inspect); setMoving(false) }}>{t(inspect ? 'Back to video frame' : 'View full page')}</button>
+      <button type="button" disabled={locked} onClick={() => setReload(value => value + 1)}>{t('Reload website')}</button>
     </div>
     {help && <div className="watch-browser-help"><p>{t('If a verification checkbox appears, select it yourself. If this frame stays blank, open the website in a new tab, complete its verification there, then return and reload. The website or browser may still block embedding.')}</p><a href={url} target="_blank" rel="noopener noreferrer">{t('Verify on website')} ↗</a></div>}
     {host && !inspect && <div className="watch-browser-tools">
