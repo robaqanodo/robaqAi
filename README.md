@@ -1,4 +1,4 @@
-# R.AI — Web + iPhone
+# robaqAi — Web + iPhone
 
 React / TypeScript / Vite / Capacitor 8.
 
