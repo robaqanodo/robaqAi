@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.npm-cache/
+.DS_Store
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+ios/DerivedData/
+ios/SourcePackages/
+**/xcuserdata/
+*.xcuserstate

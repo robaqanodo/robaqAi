@@ -1,0 +1,9 @@
+[
+  {
+    "id": "nllb-200-3.3b",
+    "name": "NLLB-200 3.3B",
+    "kind": "translation",
+    "sizeGB": 3.4,
+    "minMemoryGB": 8
+  }
+]

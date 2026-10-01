@@ -1,0 +1,73 @@
+/* iPhone layout. Desktop keeps its original composition. */
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body { overscroll-behavior: none; }
+#root { height: var(--app-height, 100dvh); }
+button { touch-action: manipulation; }
+
+@media (max-width: 600px), (pointer: coarse) and (max-height: 600px) {
+  /* Clip prevents focus from scrolling the shell during its opening animation. */
+  .app-shell { padding: 0; overflow: clip; }
+  .chat-panel {
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px)
+      max(14px, env(safe-area-inset-right, 0px))
+      calc(env(safe-area-inset-bottom, 0px) + 12px)
+      max(14px, env(safe-area-inset-left, 0px));
+    box-shadow: none;
+  }
+  .keyboard-open .chat-panel { padding-bottom: 10px; }
+  .panel-top { margin-bottom: 12px; }
+  .icon-btn, .mic-btn, .send-btn, .file-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .api-btn { min-width: 44px; height: 44px; padding: 0 12px; }
+  .api-btn-label { display: none; }
+  .composer {
+    border-radius: 26px;
+    padding: 5px;
+    gap: 4px;
+    background: rgba(30, 30, 35, 0.94);
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+  .composer-left, .composer-right { gap: 2px; }
+  .composer textarea {
+    min-width: 0;
+    font-size: 16px;
+    line-height: 24px;
+    padding: 10px 4px;
+  }
+  .composer textarea::placeholder { color: #94949f; }
+  .mic-btn { color: #b7b7c1; }
+  .msg-bubble { max-width: 94%; overflow-wrap: anywhere; }
+  .landing-entry, .landing-entry .living-cell {
+    width: min(72vw, 45dvh, 360px);
+    height: min(72vw, 45dvh, 360px);
+  }
+  .corner-settings {
+    right: max(18px, env(safe-area-inset-right, 0px));
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  }
+  .corner-settings-item { min-height: 48px; font-size: 15px; }
+  .modal-backdrop {
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px
+      calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+  .modal-card {
+    max-height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    width: min(100%, 420px);
+  }
+  .modal-input { font-size: 16px; }
+  .modal-btn, .provider-chip { min-height: 44px; }
+  .modal-help { color: #aaaab6; }
+}

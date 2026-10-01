@@ -1,0 +1,31 @@
+{
+  "model": "OpenNMT/nllb-200-3.3B-ct2-int8",
+  "revision": "28d998cc8548ad62f4f98cf8860928c3af99b97b",
+  "files": [
+    {
+      "name": "model.bin",
+      "size": 3356047962,
+      "sha256": "b7540c4e19aa2a5079c89241ffccb49711705ca8b1d255cea00c3216dc7d5165"
+    },
+    {
+      "name": "config.json",
+      "size": 1071,
+      "gitSha1": "02fa5ed61ce3f1ac1980f76d1adae2698d614d4b"
+    },
+    {
+      "name": "shared_vocabulary.json",
+      "size": 5921176,
+      "gitSha1": "af6771314c673db7660640e91062e5fee96eeb2a"
+    },
+    {
+      "name": "tokenizer.json",
+      "size": 17331176,
+      "sha256": "e316b82de11d0f951f370943b3c438311629547285129b0b81dadabd01bca665"
+    },
+    {
+      "name": "README.md",
+      "size": 8888,
+      "gitSha1": "9c817ddef449dcc25975749210e1d5707f7c13e1"
+    }
+  ]
+}

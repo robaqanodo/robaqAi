@@ -1,0 +1,52 @@
+:root {
+  --bg: #000000;
+  --bg-soft: #050507;
+  --text: #e8e8ec;
+  --text-muted: rgba(232, 232, 236, 0.55);
+  --text-dim: rgba(232, 232, 236, 0.35);
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --radius-panel: 28px;
+  --radius-pill: 999px;
+  --composer-max-lines: 5;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+::selection {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}

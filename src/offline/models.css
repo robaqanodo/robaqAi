@@ -1,0 +1,13 @@
+.offline-models .side-panel-item { min-height: 58px; gap: 8px; }
+.model-actions { display: flex; align-items: center; gap: 6px; font-size: 11px; flex-shrink: 0; }
+.model-actions .modal-btn { padding: 6px 9px; min-height: 30px; font-size: 11px; }
+.model-import, .model-remove { display: grid; place-items: center; width: 28px; height: 30px; border: 1px solid #ffffff20; border-radius: 9px; background: #ffffff08; color: inherit; cursor: pointer; font-size: 17px; }
+.model-import input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.model-import:focus-within { outline: 2px solid #b9c9ed; }
+.model-import.disabled, .model-remove:disabled { opacity: .4; cursor: default; }
+.model-manual { font-size: 12px; opacity: .8; margin: 10px 0 18px; }
+.model-manual summary { cursor: pointer; }
+.model-manual a { display: inline-block; color: inherit; margin: 6px 14px 6px 0; }
+.offline-model-picker { display: flex; align-items: center; gap: 10px; padding: 6px 12px; font-size: 12px; }
+.offline-model-picker select { max-width: 190px; background: #17191fcc; color: inherit; border: 1px solid #ffffff25; border-radius: 8px; padding: 5px 8px; }
+.offline-stop { align-self: flex-end; margin: 0 12px 4px; padding: 5px 10px; font-size: 12px; }

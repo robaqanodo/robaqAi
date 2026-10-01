@@ -1,0 +1,37 @@
+.chat-intelligence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: auto;
+  min-width: 0;
+}
+.chat-intelligence .intelligence-orb { width: 44px; height: 44px; flex-shrink: 0; }
+.chat-intelligence-label { display: flex; flex-direction: column; gap: 3px; }
+.chat-intelligence-label > span:first-child { font-size: 13px; font-weight: 600; letter-spacing: .06em; }
+.chat-status-logo { display: block; width: 44px; height: 44px; flex-shrink: 0; }
+.cell-status-light {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 29%;
+  height: 29%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  background: radial-gradient(circle at 35% 30%, #fff, #f4f4f7 55%, #d9d9e1);
+  box-shadow: 0 0 7px rgba(255, 255, 255, .8);
+  border: 1px solid rgba(255, 255, 255, .85);
+}
+.chat-status-logo[data-connection="offline"] {
+  filter: drop-shadow(0 0 5px rgba(255, 54, 78, .95)) drop-shadow(0 0 10px rgba(255, 54, 78, .55));
+}
+.chat-status-logo[data-connection="ready"] {
+  filter: drop-shadow(0 0 5px rgba(40, 239, 133, .95)) drop-shadow(0 0 10px rgba(40, 239, 133, .55));
+}
+.chat-status-logo .living-cell.intelligence-orb[data-connection] {
+  filter: none;
+  animation: cellDrift 9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-status-logo .living-cell.intelligence-orb[data-connection] { animation: none; }
+}

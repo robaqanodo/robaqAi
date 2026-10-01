@@ -1,0 +1,46 @@
+{
+  "name": "smartass",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && node scripts/offline-shell.mjs",
+    "lint": "oxlint src vite.config.ts capacitor.config.ts",
+    "preview": "vite preview",
+    "ios:sync": "npm run build && cap sync ios",
+    "ios:open": "cap open ios",
+    "ios:run": "npm run ios:sync && cap run ios",
+    "ios:check": "node scripts/check-ios.mjs",
+    "test": "node --test tests/*.test.mjs && vitest run tests/*.test.ts tests/*.test.tsx",
+    "prebuild": "node scripts/offline-runtime.mjs",
+    "predev": "node scripts/offline-runtime.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/status-bar": "^8.0.3",
+    "@capgo/capacitor-speech-recognition": "^8.3.2",
+    "@google/generative-ai": "^0.24.1",
+    "@huggingface/transformers": "^3.8.1",
+    "@wllama/wllama": "3.6.1",
+    "@wllama/wllama-compat": "3.6.1",
+    "hash-wasm": "4.12.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "jsdom": "^30.1.1",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.2"
+  }
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "input": "dog",
+    "source": "en",
+    "target": "ka",
+    "output": "ძაღლი",
+    "seconds": 10.3,
+    "passed": true
+  },
+  {
+    "input": "cat",
+    "source": "en",
+    "target": "ka",
+    "output": "კატა",
+    "seconds": 8,
+    "passed": true
+  },
+  {
+    "input": "water",
+    "source": "en",
+    "target": "ka",
+    "output": "წყალი",
+    "seconds": 7.6,
+    "passed": true
+  },
+  {
+    "input": "Hello, how are you?",
+    "source": "en",
+    "target": "ka",
+    "output": "გამარჯობა, როგორ ხარ?",
+    "seconds": 10.8,
+    "passed": true
+  },
+  {
+    "input": "The dog is sleeping under the table.",
+    "source": "en",
+    "target": "ka",
+    "output": "ძაღლი მაგიდის ქვეშ სძინავს.",
+    "seconds": 16,
+    "passed": true
+  },
+  {
+    "input": "გამარჯობა, როგორ ხარ?",
+    "source": "ka",
+    "target": "en",
+    "output": "Hi, how are you?",
+    "seconds": 7.1,
+    "passed": true
+  },
+  {
+    "input": "ხვალ თბილისში მივდივარ.",
+    "source": "ka",
+    "target": "ru",
+    "output": "Завтра я еду в Тбилиси.",
+    "seconds": 8.9,
+    "passed": true
+  },
+  {
+    "input": "Сегодня хорошая погода.",
+    "source": "ru",
+    "target": "ka",
+    "output": "დღეს კარგი ამინდია.",
+    "seconds": 8.7,
+    "passed": true
+  },
+  {
+    "input": "The meeting is tomorrow at 10:30. Please bring your passport.",
+    "source": "en",
+    "target": "ka",
+    "output": "შეხვედრა ხვალ 10:30 საათზეა. პასპორტი, გთხოვთ.",
+    "seconds": 18,
+    "passed": true
+  }
+]
