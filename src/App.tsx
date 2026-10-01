@@ -329,7 +329,7 @@ function AppContent() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [micHint, setMicHint] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
-  useTemporaryChat(chatOpen, messages)
+  useTemporaryChat(chatOpen, messages, activeChatId)
   const [introShown, setIntroShown] = useState(false)
   const [introDisplay, setIntroDisplay] = useState('')
   const [introStreaming, setIntroStreaming] = useState(false)

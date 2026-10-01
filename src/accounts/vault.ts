@@ -57,7 +57,7 @@ export async function signIn(email: string, password: string, remember = false):
     if (!localStorage.getItem(prefix + id)) localStorage.setItem(prefix + id, JSON.stringify({ version: 1, email: 'admin', salt: encode(salt), ...encrypted }))
   }
   let onlineUser: { email: string; firstName: string; lastName: string } | undefined
-  if (usesOnlineAccounts() && navigator.onLine) {
+  if (usesOnlineAccounts() && navigator.onLine && email !== 'admin') {
     try { onlineUser = (await accountRequest('login', { email, password, remember })).user }
     catch (error) {
       // Existing local accounts migrate only after their password has decrypted the vault.

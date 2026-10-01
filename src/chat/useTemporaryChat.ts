@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { Message } from '../accounts/vault'
 // Server copies are encrypted with a key held only in this open chat's memory.
-export function useTemporaryChat(open: boolean, messages: Message[]) {
+export function useTemporaryChat(open: boolean, messages: Message[], conversationId: string | null) {
   const current = useRef(messages)
   current.current = messages
   useEffect(() => {
@@ -29,5 +29,5 @@ export function useTemporaryChat(open: boolean, messages: Message[]) {
     const timer = window.setInterval(() => void save(), 2500)
     void save(); window.addEventListener('pagehide',close)
     return () => { clearInterval(timer); window.removeEventListener('pagehide',close); close() }
-  }, [open])
+  }, [open, conversationId])
 }

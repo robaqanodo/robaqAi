@@ -92,3 +92,5 @@ button { touch-action: manipulation; }
 .account-form .remember-option input { width:17px; height:17px; accent-color:#888; }
 
 @media(max-width:760px){ .app-shell.is-chat-open { position:fixed; inset:var(--viewport-top,0px) 0 auto; width:100%; } }
+
+.account-dialog #account-title { padding-right:70px; }
