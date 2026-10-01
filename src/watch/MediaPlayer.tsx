@@ -24,7 +24,11 @@ export function MediaPlayer({ url, host, frame, saveFrame, playback, onReady, on
   const callbacks = useRef({ onReady, onTime, onEnded, onError, onBlocked }); callbacks.current = { onReady, onTime, onEnded, onError, onBlocked }
   const media = watchMedia(url)
   useEffect(() => {
-    if (media.kind === 'file' || media.kind === 'external') { playback.current = null; return }
+    if (media.kind === 'file') return
+    if (media.kind === 'external') { playback.current = null; return }
+    let playAttempt: Promise<void> | undefined
+    let rejectPlay: ((error: Error) => void) | undefined
+    let playTimer: ReturnType<typeof setInterval> | undefined
     let cancelled = false; let dispose = () => {}; let timer: ReturnType<typeof setInterval> | undefined
     const container = document.createElement('div'); mount.current!.append(container)
     const fail = (message: string) => { if (!cancelled) callbacks.current.onError(message) }
@@ -33,15 +37,29 @@ export function MediaPlayer({ url, host, frame, saveFrame, playback, onReady, on
       if (media.kind === 'youtube') {
         await sdk('https://www.youtube.com/iframe_api', () => Boolean(win.YT?.Player))
         if (cancelled) return
+        const startPlayback = () => {
+          if (player.getPlayerState() === 1) return Promise.resolve()
+          if (playAttempt) return playAttempt
+          playAttempt = new Promise<void>((resolve, reject) => {
+            rejectPlay = reject
+            const started = Date.now()
+            playTimer = setInterval(() => {
+              if (player.getPlayerState() === 1) resolve()
+              else if (Date.now() - started > 6000) reject(new Error('Playback needs a tap on this device.'))
+            }, 100)
+            player.playVideo()
+          }).finally(() => { clearInterval(playTimer); rejectPlay = undefined; playAttempt = undefined })
+          return playAttempt
+        }
         const player = new win.YT!.Player(container, { width: '100%', height: '100%', videoId: media.id, playerVars: { controls: 0, disablekb: 1, playsinline: 1, origin: location.origin, rel: 0 }, events: {
           onReady: () => {
             if (cancelled) return
-            playback.current = { get currentTime() { return player.getCurrentTime() }, set currentTime(value) { player.seekTo(value, true) }, get duration() { return player.getDuration() }, volume: 1, readyState: 1, get paused() { return player.getPlayerState() !== 1 }, get ended() { return player.getPlayerState() === 0 }, play: async () => { player.playVideo() }, pause: () => player.pauseVideo() }
+            playback.current = { get currentTime() { return player.getCurrentTime() }, set currentTime(value) { player.seekTo(value, true) }, get duration() { return player.getDuration() }, volume: 1, readyState: 1, get paused() { return player.getPlayerState() !== 1 }, get ended() { return player.getPlayerState() === 0 }, play: startPlayback, pause: () => player.pauseVideo() }
             Object.defineProperty(playback.current, 'volume', { set: (value: number) => player.setVolume(value * 100) })
             callbacks.current.onReady()
           },
           onStateChange: (event: { data: number }) => { if (!cancelled && event.data === 0) callbacks.current.onEnded() },
-          onAutoplayBlocked: () => { if (!cancelled) callbacks.current.onBlocked() },
+          onAutoplayBlocked: () => { if (!cancelled) { rejectPlay?.(new Error('Playback needs a tap on this device.')); callbacks.current.onBlocked() } },
           onError: () => fail('YouTube cannot play this video here. It may be private, restricted, or have embedding disabled. Choose another video.')
         } })
         dispose = () => player.destroy()
@@ -61,7 +79,7 @@ export function MediaPlayer({ url, host, frame, saveFrame, playback, onReady, on
         timer = setInterval(() => { if (reading) return; reading = true; void Promise.all([player.getCurrentTime(), player.getPaused(), player.getDuration()]).then(([t, p, d]) => { if (!cancelled) { time = t; paused = p; duration = d; callbacks.current.onTime() } }).catch(() => {}).finally(() => { reading = false }) }, 300)
       }
     })().catch(error => fail(error instanceof Error ? error.message : 'Video could not load.'))
-    return () => { cancelled = true; clearInterval(timer); playback.current = null; dispose(); container.remove() }
+    return () => { cancelled = true; rejectPlay?.(new Error('Player closed.')); clearInterval(playTimer); clearInterval(timer); playback.current = null; dispose(); container.remove() }
   }, [url])
   if (media.kind === 'external') return <WebsitePlayer key={media.url} url={media.url} name={media.id} host={host} frame={frame} save={saveFrame} />
   return media.kind === 'file' ? <video tabIndex={-1} ref={element => { playback.current = element }} src={url} playsInline preload="metadata" onLoadedMetadata={onReady} onTimeUpdate={onTime} onEnded={onEnded} onError={() => onError('This video could not be loaded. Check the link and codec.')} /> : <div className="watch-embed" ref={mount} inert />
