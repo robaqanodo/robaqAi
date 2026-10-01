@@ -1,3 +1,4 @@
+import { kasPlugin } from './server/kas-plugin.ts'
 import { guestPresence } from './server/presence.ts'
 import { watchTogether } from './server/watch-together.ts'
 import { desktopAI } from './server/desktop-ai.ts'
@@ -5,7 +6,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  plugins: [react(), desktopAI(), watchTogether(), guestPresence()],
+  plugins: [react(), kasPlugin(), desktopAI(), watchTogether(), guestPresence()],
   worker: { format: 'es' },
   build: {
     rolldownOptions: {

@@ -1,3 +1,5 @@
+import { Kas, KasReader } from './kas/Kas'
+import { KasStore } from './kas/KasStore'
 import { retainGuestSkills } from './retainGuestSkills'
 import { skillPreferences, setPersistentSkills, persistentSkills } from './skillSession'
 import { useTemporaryChat } from './chat/useTemporaryChat'
@@ -286,6 +288,10 @@ function AppContent() {
   const { t, locale, setLocale } = useLocale()
 
   const [session, setSession] = useState<Session | null>(null)
+  const [kasOpen, setKasOpen] = useState(false)
+  const [kasCode, setKasCode] = useState('')
+  const [kasActive, setKasActive] = useState(() => skillPreferences.getItem('robaq-kas-active') === 'true')
+  useEffect(() => { setKasActive(skillPreferences.getItem('robaq-kas-active') === 'true'); setKasCode(''); setKasOpen(false) }, [session])
   const guestCount = useGuestPresence(!session)
   useEffect(() => {
     const leave = () => {
@@ -346,6 +352,7 @@ function AppContent() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [micHint, setMicHint] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
+  useEffect(() => { if (!chatOpen) setKasCode('') }, [chatOpen])
   useTemporaryChat(chatOpen, messages, activeChatId)
   const [introShown, setIntroShown] = useState(false)
   const [introDisplay, setIntroDisplay] = useState('')
@@ -810,6 +817,7 @@ function AppContent() {
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim()
+      if (/^KAS-/i.test(trimmed)) { setKasCode(trimmed.toUpperCase()); setInput(''); return }
       const files = pendingFilesRef.current
       const key = apiKeyRef.current.trim()
       const usingApi = Boolean(key)
@@ -1331,7 +1339,7 @@ function AppContent() {
       </div>
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
-      <Navigation movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
+      <Navigation kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
@@ -1378,6 +1386,7 @@ function AppContent() {
         )}
 
         <div className="history-lane" ref={historyRef} aria-live="polite">
+          {kasCode && <KasReader key={kasCode} code={kasCode} onClose={() => setKasCode('')} />}
           {messages.map((m) => {
             const streaming = streamingId === m.id
             return (
@@ -1436,7 +1445,7 @@ function AppContent() {
 
         {!hasApiKey && localModel && thinking && <button type="button" className="modal-btn offline-stop" onClick={() => { cancelOfflineReply(); sendGen.current += 1; setThinking(false) }}>{t('Stop generating')}</button>}
         {translatorReady && translationMode && <span className="translation-connection" role="status">Translator · {translationStatus}</span>}
-        <form className={`composer${hasApiKey && voiceMode ? ' is-voice-active' : ''}`}
+        <form hidden={Boolean(kasCode)} style={kasCode ? { display: 'none' } : undefined} className={`composer${hasApiKey && voiceMode ? ' is-voice-active' : ''}`}
           data-provider={hasApiKey ? provider ?? 'gemini' : undefined}
           data-voice-moving={hasApiKey && voiceMode && (listening || speaking) ? 'true' : 'false'}
           onSubmit={onSubmit}>
@@ -1684,6 +1693,7 @@ function AppContent() {
         </div>
       )}
 
+      {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}
 
       {landingPanel === 'store' && (
@@ -1701,6 +1711,7 @@ function AppContent() {
             <p className="modal-help"> {t('Translators, offline models and connected skills — all in one place.')} </p>
 
             <h3 className="store-section-title">{t('AI Skills')}</h3>
+            <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
             <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
 
             <h3 className="store-section-title" id="offline-skills-title">{t('Translators')}</h3>
