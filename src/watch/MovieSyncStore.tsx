@@ -14,7 +14,7 @@ export function MovieSyncStore({ stage, onChange, onOpen }: { stage: MovieSyncSt
     if (installing.current) return
     installing.current = true; setBusy(true); setError('')
     try {
-      // The skill ships with robaq AI. Load its implementation before activation.
+      // The skill ships with robaqAI. Load its implementation before activation.
       await Promise.all([import('./WatchTogether'), new Promise<void>(resolve => {
         finishDelay.current = resolve
         timer.current = window.setTimeout(resolve, 3000)

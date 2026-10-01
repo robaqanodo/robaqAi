@@ -36,7 +36,7 @@ export const DEFAULT_OFFLINE_BRAIN_ID = 'nodo-offline'
 export const BRAIN_CATALOG: BrainCatalogEntry[] = [
   {
     id: 'nodo-offline',
-    name: 'robaq AI Offline Guide',
+    name: 'robaqAI Offline Guide',
     description: 'Always-on — greetings, API setup, create keys, FAQ (EN/KA/RU)',
     url: '/brains/nodo-offline.json',
     alwaysOn: true,
@@ -44,7 +44,7 @@ export const BRAIN_CATALOG: BrainCatalogEntry[] = [
   {
     id: 'test-1',
     name: 'Test 1',
-    description: 'Offline knowledge pack — robaq AI / Georgian AI demo',
+    description: 'Offline knowledge pack — robaqAI / Georgian AI demo',
     url: '/brains/test-1.json',
   },
 ]
@@ -63,7 +63,7 @@ function asPack(raw: unknown): BrainFactPack | null {
 /** Built-in always-on pack (bundled) so offline mock works without a prior download. */
 export const BUILTIN_OFFLINE_PACK: BrainFactPack = asPack(builtinOfflinePack) ?? {
   id: DEFAULT_OFFLINE_BRAIN_ID,
-  name: 'robaq AI Offline Guide',
+  name: 'robaqAI Offline Guide',
   version: 1,
   description: 'Always-on offline help',
   alwaysOn: true,

@@ -1,4 +1,4 @@
-/** Preserve existing preferences when upgrading from Birdoff to robaq AI. */
+/** Preserve existing preferences when upgrading from Birdoff to robaqAI. */
 export function migrateBrandPreferences() {
   try {
     for (const key of Object.keys(localStorage)) {

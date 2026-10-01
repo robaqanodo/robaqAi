@@ -18,7 +18,7 @@ export async function packInstalled() {
   } catch { return false }
 }
 export async function validatePack(file: Blob, progress: (status: string) => void) {
-  if (file.size < 4) throw new Error('This is not an robaq AI translation pack.')
+  if (file.size < 4) throw new Error('This is not an robaqAI translation pack.')
   const headerLength = new DataView(await file.slice(0, 4).arrayBuffer()).getUint32(0, true)
   if (headerLength > 65536 || headerLength < 2) throw new Error('Invalid translation pack header.')
   const header = JSON.parse(await file.slice(4, 4 + headerLength).text())
@@ -77,9 +77,9 @@ export async function downloadPack(progress: (status: string) => void): Promise<
       if (blob.size !== total) throw new Error('The translation download is incomplete. Please try again.')
       return blob
     }
-    if (response.status !== 206) throw new Error('Download interrupted. Please download the file and use Manual Submit.')
+    if (response.status !== 206) throw new Error('Download interrupted. Please try again.')
     const chunk = await response.blob()
-    if (chunk.size !== end - start + 1) throw new Error('The download is incomplete. Please try Manual Submit.')
+    if (chunk.size !== end - start + 1) throw new Error('The download is incomplete. Please try again.')
     chunks.push(chunk)
   }
   return new Blob(chunks)

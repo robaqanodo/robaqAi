@@ -1,12 +1,12 @@
 {
   "id": "nodo-offline",
-  "name": "robaq AI Offline Guide",
+  "name": "robaqAI Offline Guide",
   "version": 3,
   "description": "Always-on offline help — greetings, API setup, create keys, FAQ (EN / KA / RU)",
   "alwaysOn": true,
   "facts": [
-    "robaq AI is a Georgian artificial intelligence chat demo with a living-cell UI, voice, and Brain AI Lab offline packs.",
-    "Without an API key the app stays offline: it answers from the robaq AI Offline Guide pack (greetings, API help, FAQ) with no network call.",
+    "robaqAI is a Georgian artificial intelligence chat demo with a living-cell UI, voice, and Brain AI Lab offline packs.",
+    "Without an API key the app stays offline: it answers from the robaqAI Offline Guide pack (greetings, API help, FAQ) with no network call.",
     "With an API key (Gemini, OpenAI, or Anthropic) chat goes online to that provider; voice speaking works best when API is on.",
     "To open chat: click the big cell / logo on the landing screen.",
     "To add an API key: open Settings → API (or Add API), pick Gemini | OpenAI | Anthropic, paste the key, tap Save. Keys stay in this browser only.",
@@ -46,9 +46,9 @@
         "хай"
       ],
       "replies": {
-        "en": "Hey — good to see you. I'm robaq AI, right here with you.",
-        "ka": "გამარჯობა — სასიამოვნოა შენი ნახვა. მე robaq AI ვარ, აქვე ვარ შენთან.",
-        "ru": "Привет — рад тебя видеть. Я robaq AI, я здесь с тобой."
+        "en": "Hey — good to see you. I'm robaqAI, right here with you.",
+        "ka": "გამარჯობა — სასიამოვნოა შენი ნახვა. მე robaqAI ვარ, აქვე ვარ შენთან.",
+        "ru": "Привет — рад тебя видеть. Я robaqAI, я здесь с тобой."
       }
     },
     {
@@ -180,9 +180,9 @@
         "как открыть"
       ],
       "replies": {
-        "en": "Quick FAQ — you're talking to **robaq AI**, a Georgian AI chat demo with a living-cell look.\n\n• **What is this app?** A friendly chat UI: land on the big cell, open chat, talk by text (and voice when supported).\n• **Offline vs online:** No API key → offline mode uses this built-in knowledge pack (greetings, setup help, FAQ) with no API call. With a saved Gemini / OpenAI / Anthropic key → messages go to that provider online.\n• **Languages:** I try to answer in the same language you write (English, Georgian, Russian).\n• **Open chat:** Click the big cell / logo on the landing screen.\n• **Voice:** Mic / speak works best when an API key is on; browsers vary (Chrome/Edge usually best). Offline still gives typed help replies.\n• **Brain AI Lab:** Extra offline packs under AI Lab; this robaq AI Offline Guide is always-on so you don't need to download it first.\n\nAsk anything or just say hi — I'm here.",
-        "ka": "მოკლე FAQ — შენ **robaq AI-სთან** ლაპარაკობ, ქართული AI ჩატის დემო ცოცხალი უჯრედის ვიზუალით.\n\n• **რა არის ეს აპი?** მეგობრული ჩატი: მთავარ ეკრანზე დიდი უჯრედი, გახსენი ჩატი, წერე ტექსტით (და ხმით, თუ ბრაუზერი უჭერს მხარს).\n• **ოფლაინ vs ონლაინ:** API გასაღები არაა → ოფლაინ რეჟიმი ამ ჩაშენებული ცოდნის პაკეტით (მისალმება, დაყენება, FAQ), API გამოძახების გარეშე. შენახული Gemini / OpenAI / Anthropic გასაღებით → შეტყობინებები მიდის იმ პროვაიდერთან ონლაინ.\n• **ენები:** ვცდილობ იმავე ენაზე ვუპასუხო, რომლითაც წერ (ინგლისური, ქართული, რუსული).\n• **ჩატის გახსნა:** დააკლიკე დიდ უჯრედს / ლოგოს მთავარ ეკრანზე.\n• **ხმა:** მიკროფონი / საუბარი უკეთ მუშაობს API გასაღების ჩართვისას; ბრაუზერები განსხვავდება (Chrome/Edge ჩვეულებრივ უკეთესია). ოფლაინში მაინც მივიღებ ტექსტურ დახმარებას.\n• **Brain AI Lab:** დამატებითი ოფლაინ პაკეტები AI Lab-ში; ეს robaq AI Offline Guide ყოველთვის ჩართულია — ჯერ გადმოწერა არ გჭირდება.\n\nიკითხე რაც გინდა ან უბრალოდ გამარჯობა — აქ ვარ.",
-        "ru": "Короткий FAQ — ты говоришь с **robaq AI**, демо грузинского ИИ-чата с «живой клеткой».\n\n• **Что это за приложение?** Дружелюбный чат: большой cell на главном экране, открой чат, пиши текстом (и голосом, если браузер умеет).\n• **Офлайн vs онлайн:** Нет API-ключа → офлайн-режим с этим встроенным пакетом знаний (приветствия, настройка, FAQ) без вызова API. С сохранённым ключом Gemini / OpenAI / Anthropic → сообщения идут к провайдеру онлайн.\n• **Языки:** Стараюсь отвечать на том же языке, на котором пишешь (английский, грузинский, русский).\n• **Открыть чат:** Кликни по большой клетке / логотипу на главном экране.\n• **Голос:** Микрофон / озвучка лучше работают при включённом API-ключе; браузеры разные (чаще всего Chrome/Edge). В офлайне всё равно даю текстовые подсказки.\n• **Brain AI Lab:** Доп. офлайн-пакеты в AI Lab; этот robaq AI Offline Guide всегда включён — скачивать сначала не нужно.\n\nСпрашивай что угодно или просто скажи привет — я здесь."
+        "en": "Quick FAQ — you're talking to **robaqAI**, a Georgian AI chat demo with a living-cell look.\n\n• **What is this app?** A friendly chat UI: land on the big cell, open chat, talk by text (and voice when supported).\n• **Offline vs online:** No API key → offline mode uses this built-in knowledge pack (greetings, setup help, FAQ) with no API call. With a saved Gemini / OpenAI / Anthropic key → messages go to that provider online.\n• **Languages:** I try to answer in the same language you write (English, Georgian, Russian).\n• **Open chat:** Click the big cell / logo on the landing screen.\n• **Voice:** Mic / speak works best when an API key is on; browsers vary (Chrome/Edge usually best). Offline still gives typed help replies.\n• **Brain AI Lab:** Extra offline packs under AI Lab; this robaqAI Offline Guide is always-on so you don't need to download it first.\n\nAsk anything or just say hi — I'm here.",
+        "ka": "მოკლე FAQ — შენ **robaqAI-სთან** ლაპარაკობ, ქართული AI ჩატის დემო ცოცხალი უჯრედის ვიზუალით.\n\n• **რა არის ეს აპი?** მეგობრული ჩატი: მთავარ ეკრანზე დიდი უჯრედი, გახსენი ჩატი, წერე ტექსტით (და ხმით, თუ ბრაუზერი უჭერს მხარს).\n• **ოფლაინ vs ონლაინ:** API გასაღები არაა → ოფლაინ რეჟიმი ამ ჩაშენებული ცოდნის პაკეტით (მისალმება, დაყენება, FAQ), API გამოძახების გარეშე. შენახული Gemini / OpenAI / Anthropic გასაღებით → შეტყობინებები მიდის იმ პროვაიდერთან ონლაინ.\n• **ენები:** ვცდილობ იმავე ენაზე ვუპასუხო, რომლითაც წერ (ინგლისური, ქართული, რუსული).\n• **ჩატის გახსნა:** დააკლიკე დიდ უჯრედს / ლოგოს მთავარ ეკრანზე.\n• **ხმა:** მიკროფონი / საუბარი უკეთ მუშაობს API გასაღების ჩართვისას; ბრაუზერები განსხვავდება (Chrome/Edge ჩვეულებრივ უკეთესია). ოფლაინში მაინც მივიღებ ტექსტურ დახმარებას.\n• **Brain AI Lab:** დამატებითი ოფლაინ პაკეტები AI Lab-ში; ეს robaqAI Offline Guide ყოველთვის ჩართულია — ჯერ გადმოწერა არ გჭირდება.\n\nიკითხე რაც გინდა ან უბრალოდ გამარჯობა — აქ ვარ.",
+        "ru": "Короткий FAQ — ты говоришь с **robaqAI**, демо грузинского ИИ-чата с «живой клеткой».\n\n• **Что это за приложение?** Дружелюбный чат: большой cell на главном экране, открой чат, пиши текстом (и голосом, если браузер умеет).\n• **Офлайн vs онлайн:** Нет API-ключа → офлайн-режим с этим встроенным пакетом знаний (приветствия, настройка, FAQ) без вызова API. С сохранённым ключом Gemini / OpenAI / Anthropic → сообщения идут к провайдеру онлайн.\n• **Языки:** Стараюсь отвечать на том же языке, на котором пишешь (английский, грузинский, русский).\n• **Открыть чат:** Кликни по большой клетке / логотипу на главном экране.\n• **Голос:** Микрофон / озвучка лучше работают при включённом API-ключе; браузеры разные (чаще всего Chrome/Edge). В офлайне всё равно даю текстовые подсказки.\n• **Brain AI Lab:** Доп. офлайн-пакеты в AI Lab; этот robaqAI Offline Guide всегда включён — скачивать сначала не нужно.\n\nСпрашивай что угодно или просто скажи привет — я здесь."
       }
     },
     {

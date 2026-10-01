@@ -36,7 +36,8 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
       if (!room && !stored) { respond(res, status, JSON.parse(output)); return }
       const encoded = room ? JSON.stringify({ version: randomUUID(), room: { ...room, code: room.code.toString('base64'), members: [...room.members] } }) : ''
       if (Buffer.byteLength(encoded) > 8_000_000) { respond(res, 413, { error: 'Room storage is full. Start a new room.' }); return }
-      const ttl = room ? Math.max(1, Math.ceil((room.created + 12 * 3600000 - Date.now()) / 1000)) : 1
+      const host = room && [...room.members.values()].find(member => member.host)
+      const ttl = room && host ? Math.max(1, Math.ceil((Math.min(room.created + 12 * 3600000, host.seen + 120000) - Date.now()) / 1000)) : 1
       const saved = await redis<number>('EVAL', saveScript, 1, key, stored?.version ?? '', encoded, ttl)
       if (saved === 1) { respond(res, status, JSON.parse(output)); return }
       await new Promise(resolve => setTimeout(resolve, 25 + Math.random() * 75))

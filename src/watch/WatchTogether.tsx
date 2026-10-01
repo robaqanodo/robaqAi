@@ -64,7 +64,12 @@ export function WatchTogether({ onClose, displayName = '', signedIn = false }: {
     void poll()
     return () => { stopped = true; clearTimeout(timer) }
   }, [ticket])
-  useEffect(() => { if (!ticket) return; return () => { void request('leave', {}, ticket).catch(() => {}) } }, [ticket])
+  useEffect(() => {
+    if (!ticket) return
+    const close = () => { void fetch('/api/watch/leave', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json', 'X-Ostra-Watch': '1', Authorization: `Bearer ${ticket.token}` }, body: JSON.stringify({ room: ticket.room }) }).catch(() => {}) }
+    window.addEventListener('pagehide', close)
+    return () => { window.removeEventListener('pagehide', close); close() }
+  }, [ticket])
   useEffect(() => {
     if (!state) { seenMessages.current = null; setFlash(null); setFlashes([]); return }
     if (!seenMessages.current) { seenMessages.current = new Set(state.messages.map(m => m.id)); return }
@@ -136,7 +141,7 @@ export function WatchTogether({ onClose, displayName = '', signedIn = false }: {
   }, setError)
   const externalPage = state ? watchMedia(state.url).kind === 'external' : false
   return <div className="watch-backdrop"><section className={`watch-panel ${state ? 'watch-cinema' : ''}${chat ? ' history-visible' : ''}`} role="region" aria-label={t("Moviesync 1.0")}>
-    <header className="watch-header"><div><span className="watch-eyebrow">{t("robaq AI · ONLINE SKILL")}</span><h2>{t("Moviesync 1.0")}</h2></div><div className="watch-header-actions">{state && <button className="modal-btn ghost" onClick={() => void copyLink()}>{t(notice === 'Invite link copied. Send your room code separately.' ? 'Copied' : 'Copy invite link')}</button>}<button className="modal-btn ghost" onClick={() => void leave()}>{t(state?.host ? 'End room' : state ? 'Leave room' : 'Close')}</button></div></header><div className="watch-participant-row">{state && <button className="modal-btn ghost watch-participant-toggle" aria-expanded={participantsOpen} aria-controls="moviesync-participants" onClick={() => setParticipantsOpen(!participantsOpen)}><span aria-hidden="true">{participantsOpen ? '‹' : '›'}</span>{t('Participants')} · {state.members.length}/8</button>}</div>
+    <header className="watch-header"><div><span className="watch-eyebrow">{t("robaqAI · ONLINE SKILL")}</span><h2>{t("Moviesync 1.0")}</h2></div><div className="watch-header-actions">{state && <button className="modal-btn ghost" onClick={() => void copyLink()}>{t(notice === 'Invite link copied. Send your room code separately.' ? 'Copied' : 'Copy invite link')}</button>}<button className="modal-btn ghost" onClick={() => void leave()}>{t(state?.host ? 'End room' : state ? 'Leave room' : 'Close')}</button></div></header><div className="watch-participant-row">{state && <button className="modal-btn ghost watch-participant-toggle" aria-expanded={participantsOpen} aria-controls="moviesync-participants" onClick={() => setParticipantsOpen(!participantsOpen)}><span aria-hidden="true">{participantsOpen ? '‹' : '›'}</span>{t('Participants')} · {state.members.length}/8</button>}</div>
     {!state ? <div className="watch-setup"><div className="watch-tabs"><button className={mode === 'create' ? 'selected' : ''} onClick={() => { setMode('create'); setError('') }}>{t("Create room")}</button><button className={mode === 'join' ? 'selected' : ''} onClick={() => { setMode('join'); setError('') }}>{t("Join room")}</button></div>
     <form onSubmit={e => { e.preventDefault(); void enter() }} className="watch-form">
     <label>{t(mode === 'create' ? 'Video link' : 'Invitation link')}<div className="watch-paste-field"><input required type={mode === 'create' ? 'url' : 'text'} placeholder="https://…" value={mode === 'create' ? url : roomId} onChange={e => mode === 'create' ? setUrl(e.target.value) : setRoomId(e.target.value)} /><button type="button" className="modal-btn ghost" onClick={async () => { try { const value = (await navigator.clipboard.readText()).trim(); if (mode === 'create') setUrl(value); else setRoomId(value) } catch { setError('Paste the link into the field using your keyboard.') } }}>{t('Paste')}</button></div></label>

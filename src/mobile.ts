@@ -9,10 +9,12 @@ export function initializeMobile() {
   const updateViewport = () => {
     const height = native ? window.innerHeight : window.visualViewport?.height ?? window.innerHeight
     root.style.setProperty('--app-height', `${height}px`)
+    root.style.setProperty('--viewport-top', `${native ? 0 : window.visualViewport?.offsetTop ?? 0}px`)
   }
   updateViewport()
   window.addEventListener('resize', updateViewport)
   window.visualViewport?.addEventListener('resize', updateViewport)
+  window.visualViewport?.addEventListener('scroll', updateViewport)
   if (Capacitor.getPlatform() === 'ios') {
     void Keyboard.addListener('keyboardWillShow', () => root.classList.add('keyboard-open'))
     void Keyboard.addListener('keyboardWillHide', () => root.classList.remove('keyboard-open'))

@@ -33,7 +33,7 @@ export async function downloadModel(model: LocalModel, signal: AbortSignal, prog
       const offset = next; next += chunkSize
       const end = Math.min(model.size - 1, offset + chunkSize - 1)
       const response = await fetch(model.url, { headers: { Range: `bytes=${offset}-${end}` }, signal: AbortSignal.any([combined, AbortSignal.timeout(120000)]) })
-      if (response.status !== 206) throw new Error('Download unavailable. Download the linked file and use Manual Submit.')
+      if (response.status !== 206) throw new Error('Download unavailable. Please check your connection and try again.')
       if (response.headers.get('Content-Range') !== `bytes ${offset}-${end}/${model.size}`) throw new Error('Incorrect download range. Please try again.')
       const chunk = await response.blob()
       if (chunk.size !== end - offset + 1) throw new Error('Incomplete download. Please try again.')

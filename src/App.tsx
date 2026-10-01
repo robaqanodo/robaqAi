@@ -1,3 +1,4 @@
+import { useTemporaryChat } from './chat/useTemporaryChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
 import { WatchTogether } from './watch/WatchTogether'
@@ -9,7 +10,7 @@ import { offlineReply, cancelOfflineReply, unloadOfflineModel } from './offline/
 import { useLocale, LocaleProvider } from './i18n/Locale'
 import { AccountDialog } from './accounts/AccountDialog'
 import { History } from './accounts/History'
-import { saveChats, type Session, type Conversation } from './accounts/vault'
+import { restoreSession, signOut, saveChats, type Session, type Conversation } from './accounts/vault'
 import { Navigation } from './navigation/Navigation'
 import { packInstalled } from './translation/package'
 import { translateOffline, stopTranslationWorker } from './translation/client'
@@ -44,7 +45,7 @@ import './ostra.css'
 import { IntelligenceOrb as LivingCell } from './components/IntelligenceOrb'
 
 const INTRO_OFFLINE = "Hello, how can I help you?"
-/** Chat welcome: human online vibe when API is on; classic robaq AI line when off. */
+/** Chat welcome: human online vibe when API is on; classic robaqAI line when off. */
 function getWelcomeText(hasApi: boolean): string {
   if (!hasApi) return INTRO_OFFLINE
   return "We're online! Good to have you here. Ask me anything — I'm right here with you."
@@ -328,10 +329,18 @@ function AppContent() {
   const [apiError, setApiError] = useState<string | null>(null)
   const [micHint, setMicHint] = useState<string | null>(null)
   const [chatOpen, setChatOpen] = useState(false)
+  useTemporaryChat(chatOpen, messages)
   const [introShown, setIntroShown] = useState(false)
   const [introDisplay, setIntroDisplay] = useState('')
   const [introStreaming, setIntroStreaming] = useState(false)
   const [landingPanel, setLandingPanel] = useState<LandingPanel>('account')
+  useEffect(() => {
+    let cancelled = false
+    void restoreSession().then(result => {
+      if (!cancelled && result) { setSession(result.session); setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null) }
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
   const [movieSyncStage, setMovieSyncStage] = useState<MovieSyncStage>(() => {
     try { const saved = localStorage.getItem('ostra-moviesync-stage'); return saved === 'active' || saved === 'downloaded' ? saved : 'new' } catch { return 'new' }
   })
@@ -1300,7 +1309,7 @@ function AppContent() {
         </div>
       </div>
 
-      {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaq AI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
+      {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
       <Navigation movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
@@ -1315,7 +1324,7 @@ function AppContent() {
           <div className="chat-intelligence">
             {session && !historyOpen && <button type="button" className="history-corner-toggle" onClick={() => setHistoryOpen(true)} aria-label={t("Expand chat sidebar")} title={t("Expand chat sidebar")}>→</button>}
             <div className="chat-intelligence-label">
-              <span>robaq AI</span>
+              <span>robaqAI</span>
             </div>
           </div>
           <div className="panel-actions">
@@ -1357,7 +1366,7 @@ function AppContent() {
                   streaming ? ' is-streaming' : ''
                 }`}
               >
-                {m.role === 'assistant' ? m.text.replace(/R\.A\.?I|Birdoff|Smartass|Ostra/gi, 'robaq AI') : m.text}
+                {m.role === 'assistant' ? m.text.replace(/R\.A\.?I|Birdoff|Smartass|Ostra|robaq AI/gi, 'robaqAI') : m.text}
                 {streaming && <span className="stream-caret" aria-hidden />}
               </div>
             )
@@ -1377,7 +1386,7 @@ function AppContent() {
         {voiceMode && (
           <div className="voice-conversation-status" role="status">
             <span className="voice-status-dot" aria-hidden />
-            <span>{speaking ? t("robaq AI is speaking…") : thinking ? t("Thinking…") : listening ? t("Listening…") : t("Voice conversation")}</span>
+            <span>{speaking ? t("robaqAI is speaking…") : thinking ? t("Thinking…") : listening ? t("Listening…") : t("Voice conversation")}</span>
           </div>
         )}
         {voiceMode && listening && voiceCaption && (
@@ -1722,6 +1731,7 @@ function AppContent() {
         setChatOpen(false)
         setLandingPanel(null)
       }} onSignOut={() => {
+        void signOut().catch(() => setSaveError(t('Server sign-out could not be confirmed. Please reconnect and try again.')))
         clearChat()
         messagesRef.current = []
         if (session) void saveChats(session, chats).catch(() => setSaveError('The last changes could not be saved.'))
@@ -1739,9 +1749,9 @@ function AppContent() {
             aria-labelledby="about-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="about-title">{t("About robaq AI")}</h2>
+            <h2 id="about-title">{t("About robaqAI")}</h2>
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
-            <p className="modal-help">{t('robaq AI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.')}</p>
+            <p className="modal-help">{t('robaqAI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.')}</p>
             <p className="modal-help">{t('Your local account keeps chat history on this device. You choose the tools, the model and when to connect.')}</p>
             <p className="about-credit">{t('Created by')} <strong>Nodar Robakidze</strong></p>
             <div className="modal-actions">
@@ -1764,7 +1774,7 @@ function AppContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="donate-title">{t("Donation help project")}</h2>
-            <p className="modal-help"> {t("Support robaq AI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.")} </p>
+            <p className="modal-help"> {t("Support robaqAI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.")} </p>
             <p className="modal-help"> {t("Placeholder: donation links and payment options will appear here.")} </p>
             <div className="modal-actions">
               <button

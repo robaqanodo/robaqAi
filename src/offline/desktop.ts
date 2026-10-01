@@ -6,7 +6,7 @@ export function cancelDesktopReply() {inference?.abort()}
 export async function desktopStatus():Promise<DesktopStatus> {
  try {
   const response=await fetch('/api/desktop-ai/status',{signal:AbortSignal.timeout(20000)})
-  if(!response.headers.get('content-type')?.includes('application/json')) throw new Error('Desktop models require robaq AI running locally on this computer.')
+  if(!response.headers.get('content-type')?.includes('application/json')) throw new Error('Desktop models require robaqAI running locally on this computer.')
   const data=await response.json()
   if(!response.ok) throw new Error(data.error??'Local engine unavailable.')
   return data

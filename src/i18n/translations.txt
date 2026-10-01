@@ -4,7 +4,7 @@ Minimize|შეკეცვა|Свернуть
 Close and clear chat|ჩათის დახურვა და გასუფთავება|Закрыть и очистить чат
 Close & clear|დახურვა და გასუფთავება|Закрыть и очистить
 Thinking…|ვფიქრობ…|Думаю…
-robaq AI is speaking…|robaq AI საუბრობს…|robaq AI говорит…
+robaqAI is speaking…|robaqAI საუბრობს…|robaqAI говорит…
 Listening…|გისმენ…|Слушаю…
 Voice conversation|ხმოვანი საუბარი|Голосовой разговор
 Attached files|მიმაგრებული ფაილები|Прикреплённые файлы
@@ -57,11 +57,11 @@ Download|ჩამოტვირთვა|Скачать
 Update|განახლება|Обновление
 Checking for the latest version…|უახლესი ვერსიის შემოწმება…|Проверка последней версии…
 Back to AI Lab|მაღაზიაში დაბრუნება|Вернуться в магазин
-About robaq AI|robaq AI-ის შესახებ|О robaq AI
-robaq AI brings local AI tools and connected conversations into one calm workspace. Install offline language packs from the AI Lab, translate on your device, or connect your own Gemini, OpenAI, or Anthropic API key.|robaq AI აერთიანებს ლოკალურ AI ინსტრუმენტებსა და ონლაინ საუბრებს ერთ სამუშაო სივრცეში. AI Lab-იდან დააყენეთ ოფლაინ ენის პაკეტები, თარგმნეთ თქვენს მოწყობილობაზე ან დაამატეთ Gemini, OpenAI თუ Anthropic-ის საკუთარი API გასაღები.|robaq AI объединяет локальные инструменты ИИ и онлайн-общение в одном рабочем пространстве. Устанавливайте офлайн-языковые пакеты из библиотеки, переводите на своём устройстве или подключайте свой ключ API Gemini, OpenAI или Anthropic.
+About robaqAI|robaqAI-ის შესახებ|О robaqAI
+robaqAI brings local AI tools and connected conversations into one calm workspace. Install offline language packs from the AI Lab, translate on your device, or connect your own Gemini, OpenAI, or Anthropic API key.|robaqAI აერთიანებს ლოკალურ AI ინსტრუმენტებსა და ონლაინ საუბრებს ერთ სამუშაო სივრცეში. AI Lab-იდან დააყენეთ ოფლაინ ენის პაკეტები, თარგმნეთ თქვენს მოწყობილობაზე ან დაამატეთ Gemini, OpenAI თუ Anthropic-ის საკუთარი API გასაღები.|robaqAI объединяет локальные инструменты ИИ и онлайн-общение в одном рабочем пространстве. Устанавливайте офлайн-языковые пакеты из библиотеки, переводите на своём устройстве или подключайте свой ключ API Gemini, OpenAI или Anthropic.
 Offline translation runs on your device. Connected chat sends your messages to the AI provider you choose. Created by Nodar Robakidze, with a focus on a simple, personal experience.|ოფლაინ თარგმანი სრულდება თქვენს მოწყობილობაზე. ონლაინ ჩათი შეტყობინებებს თქვენ მიერ არჩეულ AI პროვაიდერს უგზავნის. ავტორი: Nodar Robakidze. შექმნილია მარტივი და პირადი გამოცდილებისთვის.|Офлайн-перевод выполняется на вашем устройстве. Онлайн-чат отправляет сообщения выбранному вами провайдеру ИИ. Автор: Nodar Robakidze. Создано для простого и персонального использования.
 Donation help project|პროექტის მხარდაჭერა|Поддержать проект
-Support robaq AI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.|მხარი დაუჭირეთ robaq AI-ის განვითარებას — მოდელებს, ოფლაინ პაკეტებსა და ანიმაციურ ინტერფეისს. თითოეული წვლილი პროექტის განვითარებას ეხმარება.|Поддержите развитие robaq AI: модели, офлайн-пакеты и анимированный интерфейс. Каждый вклад помогает проекту развиваться.
+Support robaqAI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.|მხარი დაუჭირეთ robaqAI-ის განვითარებას — მოდელებს, ოფლაინ პაკეტებსა და ანიმაციურ ინტერფეისს. თითოეული წვლილი პროექტის განვითარებას ეხმარება.|Поддержите развитие robaqAI: модели, офлайн-пакеты и анимированный интерфейс. Каждый вклад помогает проекту развиваться.
 Placeholder: donation links and payment options will appear here.|მხარდაჭერის ბმულები და გადახდის მეთოდები აქ მოგვიანებით გამოჩნდება.|Ссылки для поддержки и способы оплаты появятся здесь позже.
 Main navigation|მთავარი მენიუ|Главное меню
 Stop voice conversation|ხმოვანი საუბრის შეწყვეტა|Остановить голосовой разговор
@@ -92,7 +92,7 @@ Unarchive|არქივიდან ამოღება|Извлечь из 
 Archive|დაარქივება|Архивировать
 Move to Trash|წაშლილებში გადატანა|Переместить в корзину
 Encrypted · Stored on this device|დაშიფრულია · ინახება ამ მოწყობილობაზე|Зашифровано · Хранится на этом устройстве
-Welcome to robaq AI|მოგესალმებით robaq AI-ში|Добро пожаловать в robaq AI
+Welcome to robaqAI|მოგესალმებით robaqAI-ში|Добро пожаловать в robaqAI
 Create your account|შექმენით ანგარიში|Создайте аккаунт
 Continue without saving?|გაგრძელდეს შენახვის გარეშე?|Продолжить без сохранения?
 As a guest, your conversation is temporary. If you close, leave, or reload this site, your messages and information shared in this chat will be lost and cannot be recovered. Create an account or sign in to save your chat history on this device.|სტუმრის საუბარი დროებითია. საიტის დახურვის, დატოვების ან განახლებისას შეტყობინებები და ამ ჩათში გაზიარებული ინფორმაცია წაიშლება და ვეღარ აღდგება. ამ მოწყობილობაზე ისტორიის შესანახად შექმენით ანგარიში ან გაიარეთ ავტორიზაცია.|В гостевом режиме разговор временный. Если вы закроете, покинете или обновите сайт, сообщения и информация из этого чата будут потеряны без возможности восстановления. Создайте аккаунт или войдите, чтобы сохранять историю на этом устройстве.
@@ -146,7 +146,7 @@ Verifying {0} / {1}…|მოწმდება {0} / {1}…|Проверка {0
 Installing {0} / {1}…|მიმდინარეობს დაყენება: {0} / {1}…|Установка {0} / {1}…
 Downloading language pack… {0}%|ენის პაკეტის ჩამოტვირთვა… {0}%|Загрузка языкового пакета… {0}%
 Testing the offline translation engine…|ოფლაინ თარგმანის ძრავის შემოწმება…|Проверка движка офлайн-перевода…
-This is not an robaq AI translation pack.|ეს არ არის robaq AI-ის თარგმანის პაკეტი.|Это не языковой пакет robaq AI.
+This is not an robaqAI translation pack.|ეს არ არის robaqAI-ის თარგმანის პაკეტი.|Это не языковой пакет robaqAI.
 Invalid translation pack header.|თარგმანის პაკეტის სათაური არასწორია.|Неверный заголовок языкового пакета.
 This pack is not compatible. Download the EN / KA / RU pack from this AI Lab.|პაკეტი შეუთავსებელია. ამ მაღაზიიდან ჩამოტვირთეთ EN / KA / RU პაკეტი.|Пакет несовместим. Скачайте пакет EN / KA / RU из этого магазина.
 The download is incomplete. Please download the pack again.|ჩამოტვირთვა არასრულია. ჩამოტვირთეთ პაკეტი ხელახლა.|Загрузка не завершена. Скачайте пакет повторно.
@@ -155,7 +155,7 @@ Not enough device storage. Free at least {0} MB and try again.|მოწყო�
 The translation engine could not start on this device.|თარგმანის ძრავა ამ მოწყობილობაზე ვერ ჩაირთო.|Не удалось запустить движок перевода на этом устройстве.
 Download interrupted. Please download the file and use Manual Submit.|ჩამოტვირთვა შეწყდა. ჩამოტვირთეთ ფაილი და გამოიყენეთ „ფაილიდან დაყენება“.|Загрузка прервана. Скачайте файл и используйте «Установить из файла».
 The download is incomplete. Please try Manual Submit.|ჩამოტვირთვა არასრულია. სცადეთ „ფაილიდან დაყენება“.|Загрузка не завершена. Попробуйте «Установить из файла».
-Offline knowledge pack — robaq AI / Georgian AI demo|ოფლაინ ცოდნის პაკეტი — robaq AI / ქართული AI-ის დემო|Офлайн-пакет знаний — robaq AI / демо грузинского ИИ
+Offline knowledge pack — robaqAI / Georgian AI demo|ოფლაინ ცოდნის პაკეტი — robaqAI / ქართული AI-ის დემო|Офлайн-пакет знаний — robaqAI / демо грузинского ИИ
 Update checking is not configured yet. Please try again once an update server is connected.|განახლების შემოწმება ჯერ არ არის გამართული. სცადეთ განახლების სერვერის დაკავშირების შემდეგ.|Проверка обновлений пока не настроена. Повторите после подключения сервера обновлений.
 Unable to check for updates. Please try again later.|განახლებების შემოწმება ვერ მოხერხდა. სცადეთ მოგვიანებით.|Не удалось проверить обновления. Повторите позже.
 The update server returned invalid version information.|სერვერმა ვერსიის არასწორი ინფორმაცია დააბრუნა.|Сервер вернул неверную информацию о версии.
@@ -209,12 +209,12 @@ Save profile|პროფილის შენახვა|Сохранить �
 Profile saved.|პროფილი შენახულია.|Профиль сохранён.
 Delete Profile|პროფილის წაშლა|Удалить профиль
 Delete your profile permanently?|წავშალოთ პროფილი სამუდამოდ?|Удалить профиль навсегда?
-Your profile and chat history will be permanently deleted. All robaq AI settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.|თქვენი პროფილი და ჩატის ისტორია სამუდამოდ წაიშლება. ამ მოწყობილობაზე ასევე გასუფთავდება robaq AI-ის ყველა პარამეტრი, შენახული API გასაღები და ჩამოტვირთული ფაილი, მათ შორის საერთო AI მოდელები და თარგმანის პაკეტი. აღდგენა შეუძლებელია. სხვა ლოკალური ანგარიშები დარჩება. აპის გარეთ შენახული ფაილები არ წაიშლება.|Ваш профиль и история чатов будут удалены навсегда. Все настройки robaq AI, сохранённые API-ключи и загруженные файлы на этом устройстве, включая общие модели ИИ и пакет перевода, также будут удалены. Отменить это нельзя. Другие локальные аккаунты сохранятся. Файлы вне приложения не затрагиваются.
+Your profile and chat history will be permanently deleted. All robaqAI settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.|თქვენი პროფილი და ჩატის ისტორია სამუდამოდ წაიშლება. ამ მოწყობილობაზე ასევე გასუფთავდება robaqAI-ის ყველა პარამეტრი, შენახული API გასაღები და ჩამოტვირთული ფაილი, მათ შორის საერთო AI მოდელები და თარგმანის პაკეტი. აღდგენა შეუძლებელია. სხვა ლოკალური ანგარიშები დარჩება. აპის გარეთ შენახული ფაილები არ წაიშლება.|Ваш профиль и история чатов будут удалены навсегда. Все настройки robaqAI, сохранённые API-ключи и загруженные файлы на этом устройстве, включая общие модели ИИ и пакет перевода, также будут удалены. Отменить это нельзя. Другие локальные аккаунты сохранятся. Файлы вне приложения не затрагиваются.
 IP shows your current internet connection, when available. It is not saved to your profile.|IP აჩვენებს მიმდინარე ინტერნეტკავშირის მისამართს, როცა ის ხელმისაწვდომია. პროფილში არ ინახება.|IP показывает адрес текущего интернет-соединения, если он доступен. Он не сохраняется в профиле.
 The operation could not be completed. Please try again.|მოქმედება ვერ დასრულდა. სცადეთ ხელახლა.|Не удалось завершить действие. Повторите попытку.
-Think, write and translate with robaq AI. Chat with downloaded AI models without internet, or connect your own API key for online chat and voice. Find models and language packs in AI Lab.|robaq AI დაგეხმარებათ იდეების განვითარებაში, წერასა და თარგმანში. ჩამოტვირთულ AI მოდელებს ინტერნეტის გარეშე ესაუბრეთ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ ჩატისა და ხმოვანი საუბრისთვის. მოდელები და ენის პაკეტები AI Lab-შია.|Развивайте идеи, пишите и переводите с robaq AI. Общайтесь со скачанными моделями ИИ без интернета или подключите свой API-ключ для онлайн-чата и голосовых разговоров. Модели и языковые пакеты — в AI Lab.
+Think, write and translate with robaqAI. Chat with downloaded AI models without internet, or connect your own API key for online chat and voice. Find models and language packs in AI Lab.|robaqAI დაგეხმარებათ იდეების განვითარებაში, წერასა და თარგმანში. ჩამოტვირთულ AI მოდელებს ინტერნეტის გარეშე ესაუბრეთ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ ჩატისა და ხმოვანი საუბრისთვის. მოდელები და ენის პაკეტები AI Lab-შია.|Развивайте идеи, пишите и переводите с robaqAI. Общайтесь со скачанными моделями ИИ без интернета или подключите свой API-ключ для онлайн-чата и голосовых разговоров. Модели и языковые пакеты — в AI Lab.
 A little space for bigger ideas.|პატარა სივრცე დიდი იდეებისთვის.|Небольшое пространство для больших идей.
-robaq AI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.|robaq AI დაგეხმარებათ იდეების განვითარებაში, წერაში, თარგმანსა და AI-სთან საუბარში. AI Lab-იდან ჩამოტვირთეთ მოდელები ინტერნეტის გარეშე სამუშაოდ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ საუბრებისთვის.|robaq AI помогает развивать идеи, писать, переводить и общаться с ИИ. Скачайте модели в AI Lab для работы без интернета или подключите свой API-ключ для онлайн-общения.
+robaqAI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.|robaqAI დაგეხმარებათ იდეების განვითარებაში, წერაში, თარგმანსა და AI-სთან საუბარში. AI Lab-იდან ჩამოტვირთეთ მოდელები ინტერნეტის გარეშე სამუშაოდ, ან შეიყვანეთ თქვენი API გასაღები ონლაინ საუბრებისთვის.|robaqAI помогает развивать идеи, писать, переводить и общаться с ИИ. Скачайте модели в AI Lab для работы без интернета или подключите свой API-ключ для онлайн-общения.
 Your local account keeps chat history on this device. You choose the tools, the model and when to connect.|ლოკალური ანგარიში ჩატის ისტორიას ამ მოწყობილობაზე ინახავს. თავად ირჩევთ ხელსაწყოებს, მოდელს და ინტერნეტთან დაკავშირების დროს.|Локальный аккаунт хранит историю чатов на этом устройстве. Вы выбираете инструменты, модель и когда подключаться к сети.
 Created by|ავტორი|Автор
 Could not delete the translation pack. Please try again.|თარგმანის პაკეტი ვერ წაიშალა. სცადეთ ხელახლა.|Не удалось удалить пакет перевода. Повторите попытку.

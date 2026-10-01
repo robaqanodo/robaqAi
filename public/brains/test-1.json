@@ -2,10 +2,10 @@
   "id": "test-1",
   "name": "Test 1",
   "version": 1,
-  "description": "Offline knowledge pack — robaq AI / Georgian AI demo",
+  "description": "Offline knowledge pack — robaqAI / Georgian AI demo",
   "facts": [
-    "robaq AI is a Georgian artificial intelligence demo assistant.",
-    "The product brand line is: Hello! I'm a Georgian artificial intelligence! robaq AI",
+    "robaqAI is a Georgian artificial intelligence demo assistant.",
+    "The product brand line is: Hello! I'm a Georgian artificial intelligence! robaqAI",
     "This chat UI is a living-cell visual demo with voice, API keys (Gemini / OpenAI / Claude), and offline Brain AI Lab packs.",
     "Georgia (Sakartvelo) uses the Georgian language; the assistant prefers matching the user's language.",
     "Brain AI Lab packs download into the browser (localStorage) so the chat can use offline facts without a network call."

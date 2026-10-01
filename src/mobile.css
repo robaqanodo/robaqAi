@@ -71,3 +71,24 @@ button { touch-action: manipulation; }
   .modal-btn, .provider-chip { min-height: 44px; }
   .modal-help { color: #aaaab6; }
 }
+
+@media (max-width:760px), (pointer:coarse) and (max-height:500px) {
+ .app-shell.has-navigation.is-chat-open .navigation-rail { display:none; }
+ .app-shell.has-navigation.is-chat-open, .app-shell.has-navigation.has-history.is-chat-open {
+   padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+   height:var(--app-height,100dvh); min-height:0;
+ }
+ .app-shell.is-chat-open .chat-panel { height:100%; min-height:0; display:flex; flex-direction:column; }
+ .app-shell.is-chat-open .history-lane { flex:1; min-height:0; overflow-y:auto; }
+ .app-shell.is-chat-open .composer { flex-shrink:0; }
+ .app-shell.is-chat-open .history-drawer { left:6px; bottom:6px; max-width:calc(100vw - 12px); }
+ .app-shell.is-chat-open textarea { font-size:16px; }
+}
+.account-info { position:absolute; right:58px; top:20px; z-index:4; }
+.account-info summary { list-style:none; cursor:pointer; width:30px; height:30px; border:1px solid #8886; border-radius:50%; display:grid; place-items:center; }
+.account-info > div { position:absolute; right:0; top:38px; width:min(290px,70vw); padding:16px; border:1px solid #8886; border-radius:16px; background:#19191ff5; color:#e5e5ed; box-shadow:0 12px 35px #0005; font-size:12px; line-height:1.6; }
+.theme-white .account-info > div { background:#fffffff5; color:#222; }
+.account-form .remember-option { display:flex; align-items:center; gap:9px; }
+.account-form .remember-option input { width:17px; height:17px; accent-color:#888; }
+
+@media(max-width:760px){ .app-shell.is-chat-open { position:fixed; inset:var(--viewport-top,0px) 0 auto; width:100%; } }

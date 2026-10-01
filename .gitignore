@@ -14,3 +14,5 @@ release/*.zip
 .env
 .env.local
 .env.*.local
+
+.server-build/
