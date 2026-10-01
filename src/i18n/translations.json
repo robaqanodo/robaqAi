@@ -1630,5 +1630,33 @@
   "Screen sharing is disabled. Synchronized playback requires a supported video link or an integration with the video provider.": [
     "ეკრანის გაზიარება გამორთულია. სინქრონულ დაკვრას მხარდაჭერილი ვიდეობმული ან ვიდეოს მომწოდებელთან ინტეგრაცია სჭირდება.",
     "Демонстрация экрана отключена. Для синхронного просмотра нужна поддерживаемая ссылка или интеграция с поставщиком видео."
+  ],
+  "Waiting for the host to press Play. Chat and voice are available.": [
+    "ველოდებით ჰოსთის Play-ს. ჩათი და ხმა ხელმისაწვდომია.",
+    "Ожидаем, пока ведущий нажмёт Play. Чат и голос доступны."
+  ],
+  "Lock the frame before pressing Play.": [
+    "Play-მდე ჩაკეტეთ ჩარჩო.",
+    "Зафиксируйте рамку перед нажатием Play."
+  ],
+  "Play shows the website to guests; Pause closes their view.": [
+    "Play საიტს სტუმრებთან აჩენს; Pause მათ ხედს ხურავს.",
+    "Play открывает сайт гостям; Pause закрывает его."
+  ],
+  "Align the video and lock the frame, then press Play to show the website to guests. Pause closes their view; it does not pause your website video.": [
+    "გაასწორეთ ვიდეო, ჩაკეტეთ ჩარჩო და Play-ს დააჭირეთ — საიტი სტუმრებთან გაიხსნება. Pause სტუმრების ხედს ხურავს; თქვენს ვიდეოს არ აჩერებს.",
+    "Выровняйте видео, зафиксируйте рамку и нажмите Play — сайт откроется гостям. Pause закрывает их просмотр, но не останавливает ваше видео."
+  ],
+  "Start the video inside the website yourself. Playback is independent and is not synchronized with the host.": [
+    "ვიდეო საიტში თავად ჩართეთ. დაკვრა დამოუკიდებელია და ჰოსთთან სინქრონიზებული არ არის.",
+    "Запустите видео на сайте самостоятельно. Воспроизведение независимо и не синхронизировано с ведущим."
+  ],
+  "Align the video using Move frame and zoom, then Lock frame. Play opens the same website and frame position for guests. Each guest starts their own video; Pause closes the guest website and Play reloads it.": [
+    "გადაადგილებითა და მასშტაბით გაასწორეთ ვიდეო და ჩაკეტეთ ჩარჩო. Play სტუმრებს იმავე საიტსა და დამიზნებას უხსნის. ვიდეოს ყველა თავად რთავს; Pause სტუმრის საიტს ხურავს, Play კი თავიდან ტვირთავს.",
+    "Выровняйте видео перемещением и масштабом и зафиксируйте рамку. Play открывает гостям тот же сайт с тем же положением. Каждый запускает видео сам; Pause закрывает сайт гостя, Play загружает его заново."
+  ],
+  "Screen sharing is disabled. Website previews play independently; some sites block embedding or require each viewer to sign in. YouTube, Vimeo and direct video links retain synchronized controls.": [
+    "ეკრანის გაზიარება გამორთულია. საიტებზე ვიდეო დამოუკიდებლად ირთვება; ზოგ საიტს ჩაშენება შეზღუდული აქვს ან თითოეული მაყურებლის შესვლას მოითხოვს. YouTube, Vimeo და პირდაპირი ვიდეობმულები სინქრონულ მართვას ინარჩუნებს.",
+    "Демонстрация экрана отключена. Сайты воспроизводят видео независимо; некоторые запрещают встраивание или требуют входа каждого зрителя. YouTube, Vimeo и прямые видеоссылки сохраняют синхронное управление."
   ]
 }

@@ -96,11 +96,15 @@ export function createWatchHandler(rooms = new Map<string, Room>(), attempts = n
         const f = body.frame as Room['frame'] | undefined
         if (!f || !Number.isFinite(f.x) || !Number.isFinite(f.y) || !Number.isFinite(f.zoom) || f.x > 0 || f.x < -2400 || f.y > 0 || f.y < -3000 || f.zoom < .4 || f.zoom > 1.5 || typeof f.locked !== 'boolean') throw new Error('Invalid frame position.')
         room.frame = { x: f.x, y: f.y, zoom: f.zoom, locked: f.locked }
+        if (!f.locked) room.playing = false
       } else if (action === 'control') {
         if (!member.host) { reply(res, 403, { error: 'Only the host controls playback.' }); return }
         if (typeof body.position !== 'number' || !Number.isFinite(body.position) || body.position < 0 || body.position > 604800 || typeof body.playing !== 'boolean') throw new Error('Invalid playback state.')
         if (body.url !== undefined && body.url !== room.url) { room.url = mediaUrl(body.url); room.broadcast = ''; room.signals = []; room.frame = { x: 0, y: 0, zoom: 1, locked: false }; room.position = 0; room.playing = false }
-        else { room.position = body.position; room.playing = body.playing }
+        else {
+          if (body.playing && watchMedia(room.url).kind === 'external' && !room.frame.locked) throw new Error('Lock the frame before pressing Play.')
+          room.position = body.position; room.playing = body.playing
+        }
         room.updated = now
       } else if (action === 'like') {
         if (now - member.lastLike >= 300) {
