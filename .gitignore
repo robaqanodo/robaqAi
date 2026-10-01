@@ -8,3 +8,9 @@ ios/DerivedData/
 ios/SourcePackages/
 **/xcuserdata/
 *.xcuserstate
+macos/build-cache/
+release/*.app/
+release/*.zip
+.env
+.env.local
+.env.*.local

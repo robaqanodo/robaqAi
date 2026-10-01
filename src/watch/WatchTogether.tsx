@@ -12,7 +12,7 @@ type State = { broadcast: string; frame: { x: number; y: number; zoom: number; l
 type Ticket = { room: string; token: string }
 async function request(action: string, data: object, ticket?: Ticket) {
   const response = await fetch(`/api/watch/${action}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Ostra-Watch': '1', ...(ticket ? { Authorization: `Bearer ${ticket.token}` } : {}) }, body: JSON.stringify({ ...data, room: ticket?.room ?? ('room' in data ? data.room : undefined) }), signal: AbortSignal.timeout(10000) })
-  const result = await response.json().catch(() => ({ error: 'Moviesync 1.0 needs the robaq AI server. Start it with npm run dev.' }))
+  const result = await response.json().catch(() => ({ error: 'MovieSync is not connected to its online server yet. Please contact the site owner.' }))
   if (!response.ok || result.error) throw Object.assign(new Error(result.error || 'Connection failed.'), { status: response.status })
   return result
 }

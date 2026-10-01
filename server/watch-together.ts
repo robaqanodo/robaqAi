@@ -8,9 +8,7 @@ type Voice = { id: string; memberId: string; name: string; sentAt: number; mime:
 type Like = { id: string; memberId: string; color: string; sentAt: number }
 const memberColors = ['#f472b6','#60a5fa','#4ade80','#fbbf24','#c084fc','#22d3ee','#fb923c','#fb7185']
 type Signal = { from: string; to: string; session: string; data: unknown; at: number }
-type Room = { broadcast: string; signals: Signal[]; frame: { x: number; y: number; zoom: number; locked: boolean }; likes: Like[]; likeCount: number; locked: boolean; muteAll: boolean; voices: Voice[]; id: string; salt: string; code: Buffer; created: number; members: Map<string, Member>; url: string; position: number; playing: boolean; updated: number; messages: { id: string; name: string; text: string; memberId: string; sentAt: number; color: string }[] }
-const rooms = new Map<string, Room>()
-const attempts = new Map<string, { count: number; until: number }>()
+export type Room = { broadcast: string; signals: Signal[]; frame: { x: number; y: number; zoom: number; locked: boolean }; likes: Like[]; likeCount: number; locked: boolean; muteAll: boolean; voices: Voice[]; id: string; salt: string; code: Buffer; created: number; members: Map<string, Member>; url: string; position: number; playing: boolean; updated: number; messages: { id: string; name: string; text: string; memberId: string; sentAt: number; color: string }[] }
 const token = () => randomBytes(24).toString('hex')
 const position = (r: Room) => r.position + (r.playing ? (Date.now() - r.updated) / 1000 : 0)
 function reply(res: ServerResponse, status: number, data: unknown) {
@@ -23,8 +21,8 @@ function mediaUrl(value: unknown) {
 function snapshot(r: Room, member: Member) {
   return { broadcast: r.broadcast, frame: r.frame, likes: r.likes.filter(l => Date.now() - l.sentAt < 6000), likeCount: r.likeCount, locked: r.locked, muteAll: r.muteAll, muted: member.muted || (!member.host && r.muteAll), voices: r.voices.filter(v => Date.now() - v.sentAt < 60000).map(({ data: _data, mime: _mime, ...meta }) => meta), id: r.id, host: member.host, memberId: member.id, url: r.url, position: position(r), playing: r.playing, members: [...r.members.values()].filter(m => Date.now() - m.seen < 15000).map(m => ({ id: m.id, name: m.name, color: m.color, host: m.host, muted: m.muted || (!m.host && r.muteAll) })), messages: r.messages }
 }
-export function watchTogether(): Plugin {
-  const middleware = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+export function createWatchHandler(rooms = new Map<string, Room>(), attempts = new Map<string, { count: number; until: number }>()) {
+  return async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     if (!req.url?.startsWith('/api/watch/')) return next()
     try {
       const origin = req.headers.origin
@@ -147,5 +145,8 @@ export function watchTogether(): Plugin {
       reply(res, 200, snapshot(room, member))
     } catch (error) { reply(res, 400, { error: error instanceof Error ? error.message : 'Room request failed.' }) }
   }
+}
+export function watchTogether(): Plugin {
+  const middleware = createWatchHandler()
   return { name: 'ostra-watch-together', configureServer(server) { server.middlewares.use((req, res, next) => { void middleware(req, res, next) }) }, configurePreviewServer(server) { server.middlewares.use((req, res, next) => { void middleware(req, res, next) }) } }
 }

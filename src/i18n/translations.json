@@ -1554,5 +1554,25 @@
   "Working…": [
     "მუშავდება…",
     "Обработка…"
+  ],
+  "MovieSync is not connected to its online server yet. Please contact the site owner.": [
+    "MovieSync-ის ონლაინ სერვერი ჯერ დაკავშირებული არ არის. დაუკავშირდით საიტის ადმინისტრატორს.",
+    "Онлайн-сервер MovieSync ещё не подключён. Обратитесь к владельцу сайта."
+  ],
+  "MovieSync storage is not connected. Connect Upstash Redis in Vercel and redeploy.": [
+    "MovieSync-ის საცავი დაკავშირებული არ არის. Vercel-ში დააკავშირეთ Upstash Redis და თავიდან გაუშვით განთავსება.",
+    "Хранилище MovieSync не подключено. Подключите Upstash Redis в Vercel и выполните повторное развёртывание."
+  ],
+  "MovieSync storage is temporarily unavailable.": [
+    "MovieSync-ის საცავი დროებით მიუწვდომელია.",
+    "Хранилище MovieSync временно недоступно."
+  ],
+  "The room is busy. Please try again.": [
+    "ოთახი დატვირთულია. სცადეთ ხელახლა.",
+    "Комната занята. Повторите попытку."
+  ],
+  "Room storage is full. Start a new room.": [
+    "ოთახის საცავი სავსეა. შექმენით ახალი ოთახი.",
+    "Хранилище комнаты заполнено. Создайте новую комнату."
   ]
 }
