@@ -7,6 +7,15 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react(), desktopAI(), watchTogether(), guestPresence()],
   worker: { format: 'es' },
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [{ name: 'react-vendor', test: /node_modules\/(react|react-dom|scheduler)\// }],
+        },
+      },
+    },
+  },
   server: {
     host: '127.0.0.1',
     port: 8787,

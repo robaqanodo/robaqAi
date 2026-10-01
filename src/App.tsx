@@ -1,7 +1,6 @@
 import { useTemporaryChat } from './chat/useTemporaryChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
-import { WatchTogether } from './watch/WatchTogether'
 import { DesktopModels } from './offline/DesktopModels'
 import { DESKTOP_MODELS, desktopStatus, desktopInference, cancelDesktopReply } from './offline/desktop'
 import { ModelStore } from './offline/ModelStore'
@@ -20,7 +19,7 @@ import { currentVersion } from './updates'
 import { Capacitor } from '@capacitor/core'
 import { SpeechRecognition } from '@capgo/capacitor-speech-recognition'
 import { nativeRecognitionClass, type SpeechRecognitionLike } from './native-speech'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   clearCredentials,
   detectProvider,
@@ -43,6 +42,8 @@ import './App.css'
 import './voice-composer.css'
 import './ostra.css'
 import { IntelligenceOrb as LivingCell } from './components/IntelligenceOrb'
+
+const WatchTogether = lazy(() => import('./watch/WatchTogether').then(module => ({ default: module.WatchTogether })))
 
 const INTRO_OFFLINE = "Hello, how can I help you?"
 /** Chat welcome: human online vibe when API is on; classic robaqAI line when off. */
@@ -1663,7 +1664,7 @@ function AppContent() {
         </div>
       )}
 
-      {watchOpen && <WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} />}
+      {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}
 
       {landingPanel === 'store' && (
         <div className="modal-backdrop" role="presentation" onClick={() => setLandingPanel(null)}>
