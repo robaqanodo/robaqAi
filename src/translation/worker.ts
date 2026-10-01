@@ -1,3 +1,4 @@
+import { setPersistentSkills, guestFiles } from '../skillSession'
 import { env, pipeline } from '@huggingface/transformers'
 import { readFile } from './storage'
 
@@ -26,6 +27,11 @@ type Translator = (text: string, options: { src_lang: string; tgt_lang: string; 
 const createTranslator = pipeline as unknown as (task: 'translation', model: string, options: object) => Promise<Translator>
 let translator: Translator | null = null
 self.onmessage = async ({ data }) => {
+  if (data.configure) {
+    setPersistentSkills(Boolean(data.persistent))
+    for (const [name, blob] of data.files as [string, Blob][]) guestFiles('translation').set(name, blob)
+    return
+  }
   const { id, text, source, target } = data
   try {
     if (!translator) {

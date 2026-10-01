@@ -1,3 +1,5 @@
+import { persistentSkills } from '../skillSession'
+import { skillPreferences } from '../skillSession'
 import { downloadFile, DownloadError } from '../downloads/download'
 import manifest from './manifest.json'
 import { clearPack, readFile, writeFile } from './storage'
@@ -6,8 +8,8 @@ import { stopTranslationWorker, translateOffline } from './client'
 export const PACK_URL = '/translator/rai-translator-en-ka-ru.raipack'
 export const PACK_MIB = Math.ceil(manifest.files.reduce((size, file) => size + file.size, 0) / 1048576)
 const ACTIVE_KEY = 'ostra-translator-active'
-export function translationPackActive() { try { return localStorage.getItem(ACTIVE_KEY) === manifest.revision } catch { return false } }
-export function setTranslationPackActive(active: boolean) { try { localStorage.setItem(ACTIVE_KEY, active ? manifest.revision : 'false') } catch { /* Session still works. */ } }
+export function translationPackActive() { try { return skillPreferences.getItem(ACTIVE_KEY) === manifest.revision } catch { return false } }
+export function setTranslationPackActive(active: boolean) { try { skillPreferences.setItem(ACTIVE_KEY, active ? manifest.revision : 'false') } catch { /* Session still works. */ } }
 export async function packInstalled() {
   try {
     const marker = await readFile('installed')
@@ -55,7 +57,7 @@ export async function installPack(file: Blob, progress: (status: string) => void
     const result = await translateOffline('Hello', 'en', 'ru')
     if (!result.trim()) throw new Error('The translation engine could not start on this device.')
     await writeFile('installed', new Blob([manifest.revision]))
-    await navigator.storage?.persist?.().catch(() => false)
+    persistentSkills() && await navigator.storage?.persist?.().catch(() => false)
   } catch (error) {
     stopTranslationWorker()
     await clearPack()

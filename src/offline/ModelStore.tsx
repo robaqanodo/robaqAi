@@ -1,3 +1,4 @@
+import { skillPreferences } from '../skillSession'
 import { InstallProgress, finishInstallation } from '../components/InstallProgress'
 import { useEffect, useRef, useState } from 'react'
 import { useLocale } from '../i18n/Locale'
@@ -23,7 +24,7 @@ export function ModelStore({ installed, selected, onChange, disabled }: {install
       setVerifying(true); setProgress(0)
       await installModel(model, blob, abort.signal, setProgress)
       setFinishing(true); await finishInstallation(abort.signal)
-      try { localStorage.setItem('ostra-last-installed-model', model.id) } catch { /* Selection still updates for this session. */ }
+      try { skillPreferences.setItem('ostra-last-installed-model', model.id) } catch { /* Selection still updates for this session. */ }
       onChange(model.id)
     } catch (e) {
       if (!abort.signal.aborted) setError(e instanceof Error ? e.message : 'Model installation failed. Please try again.')

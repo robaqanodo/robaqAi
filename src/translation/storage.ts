@@ -1,3 +1,4 @@
+import { persistentSkills, guestFiles } from '../skillSession'
 const DB_NAME = 'rai-offline-translation-v1'
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -8,6 +9,7 @@ function openDatabase(): Promise<IDBDatabase> {
   })
 }
 export async function readFile(name: string): Promise<Blob | undefined> {
+  if (!persistentSkills()) return guestFiles('translation').get(name)
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction('files', 'readonly')
@@ -19,6 +21,7 @@ export async function readFile(name: string): Promise<Blob | undefined> {
   })
 }
 export async function writeFile(name: string, value: Blob): Promise<void> {
+  if (!persistentSkills()) { guestFiles('translation').set(name, value); return }
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction('files', 'readwrite')
@@ -29,6 +32,7 @@ export async function writeFile(name: string, value: Blob): Promise<void> {
   })
 }
 export async function clearPack(): Promise<void> {
+  if (!persistentSkills()) { guestFiles('translation').clear(); return }
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction('files', 'readwrite')

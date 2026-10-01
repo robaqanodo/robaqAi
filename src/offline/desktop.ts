@@ -1,9 +1,11 @@
+import { persistentSkills } from '../skillSession'
 import catalog from './desktop-catalog.json'
 export const DESKTOP_MODELS = catalog
 export type DesktopStatus = {available:boolean;memoryGB:number;installed:string[];error?:string}
 let inference: AbortController | undefined
 export function cancelDesktopReply() {inference?.abort()}
 export async function desktopStatus():Promise<DesktopStatus> {
+ if (!persistentSkills()) return {available:false,memoryGB:0,installed:[],error:'Sign in to use desktop models. Guest downloads are temporary browser models only.'}
  try {
   const response=await fetch('/api/desktop-ai/status',{signal:AbortSignal.timeout(20000)})
   if(!response.headers.get('content-type')?.includes('application/json')) throw new Error('Desktop models require robaqAI running locally on this computer.')
@@ -13,6 +15,7 @@ export async function desktopStatus():Promise<DesktopStatus> {
  } catch(error) {return {available:false,memoryGB:0,installed:[],error:error instanceof Error?error.message:'Local engine unavailable.'}}
 }
 export async function desktopRequest(action:string, body:object, signal?:AbortSignal) {
+ if (!persistentSkills()) throw new Error('Sign in to use desktop models. Guest downloads are temporary browser models only.')
  const response=await fetch(`/api/desktop-ai/${action}`,{method:'POST',headers:{'Content-Type':'application/json','X-Ostra-Local':'1'},body:JSON.stringify(body),signal})
  if(!response.ok) {const data=await response.json();throw new Error(data.error??'Local AI request failed.')}
  return response

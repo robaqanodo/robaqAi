@@ -1,3 +1,5 @@
+import { retainGuestSkills } from './retainGuestSkills'
+import { skillPreferences, setPersistentSkills, persistentSkills } from './skillSession'
 import { useTemporaryChat } from './chat/useTemporaryChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
@@ -285,6 +287,20 @@ function AppContent() {
 
   const [session, setSession] = useState<Session | null>(null)
   const guestCount = useGuestPresence(!session)
+  useEffect(() => {
+    const leave = () => {
+      if (persistentSkills()) return
+      stopTranslationWorker()
+      void unloadOfflineModel()
+      setPersistentSkills(false)
+    }
+    const resume = (event: PageTransitionEvent) => {
+      if (event.persisted && !persistentSkills()) window.location.reload()
+    }
+    window.addEventListener('pagehide', leave)
+    window.addEventListener('pageshow', resume)
+    return () => { window.removeEventListener('pagehide', leave); window.removeEventListener('pageshow', resume) }
+  }, [])
   const [chats, setChats] = useState<Conversation[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(() => {
@@ -318,7 +334,7 @@ function AppContent() {
   const [desktopTranslator, setDesktopTranslator] = useState('')
   const translatorReady = m2mReady || Boolean(desktopTranslator)
   const [translationStatus, setTranslationStatus] = useState('Offline')
-  const [translationMode, setTranslationMode] = useState(() => { try { return !localStorage.getItem('rai-local-model') } catch { return true } })
+  const [translationMode, setTranslationMode] = useState(() => { try { return !skillPreferences.getItem('rai-local-model') } catch { return true } })
   const [chatColor, setChatColor] = useState(() => { try { const saved = localStorage.getItem('ostra-chat-color'); return saved === 'white' ? saved : 'default' } catch { return 'default' } })
 
   const [apiOpen, setApiOpen] = useState(false)
@@ -338,26 +354,30 @@ function AppContent() {
   useEffect(() => {
     let cancelled = false
     void restoreSession().then(result => {
-      if (!cancelled && result) { setSession(result.session); setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null) }
+      if (!cancelled && result) { setPersistentSkills(true); setSession(result.session); setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null) }
     }).catch(() => {})
     return () => { cancelled = true }
   }, [])
   const [movieSyncStage, setMovieSyncStage] = useState<MovieSyncStage>(() => {
-    try { const saved = localStorage.getItem('ostra-moviesync-stage'); return saved === 'active' || saved === 'downloaded' ? saved : 'new' } catch { return 'new' }
+    try { const saved = skillPreferences.getItem('ostra-moviesync-stage'); return saved === 'active' || saved === 'downloaded' ? saved : 'new' } catch { return 'new' }
   })
+  useEffect(() => {
+    const saved = skillPreferences.getItem('ostra-moviesync-stage')
+    setMovieSyncStage(saved === 'active' || saved === 'downloaded' ? saved : 'new')
+  }, [session])
   const changeMovieSyncStage = (stage: MovieSyncStage) => {
     setMovieSyncStage(stage)
-    try { localStorage.setItem('ostra-moviesync-stage', stage) } catch { /* Current session remains usable. */ }
+    try { skillPreferences.setItem('ostra-moviesync-stage', stage) } catch { /* Current session remains usable. */ }
   }
   const [watchOpen, setWatchOpen] = useState(() => new URLSearchParams(window.location.search).has('watch'))
   useEffect(() => {
     let active = true
-    void packInstalled().then(ready => { if (active) { const marker = localStorage.getItem('ostra-translator-active'); const enabled = ready && Boolean(marker) && marker !== 'false'; setM2mReady(enabled) } })
+    void packInstalled().then(ready => { if (active) { const marker = skillPreferences.getItem('ostra-translator-active'); const enabled = ready && Boolean(marker) && marker !== 'false'; setM2mReady(enabled) } })
     return () => { active = false }
-  }, [landingPanel, chatOpen, translatorBusy])
+  }, [landingPanel, chatOpen, translatorBusy, session])
   const [, setSettingsMenuOpen] = useState(false)
   const [localModels, setLocalModels] = useState<string[]>([])
-  const [localModel, setLocalModel] = useState(() => { try { return localStorage.getItem('rai-local-model') ?? '' } catch { return '' } })
+  const [localModel, setLocalModel] = useState(() => { try { return skillPreferences.getItem('rai-local-model') ?? '' } catch { return '' } })
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const birdPalette = (translatorReady || localModels.length > 0) ? 'mixed' : 'default'
   const birdColors = ['stock', 'stock', ...(translatorReady ? ['translator'] : []), ...(localModels.length > 0 ? ['rainbow-blue'] : [])]
@@ -372,27 +392,27 @@ function AppContent() {
     void Promise.all([installedModels(), desktopStatus()]).then(([browserIds, desktop]) => {
       const ids = [...browserIds, ...desktop.installed.filter(id => DESKTOP_MODELS.some(m => m.id === id && m.kind === 'chat'))]
       let wanted = ''
-      try { wanted = localStorage.getItem('ostra-desktop-translator') ?? '' } catch { /* Session only */ }
+      try { wanted = skillPreferences.getItem('ostra-desktop-translator') ?? '' } catch { /* Session only */ }
       const translators = DESKTOP_MODELS.filter(m => m.kind === 'translation' && desktop.installed.includes(m.id) && desktop.memoryGB >= m.minMemoryGB)
       const translator = translators.find(m => m.id === wanted)?.id ?? translators.at(-1)?.id ?? ''
       setDesktopTranslator(translator)
       if (translator && !wanted) setTranslationMode(true)
-      if (translator) { try { localStorage.setItem('ostra-desktop-translator', translator) } catch { /* Session only */ } }
+      if (translator) { try { skillPreferences.setItem('ostra-desktop-translator', translator) } catch { /* Session only */ } }
       setLocalModels(ids)
       if (selection !== undefined) {
         setLocalModel(ids.includes(selection) ? selection : '')
         if (selection) setTranslationMode(false)
       } else setLocalModel(previous => {
         let last = ''
-        try { last = localStorage.getItem('ostra-last-installed-model') ?? '' } catch { /* Use the current selection. */ }
+        try { last = skillPreferences.getItem('ostra-last-installed-model') ?? '' } catch { /* Use the current selection. */ }
         if (ids.includes(previous)) return previous
         if (last && ids.includes(last)) return last
         return ids[0] ?? ''
       })
     }).catch(() => { setLocalModels([]); setLocalModel('') })
   }, [])
-  useEffect(() => { refreshModels() }, [refreshModels, landingPanel, chatOpen])
-  useEffect(() => { try { localStorage.setItem('rai-local-model', localModel) } catch { /* Session selection still works. */ } }, [localModel])
+  useEffect(() => { refreshModels() }, [refreshModels, landingPanel, chatOpen, session])
+  useEffect(() => { try { skillPreferences.setItem('rai-local-model', localModel) } catch { /* Session selection still works. */ } }, [localModel])
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
   const [attachBusy, setAttachBusy] = useState(false)
   const [speaking, setSpeaking] = useState(false)
@@ -1687,7 +1707,7 @@ function AppContent() {
             <TranslatorStore onBusyChange={setTranslatorBusy} />
             <DesktopModels selectedChat={localModel} selectedTranslator={desktopTranslator} disabled={thinking || Boolean(streamingId)} onChange={id => {
               if (id && DESKTOP_MODELS.find(m => m.id === id)?.kind === 'translation') {
-                try { localStorage.setItem('ostra-desktop-translator', id) } catch { /* Session only */ }
+                try { skillPreferences.setItem('ostra-desktop-translator', id) } catch { /* Session only */ }
                 setDesktopTranslator(id); setTranslationMode(true); refreshModels()
               } else refreshModels(id)
             }} />
@@ -1721,10 +1741,13 @@ function AppContent() {
       )}
 
       {landingPanel === 'account' && <AccountDialog session={session} onProfileUpdate={setSession} onDeleted={() => {
+        stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
         clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false); setLocalModels([]); setLocalModel(''); setM2mReady(false); setDesktopTranslator(''); setChatColor('default'); setLocale('en'); setHistoryOpen(true); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
-      }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={(account, history) => {
+      }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={async (account, history) => {
         clearChat()
         messagesRef.current = []
+        stopTranslationWorker(); await unloadOfflineModel()
+        try { await retainGuestSkills() } catch { setSaveError(t('Some guest downloads could not be saved. Please download them again.')) }
         setSession(account)
         setWatchOpen(false)
         setChats(history)
@@ -1736,6 +1759,8 @@ function AppContent() {
         clearChat()
         messagesRef.current = []
         if (session) void saveChats(session, chats).catch(() => setSaveError('The last changes could not be saved.'))
+        stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
+        setMovieSyncStage('new'); setLocalModel(''); setM2mReady(false)
         setSession(null)
         setChats([])
         setActiveChatId(null)

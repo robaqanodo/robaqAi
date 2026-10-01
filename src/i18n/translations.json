@@ -1698,5 +1698,13 @@
   "If a verification checkbox appears, select it yourself. If this frame stays blank, open the website in a new tab, complete its verification there, then return and reload. The website or browser may still block embedding.": [
     "თუ შემოწმების მოსანიშნი გამოჩნდება, თავად მონიშნეთ. თუ ჩარჩო ცარიელია, გახსენით საიტი ახალ ჩანართში, გაიარეთ შემოწმება, შემდეგ დაბრუნდით და ხელახლა ჩატვირთეთ. საიტმა ან ბრაუზერმა ჩაშენება შეიძლება კვლავ დაბლოკოს.",
     "Если появится флажок проверки, отметьте его самостоятельно. Если рамка пустая, откройте сайт в новой вкладке, пройдите проверку, вернитесь и перезагрузите. Сайт или браузер всё ещё может блокировать встраивание."
+  ],
+  "Sign in to use desktop models. Guest downloads are temporary browser models only.": [
+    "Desktop მოდელებისთვის გაიარეთ ავტორიზაცია. Guest რეჟიმში ბრაუზერული მოდელები დროებით ინახება.",
+    "Войдите для использования настольных моделей. В гостевом режиме доступны временные браузерные модели."
+  ],
+  "Some guest downloads could not be saved. Please download them again.": [
+    "Guest რეჟიმში ჩამოტვირთული ზოგი ფაილი ვერ შეინახა. გთხოვთ, ხელახლა ჩამოტვირთოთ.",
+    "Некоторые гостевые загрузки не удалось сохранить. Загрузите их повторно."
   ]
 }

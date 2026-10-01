@@ -1,3 +1,4 @@
+import { persistentSkills } from '../skillSession'
 import { downloadFile } from '../downloads/download'
 import catalog from './catalog.json'
 import { readFile, writeFile, deleteFile } from './storage'
@@ -17,7 +18,7 @@ export async function installModel(model: LocalModel, file: Blob, signal: AbortS
   await validateModel(file, model, signal, progress)
   signal.throwIfAborted()
   await writeFile(model.id, file)
-  await navigator.storage?.persist?.().catch(() => false)
+  persistentSkills() && await navigator.storage?.persist?.().catch(() => false)
 }
 export async function downloadModel(model: LocalModel, signal: AbortSignal, progress: (value: number) => void): Promise<Blob> {
   const estimate = await navigator.storage?.estimate?.()

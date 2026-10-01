@@ -1,3 +1,4 @@
+import { persistentSkills, guestFiles } from '../skillSession'
 let worker: Worker | undefined
 let serial = 0
 const pending = new Map<number, { resolve: (text: string) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>()
@@ -19,6 +20,7 @@ export function translateOffline(text: string, source: string, target: string): 
       else item.resolve(data.text)
     }
     worker.onerror = () => stopTranslationWorker()
+    worker.postMessage({ configure: true, persistent: persistentSkills(), files: [...guestFiles('translation')] })
   }
   const id = ++serial
   return new Promise((resolve, reject) => {
