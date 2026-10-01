@@ -1610,5 +1610,25 @@
   "Remember me keeps you signed in on this browser for up to 30 days, or until you sign out. Use it only on your own device.": [
     "დამიმახსოვრე ამ ბრაუზერში შესვლას 30 დღემდე ან ანგარიშიდან გასვლამდე შეგინარჩუნებს. გამოიყენე მხოლოდ საკუთარ მოწყობილობაზე.",
     "Вход сохраняется в этом браузере до 30 дней или до выхода из аккаунта. Используйте только на своём устройстве."
+  ],
+  "Waiting for a supported video link. Chat and voice are available.": [
+    "ველოდებით მხარდაჭერილ ვიდეობმულს. ჩათი და ხმა ხელმისაწვდომია.",
+    "Ожидается поддерживаемая ссылка на видео. Чат и голос доступны."
+  ],
+  "This website preview cannot start synchronized playback. Choose a YouTube, Vimeo or direct video link.": [
+    "ამ საიტის წინასწარი ხედით სინქრონული დაკვრა შეუძლებელია. აირჩიეთ YouTube, Vimeo ან პირდაპირი ვიდეობმული.",
+    "Предпросмотр сайта не поддерживает синхронное воспроизведение. Выберите YouTube, Vimeo или прямую ссылку на видео."
+  ],
+  "Host-only website preview. Play/Pause cannot control this website or send its video to guests. Use Change video to choose a YouTube, Vimeo or direct MP4/WebM link.": [
+    "საიტის ხედი მხოლოდ ჰოსთისთვისაა. Play/Pause ამ საიტს ვერ მართავს და ვიდეოს სტუმრებთან ვერ აგზავნის. ვიდეოს შეცვლით აირჩიეთ YouTube, Vimeo ან პირდაპირი MP4/WebM ბმული.",
+    "Предпросмотр сайта доступен только ведущему. Play/Pause не управляет этим сайтом и не передаёт видео гостям. Через «Изменить видео» выберите YouTube, Vimeo или прямую ссылку MP4/WebM."
+  ],
+  "Use Move frame and zoom to align the website video with the center guide, then Lock frame. This only positions the host preview; it does not transmit video to guests.": [
+    "კადრის გადაადგილებითა და მასშტაბით ვიდეო ცენტრის ნიშნულს გაუსწორეთ და ჩარჩო ჩაკეტეთ. ეს მხოლოდ ჰოსთის ხედს აყენებს; სტუმრებთან ვიდეო არ გადაიცემა.",
+    "Выровняйте видео по центру с помощью перемещения и масштаба, затем зафиксируйте рамку. Это настраивает только предпросмотр ведущего и не передаёт видео гостям."
+  ],
+  "Screen sharing is disabled. Synchronized playback requires a supported video link or an integration with the video provider.": [
+    "ეკრანის გაზიარება გამორთულია. სინქრონულ დაკვრას მხარდაჭერილი ვიდეობმული ან ვიდეოს მომწოდებელთან ინტეგრაცია სჭირდება.",
+    "Демонстрация экрана отключена. Для синхронного просмотра нужна поддерживаемая ссылка или интеграция с поставщиком видео."
   ]
 }

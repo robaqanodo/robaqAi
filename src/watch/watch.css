@@ -196,3 +196,12 @@
 .watch-panel.history-visible>.watch-header,.watch-panel.history-visible>.watch-participant-row,.watch-panel.history-visible>.watch-corner-info,.watch-panel.history-visible .watch-participants{visibility:hidden;pointer-events:none}
 
 .watch-panel.history-visible>.modal-error{visibility:hidden}
+
+/* Non-interactive alignment guide stays above the page without blocking its controls. */
+.watch-browser-window { position:relative; }
+.watch-center-guide { position:absolute; inset:0; z-index:5; pointer-events:none; overflow:hidden; }
+.watch-center-guide i,.watch-center-guide b { position:absolute; display:block; background:rgba(255,255,255,.25); box-shadow:0 0 1px #000; }
+.watch-center-guide i { left:50%; top:0; bottom:0; width:1px; }
+.watch-center-guide b { top:50%; left:0; right:0; height:1px; }
+.watch-center-guide span { position:absolute; left:50%; top:50%; width:24px; height:24px; transform:translate(-50%,-50%); border:1px solid #ffffff70; border-radius:50%; box-shadow:0 0 2px #0008; }
+.watch-controls button:disabled { opacity:.45; cursor:not-allowed; }

@@ -14,6 +14,7 @@ export function WebsitePlayer({ url, name, host, frame, save }: { url: string; n
   return <div className="watch-browser">
     <div className="watch-browser-window"><iframe inert={!host} tabIndex={host ? 0 : -1} title={name} src={url} style={{ left: shown.x, top: shown.y, transform: `scale(${shown.zoom})` }} sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowFullScreen />
     {host && moving && !locked && <div className="watch-browser-drag" onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { x: e.clientX, y: e.clientY, left: position.x, top: position.y } }} onPointerMove={e => { if (drag.current) setPosition({ x: Math.max(-2400, Math.min(0, drag.current.left + e.clientX - drag.current.x)), y: Math.max(-3000, Math.min(0, drag.current.top + e.clientY - drag.current.y)) }) }} onPointerUp={() => { drag.current = null }} onPointerCancel={() => { drag.current = null }} />}
+    {host && !locked && <div className="watch-center-guide" aria-hidden="true"><i /><b /><span /></div>}
     {!host && <div className="watch-browser-guest-shield" />}
     </div>
     {host && <div className="watch-browser-tools">
