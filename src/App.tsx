@@ -290,6 +290,7 @@ function AppContent() {
   const [session, setSession] = useState<Session | null>(null)
   const [kasOpen, setKasOpen] = useState(false)
   const [kasCode, setKasCode] = useState('')
+  const kasSubmit = useRef<((text:string)=>void)|null>(null)
   const [kasActive, setKasActive] = useState(() => skillPreferences.getItem('robaq-kas-active') === 'true')
   useEffect(() => { setKasActive(skillPreferences.getItem('robaq-kas-active') === 'true'); setKasCode(''); setKasOpen(false) }, [session])
   const guestCount = useGuestPresence(!session)
@@ -821,6 +822,7 @@ function AppContent() {
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim()
+      if(kasSubmit.current){kasSubmit.current(text);setInput('');return}
       if (/^KAS-/i.test(trimmed)) { setKasCode(trimmed.toUpperCase()); setInput(''); return }
       const files = pendingFilesRef.current
       const key = apiKeyRef.current.trim()
@@ -1389,7 +1391,7 @@ function AppContent() {
           </p>
         )}
 
-        {kasCode && <KasReader key={kasCode} code={kasCode} onClose={() => setKasCode('')} />}
+        {kasCode && <KasReader key={kasCode} code={kasCode} submitRef={kasSubmit} onClose={() => {setKasCode('');setChatOpen(false)}} />}
         <div className="history-lane" style={kasCode ? {display: 'none'} : undefined} ref={historyRef} aria-live="polite">
           {messages.map((m) => {
             const streaming = streamingId === m.id
@@ -1449,7 +1451,7 @@ function AppContent() {
 
         {!hasApiKey && localModel && thinking && <button type="button" className="modal-btn offline-stop" onClick={() => { cancelOfflineReply(); sendGen.current += 1; setThinking(false) }}>{t('Stop generating')}</button>}
         {translatorReady && translationMode && <span className="translation-connection" role="status">Translator · {translationStatus}</span>}
-        <form hidden={Boolean(kasCode)} style={kasCode ? { display: 'none' } : undefined} className={`composer${hasApiKey && voiceMode ? ' is-voice-active' : ''}`}
+        <form className={`composer${hasApiKey && voiceMode ? ' is-voice-active' : ''}`}
           data-provider={hasApiKey ? provider ?? 'gemini' : undefined}
           data-voice-moving={hasApiKey && voiceMode && (listening || speaking) ? 'true' : 'false'}
           onSubmit={onSubmit}>
