@@ -7,7 +7,7 @@ export function Navigation({ teslaActive, onTesla, kasActive, onKas, movieSyncAc
 }) {
   const { t } = useLocale()
 
-  return <nav className="navigation-rail" aria-label={t("Main navigation")}>
+  return <nav id="main-navigation" className="navigation-rail" aria-label={t("Main navigation")}>
     <div className="rail-spacer">{hasApiKey && <button className="rail-mic landing-glass-mic" aria-label={voiceMode ? t("Stop voice conversation") : t("Start voice conversation")} aria-pressed={voiceMode} data-voice-moving={voiceMoving ? 'true' : 'false'} disabled={voiceDisabled} onClick={onVoice}><span className="mic-dot-orbit" aria-hidden="true"><i /><i /><i /><i /></span><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></svg></button>}</div>
     <button onClick={onHome} aria-label={t("Home")} title={t("Home")}><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3Z"/><path d="M9 20v-7h6v7"/></svg><span>{t("Home")}</span></button>
     {email && <button onClick={onHistory} aria-label={t("Chat history")} title={t("Chat history")} aria-expanded={historyOpen}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>{t("History")}</span></button>}

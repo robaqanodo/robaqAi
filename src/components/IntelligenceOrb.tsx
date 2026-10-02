@@ -5,6 +5,7 @@ import './IntelligenceOrb.css'
 type OrbProps = {
   teslaUnit?: 'km/h'|'mph'
   teslaSpeedKmh?: number|null
+  teslaHomeVisible?: boolean
   linkTesla?: boolean
   tesla?: boolean
   memberCount?:number
@@ -59,7 +60,7 @@ export function IntelligenceOrb(props: OrbProps) {
       {props.connectionIndicator
         ? <span className="cell-status-light" />
         : <span className={`cell-nucleus${props.linkTesla ? ' link-tesla-core' : props.tesla ? ' tesla-nucleus' : ''}`}>
-          {props.linkTesla && (typeof props.teslaSpeedKmh==='number' && props.teslaSpeedKmh>=1 ? <span className="tesla-core-speed"><strong>{Math.round(props.teslaSpeedKmh/(props.teslaUnit==='mph'?1.609344:1))}</strong><small>GPS · {props.teslaUnit??'km/h'}</small></span> : <svg className="tesla-core-logo" viewBox="970 290 1060 1400" aria-hidden="true"><image href={teslaLogo} width="3000" height="2000"/></svg>)}
+          {props.linkTesla && <><svg className={`tesla-core-logo${props.teslaHomeVisible!==false?' is-opening':''}`} style={{visibility:typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1?'hidden':'visible'}} viewBox="1000 300 1000 1000" overflow="hidden" aria-hidden="true"><image href={teslaLogo} width="3000" height="2000"/></svg>{typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1&&<span className="tesla-core-speed"><strong>{Math.round(props.teslaSpeedKmh/(props.teslaUnit!=='km/h'?1.609344:1))}</strong><small>GPS · {props.teslaUnit??'mph'}</small></span>}</>}
           {!props.linkTesla && props.tesla && <svg className="tesla-emblem" viewBox="0 0 100 120" focusable="false" aria-hidden="true">
             <path fill="currentColor" d="M8 15 Q50 -3 92 15 L88 24 Q50 9 12 24 Z M16 30 Q50 16 84 30 L78 43 Q66 35 59 35 L50 111 L41 35 Q34 35 22 43 Z"/>
           </svg>}

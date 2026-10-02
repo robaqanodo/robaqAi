@@ -299,10 +299,12 @@ function AppContent() {
   useEffect(()=>{setLiveSkills({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'})},[session])
   const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
   const [teslaOpen,setTeslaOpen]=useState(false)
-  const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='mph'?'mph':'km/h')
+  const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
   const [teslaTouch,setTeslaTouch]=useState(0)
+  const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
+  useEffect(()=>{setTeslaMenuCollapsed(false)},[teslaActive,session])
   useEffect(()=>{if(teslaActive&&locale==='ka')setLocale('en')},[teslaActive,locale,setLocale])
-  useEffect(()=>{setTeslaUnit(skillPreferences.getItem(TESLA_UNIT_KEY)==='mph'?'mph':'km/h')},[session,teslaActive])
+  useEffect(()=>{setTeslaUnit(skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')},[session,teslaActive])
 
   const teslaLocation=useTeslaLocation()
   useEffect(()=>{stopTeslaLocation();return()=>stopTeslaLocation()},[session,teslaActive])
@@ -1299,7 +1301,7 @@ function AppContent() {
 
   return (
     <div
-      className={`app-shell has-navigation${watchOpen ? ' is-watch-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
+      className={`app-shell has-navigation${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
         hasApiKey && provider ? ` ${providerThemeClass(provider)}` : ''
       }`}
     >
@@ -1325,9 +1327,10 @@ function AppContent() {
             tabIndex={chatOpen ? -1 : 0}
           >
             {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
-            {teslaActive&&teslaTouch>0&&<span key={teslaTouch} className="tesla-touch-ripple" aria-hidden="true"/>}
+            {teslaActive&&teslaTouch>0&&<span key={teslaTouch} className="tesla-touch-ripple" aria-hidden="true"><span className="tesla-energy-halo"/>{[0,60,120,180,240,300].map(angle=><span className="tesla-energy-ray" key={angle} style={{transform:`rotate(${angle}deg)`}}><i/></span>)}<span className="tesla-energy-return"/></span>}
             <LivingCell
               linkTesla={teslaActive}
+              teslaHomeVisible={!chatOpen&&!landingPanel&&!teslaOpen&&!watchOpen}
               teslaSpeedKmh={teslaLocation.speedKmh}
               teslaUnit={teslaUnit}
               hasApiKey={hasApiKey}
@@ -1349,6 +1352,7 @@ function AppContent() {
       </div>
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
+      {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={teslaMenuCollapsed?'M4 6h16M4 12h16M4 18h16':'m7 7 10 10M17 7 7 17'}/></svg><span>{t(teslaMenuCollapsed?'Expand menu':'Collapse menu')}</span></button>}
       <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)}} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
