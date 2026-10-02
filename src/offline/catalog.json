@@ -12,7 +12,8 @@
     "quant": "Q4_K_M",
     "description": "Short chat and simple writing.",
     "device": "iPhone 11 and newer. Android 6 GB. Better from iPhone 12 Pro.",
-    "color": "#0866ff"
+    "color": "#0866ff",
+    "ramRange": "4–6"
   },
   {
     "id": "gemma-4-E2B",
@@ -26,8 +27,9 @@
     "license": "Apache 2.0",
     "quant": "Q4_K_M",
     "description": "Fast everyday chat.",
-    "device": "iPhone 13 Pro, 14 Pro, 15 and newer. Android 6\u20138 GB.",
-    "color": "#34b9dd"
+    "device": "iPhone 13 Pro, 14 Pro, 15 and newer. Android 6–8 GB.",
+    "color": "#34b9dd",
+    "ramRange": "6–8"
   },
   {
     "id": "qwen35-4",
@@ -42,7 +44,8 @@
     "quant": "Q4_K_M",
     "description": "Instructions and multilingual text.",
     "device": "iPhone 15 Pro, 16 and newer. Android 8 GB.",
-    "color": "#34b9dd"
+    "color": "#34b9dd",
+    "ramRange": "8"
   },
   {
     "id": "gemma-4-E4B",
@@ -57,7 +60,8 @@
     "quant": "Q4_K_M",
     "description": "Higher-quality phone writing.",
     "device": "iPhone 16 Pro and newer with enough free memory. Android 12 GB.",
-    "color": "#8864ef"
+    "color": "#8864ef",
+    "ramRange": "12+"
   },
   {
     "id": "phi4-mini",
@@ -72,7 +76,8 @@
     "quant": "Q4_K_M",
     "description": "Fast CPU chat without a GPU.",
     "device": "",
-    "color": "#34b9dd"
+    "color": "#34b9dd",
+    "ramRange": "8"
   },
   {
     "id": "gemma4-12",
@@ -87,7 +92,8 @@
     "quant": "Q4_K_M",
     "description": "Writing, translation and long text.",
     "device": "",
-    "color": "#8864ef"
+    "color": "#8864ef",
+    "ramRange": "16"
   },
   {
     "id": "qwen36-27",
@@ -102,7 +108,8 @@
     "quant": "Q4_K_M",
     "description": "Advanced tasks on powerful desktops.",
     "device": "",
-    "color": "#e6a832"
+    "color": "#e6a832",
+    "ramRange": "32"
   },
   {
     "id": "gemma4-31",
@@ -117,7 +124,8 @@
     "quant": "Q4_K_M",
     "description": "High-quality writing on one machine.",
     "device": "",
-    "color": "#e664a9"
+    "color": "#e664a9",
+    "ramRange": "48"
   },
   {
     "id": "qwen36-35",
@@ -132,6 +140,7 @@
     "quant": "UD-Q4_K_M",
     "description": "Efficient mixture-of-experts chat.",
     "device": "",
-    "color": "#e664a9"
+    "color": "#e664a9",
+    "ramRange": "48"
   }
 ]

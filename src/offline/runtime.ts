@@ -7,12 +7,13 @@ import { boundedMessages } from './validation'
 import { stopTranslationWorker } from '../translation/client'
 let engine: Wllama | undefined, loaded = ''
 let controller: AbortController | undefined, running: Promise<string> | undefined
-let loading: Promise<void> | undefined
 let queue: Promise<void> = Promise.resolve()
 export function cancelOfflineReply() { controller?.abort(); cancelDesktopReply() }
 async function clearEngine() { if(engine)await engine.exit().catch(()=>{});engine=undefined;loaded='' }
-export async function unloadOfflineModel() {
- cancelOfflineReply();await running?.catch(()=>{});await loading?.catch(()=>{});await clearEngine()
+export function unloadOfflineModel() {
+ cancelOfflineReply()
+ const work=queue.catch(()=>{}).then(async()=>{cancelOfflineReply();await running?.catch(()=>{});await clearEngine()})
+ queue=work;return work
 }
 export function prepareOfflineModel(id:string) {
  const work=queue.catch(()=>{}).then(async()=>{
@@ -25,7 +26,7 @@ export function prepareOfflineModel(id:string) {
   engine.setCompat({wasm:new URL('/offline-runtime/compat.wasm',location.href).href,worker:{code:compatWorker}})
   try{await engine.loadModel([blob],{n_ctx:2048,n_batch:128,n_ubatch:128,n_threads:1,n_gpu_layers:0,reasoning:false,default_template_kwargs:{enable_thinking:false}});loaded=id}
   catch{await clearEngine();throw Error('This device could not load the model. Close other apps to free memory and try again.')}
- });queue=work;loading=work;void work.finally(()=>{if(loading===work)loading=undefined}).catch(()=>{});return work
+ });queue=work;return work
 }
 export async function offlineReply(id:string,history:{role:'user'|'assistant';text:string}[],text:string):Promise<string>{
  if(running)throw Error('The offline model is still finishing. Please try again shortly.')
