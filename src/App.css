@@ -3603,3 +3603,8 @@
 .history-lane > .msg-bubble{flex-shrink:0}
 .chat-panel{min-height:0;overflow:hidden}
 .chat-panel > .panel-top,.chat-panel > .composer{flex-shrink:0}
+.modal-card .donation-button{display:block;width:100%;margin:20px 0 12px;min-height:48px;padding:13px 20px;border:1px solid #e74356;border-radius:15px;background:#bd2136;color:#fff;font-size:15px;font-weight:650;letter-spacing:.01em;box-shadow:0 6px 20px #bd213629;transition:background .2s,box-shadow .2s}
+.modal-card .donation-button:hover:not(:disabled){background:#d02940;box-shadow:0 8px 24px #bd213642}
+.modal-card .donation-button:focus-visible{outline:2px solid currentColor;outline-offset:4px}
+.modal-card .donation-button:disabled{background:#9e2535;color:#fff;opacity:1;cursor:not-allowed;box-shadow:none}
+.about-responsibility{font-size:12px!important;line-height:1.65;padding-top:14px;border-top:1px solid #8883}

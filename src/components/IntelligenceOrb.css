@@ -35,3 +35,11 @@
 @media (prefers-reduced-motion: reduce) {
   .chat-status-logo .living-cell.intelligence-orb[data-connection] { animation: none; }
 }
+/* Tesla landing orb: direct manipulation, followed by velocity-based inertia. */
+.landing-entry.is-tesla-orb{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.landing-entry.is-tesla-orb:active{cursor:grabbing}
+.landing-entry.is-tesla-orb .intelligence-orb{animation:none!important;will-change:transform;transform-origin:center;backface-visibility:visible}
+.landing-entry.is-tesla-orb .cell-nucleus.tesla-nucleus{width:51%;height:51%;display:grid;place-items:center;background:radial-gradient(circle at 35% 25%,#333a45,#0a0c10 74%);border:1px solid #ffffff35;box-shadow:inset 0 1px 12px #ffffff19,0 0 22px #e821272b;opacity:1;animation:none;z-index:7}
+.tesla-emblem{width:66%;height:76%;color:#f4f5f7;filter:drop-shadow(0 0 7px #e8212780);animation:tesla-emblem-breathe 3.8s ease-in-out infinite;pointer-events:none}
+@keyframes tesla-emblem-breathe{0%,100%{opacity:.88;filter:drop-shadow(0 0 5px #e8212755)}50%{opacity:1;filter:drop-shadow(0 0 12px #e82127a0)}}
+@media(prefers-reduced-motion:reduce){.tesla-emblem{animation:none}}

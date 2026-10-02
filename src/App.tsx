@@ -1,3 +1,4 @@
+import { useTeslaOrb } from './components/useTeslaOrb'
 import { Kas, KasReader } from './kas/Kas'
 import { KasStore } from './kas/KasStore'
 import { retainGuestSkills } from './retainGuestSkills'
@@ -5,7 +6,6 @@ import { skillPreferences, setPersistentSkills, persistentSkills } from './skill
 import { useTemporaryChat } from './chat/useTemporaryChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
-import { DesktopModels } from './offline/DesktopModels'
 import { DESKTOP_MODELS, desktopStatus, desktopInference, cancelDesktopReply } from './offline/desktop'
 import { ModelStore } from './offline/ModelStore'
 import { MODELS, installedModels } from './offline/models'
@@ -18,7 +18,6 @@ import { Navigation } from './navigation/Navigation'
 import { packInstalled } from './translation/package'
 import { translateOffline, stopTranslationWorker } from './translation/client'
 import { automaticTranslation } from './translation/automatic'
-import { TranslatorStore } from './translation/TranslatorStore'
 import { currentVersion } from './updates'
 import { Capacitor } from '@capacitor/core'
 import { SpeechRecognition } from '@capgo/capacitor-speech-recognition'
@@ -282,7 +281,7 @@ function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-type LandingPanel = 'settings' | 'store' | 'plugin' | 'about' | 'donate' | 'updates' | 'update-menu' | 'translators' | 'account' | null
+type LandingPanel = 'settings' | 'store' | 'plugin' | 'about' | 'donate' | 'updates' | 'update-menu' | 'account' | null
 
 function AppContent() {
   const { t, locale, setLocale } = useLocale()
@@ -336,7 +335,6 @@ function AppContent() {
   const [thinking, setThinking] = useState(false)
   const [streamingId, setStreamingId] = useState<string | null>(null)
   const [listening, setListening] = useState(false)
-  const [translatorBusy, setTranslatorBusy] = useState(false)
   const [m2mReady, setM2mReady] = useState(false)
   const [desktopTranslator, setDesktopTranslator] = useState('')
   const translatorReady = m2mReady || Boolean(desktopTranslator)
@@ -386,7 +384,7 @@ function AppContent() {
     let active = true
     void packInstalled().then(ready => { if (active) { const marker = skillPreferences.getItem('ostra-translator-active'); const enabled = ready && Boolean(marker) && marker !== 'false'; setM2mReady(enabled) } })
     return () => { active = false }
-  }, [landingPanel, chatOpen, translatorBusy, session])
+  }, [landingPanel, chatOpen, session])
   const [, setSettingsMenuOpen] = useState(false)
   const [localModels, setLocalModels] = useState<string[]>([])
   const [localModel, setLocalModel] = useState(() => { try { return skillPreferences.getItem('rai-local-model') ?? '' } catch { return '' } })
@@ -1293,6 +1291,8 @@ function AppContent() {
     if ((chat.deleted || chat.archived) && chat.id === activeChatId) newConversation()
   }
 
+  const teslaOrb = useTeslaOrb(!chatOpen && !watchOpen && !landingPanel)
+
   /** Big living-cell logo: single click always opens chat (stops voice if running). */
   const onLandingClick = useCallback(() => {
     if (chatOpen) return
@@ -1319,13 +1319,15 @@ function AppContent() {
         <div className={`landing-cluster${hasApiKey && !chatOpen ? ' has-voice-energy' : ''}`}>
           <button
             type="button"
-            className={`landing-entry${voiceMode ? ' is-voice-mode' : ''}`}
+            ref={teslaOrb.buttonRef}
+            className={`landing-entry${teslaOrb.tesla ? ' is-tesla-orb' : ''}${voiceMode ? ' is-voice-mode' : ''}`}
             onClick={onLandingClick}
             aria-label={t("Open chat")}
             title={t("Open chat")}
             tabIndex={chatOpen ? -1 : 0}
           >
             <LivingCell
+              tesla={teslaOrb.tesla}
               hasApiKey={hasApiKey}
               provider={provider}
               speaking={speaking}
@@ -1714,21 +1716,12 @@ function AppContent() {
               <h2 id="store-title">{t("AI Lab")}</h2>
               <small className="version-label">{t('Version')} {currentVersion}</small>
             </div>
-            <p className="modal-help"> {t('Translators, offline models and connected skills — all in one place.')} </p>
+            <p className="modal-help"> {t('Offline models and everyday tools — all in one place.')} </p>
 
             <p className="ai-lab-use-note">{t('For education and lawful use only. You are responsible for how you use these tools. Misuse is prohibited.')}</p>
             <h3 className="store-section-title">{t('AI Skills')}</h3>
             <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
             <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
-
-            <h3 className="store-section-title" id="offline-skills-title">{t('Translators')}</h3>
-            <TranslatorStore onBusyChange={setTranslatorBusy} />
-            <DesktopModels selectedChat={localModel} selectedTranslator={desktopTranslator} disabled={thinking || Boolean(streamingId)} onChange={id => {
-              if (id && DESKTOP_MODELS.find(m => m.id === id)?.kind === 'translation') {
-                try { skillPreferences.setItem('ostra-desktop-translator', id) } catch { /* Session only */ }
-                setDesktopTranslator(id); setTranslationMode(true); refreshModels()
-              } else refreshModels(id)
-            }} />
 
             <h3 className="store-section-title store-section-title-info">{t("Offline AI")}<details className="store-info inline-store-info"><summary aria-label="Offline AI information">?</summary><p className="modal-help">{t('Download once, then chat offline. Keep AI Lab open during installation.')}</p></details></h3>
             <ModelStore installed={localModels} selected={localModel} onChange={refreshModels} disabled={thinking || Boolean(streamingId)} />
@@ -1745,15 +1738,6 @@ function AppContent() {
                 onClick={() => setLandingPanel(null)}
               > {t("Close")} </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {landingPanel === 'translators' && (
-        <div className="modal-backdrop" role="presentation">
-          <div className="modal-card side-panel store-panel" role="dialog" aria-labelledby="translators-title">
-            <div className="store-update-header"><h2 id="translators-title">{t("Translator")}</h2><button className="modal-btn ghost" disabled={translatorBusy} onClick={() => openLandingPanel('store')}>{t("Back to AI Lab")}</button></div>
-            <TranslatorStore onBusyChange={setTranslatorBusy} />
           </div>
         </div>
       )}
@@ -1793,11 +1777,13 @@ function AppContent() {
             aria-labelledby="about-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="about-title">{t("About robaqAI")}</h2>
+            <h2 id="about-title">{t("About robaqAi")}</h2>
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
-            <p className="modal-help">{t('robaqAI helps you explore ideas, write, translate and talk with AI. Download models in AI Lab to work without internet, or connect your own API key for online conversations.')}</p>
-            <p className="modal-help">{t('Your local account keeps chat history on this device. You choose the tools, the model and when to connect.')}</p>
+            <p className="modal-help">{t('I am building robaqAi with dedication and a simple goal: to make everyday tasks easier. I want to keep adding useful skills and tools that help us learn, create and get things done.')}</p>
+            <p className="modal-help">{t('This independent project is growing step by step. Your feedback helps shape what comes next.')}</p>
             <p className="about-credit">{t('Created by')} <strong>Nodar Robakidze</strong></p>
+            <p className="modal-help about-responsibility">{t('Use these tools lawfully and respect others’ privacy and rights. AI can make mistakes; verify important results. Features may change as the project develops.')}</p>
+            <button type="button" className="modal-btn donation-button" onClick={() => setLandingPanel('donate')}>{t('Support the project')}</button>
             <div className="modal-actions">
               <button
                 type="button"
@@ -1817,9 +1803,11 @@ function AppContent() {
             aria-labelledby="donate-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="donate-title">{t("Donation help project")}</h2>
-            <p className="modal-help"> {t("Support robaqAI development — models, offline packs, and the living-cell experience. Every contribution helps the project grow.")} </p>
-            <p className="modal-help"> {t("Placeholder: donation links and payment options will appear here.")} </p>
+            <h2 id="donate-title">{t('Support robaqAi')}</h2>
+            <p className="modal-help"> {t("Your voluntary support helps me develop new skills and tools and maintain robaqAi. Thank you for helping the project grow.")} </p>
+            <p className="modal-help"> {t("The donation link will be added here soon. Payments are not available yet.")} </p>
+            <p className="modal-help">{t('Support is optional and does not purchase a feature or guarantee future releases.')}</p>
+            <button type="button" className="modal-btn donation-button" disabled>{t('Donate — coming soon')}</button>
             <div className="modal-actions">
               <button
                 type="button"
