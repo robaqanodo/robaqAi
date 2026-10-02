@@ -341,7 +341,11 @@ function AppContent() {
   const translatorReady = m2mReady || Boolean(desktopTranslator)
   const [translationStatus, setTranslationStatus] = useState('Offline')
   const [translationMode, setTranslationMode] = useState(() => { try { return !skillPreferences.getItem('rai-local-model') } catch { return true } })
-  const [chatColor, setChatColor] = useState(() => { try { const saved = localStorage.getItem('ostra-chat-color'); return saved === 'white' ? saved : 'default' } catch { return 'default' } })
+  const [themeChoice, setChatColor] = useState<string>(() => { try { return localStorage.getItem('robaq-theme-choice') || 'system' } catch { return 'system' } })
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  useEffect(() => { const media=window.matchMedia('(prefers-color-scheme: dark)');const update=()=>setSystemDark(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update) }, [])
+  const chatColor = themeChoice === 'system' ? (systemDark ? 'default' : 'white') : themeChoice
+  useEffect(() => { document.documentElement.style.colorScheme=chatColor === 'white' ? 'light' : 'dark' }, [chatColor])
 
   const [apiOpen, setApiOpen] = useState(false)
   const [apiKey, setApiKey] = useState(() => loadStoredCredentials().apiKey)
@@ -1378,15 +1382,15 @@ function AppContent() {
           </div>
         </header>
 
-        {(introDisplay || introStreaming) && (
+        {!kasCode && (introDisplay || introStreaming) && (
           <p className={`intro-text${introStreaming ? ' is-streaming' : ''}`} aria-live="polite">
             {introDisplay}
             {introStreaming && <span className="stream-caret" aria-hidden />}
           </p>
         )}
 
-        <div className="history-lane" ref={historyRef} aria-live="polite">
-          {kasCode && <KasReader key={kasCode} code={kasCode} onClose={() => setKasCode('')} />}
+        {kasCode && <KasReader key={kasCode} code={kasCode} onClose={() => setKasCode('')} />}
+        <div className="history-lane" style={kasCode ? {display: 'none'} : undefined} ref={historyRef} aria-live="polite">
           {messages.map((m) => {
             const streaming = streamingId === m.id
             return (
@@ -1586,7 +1590,7 @@ function AppContent() {
             <h2 id="settings-title">{t("Settings")}</h2>
             <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option><option value="ka">ქართული</option><option value="ru">Русский</option></select></label>
             <p className="modal-help">{t("API credentials and updates.")}</p>
-            <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={chatColor === color} onChange={() => { setChatColor(color); try { localStorage.setItem('ostra-chat-color', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
+            <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'System theme' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
             {localModels.length > 0 && <label className="settings-language">{t('Active offline AI')}<select value={localModel} onChange={event => { setLocalModel(event.target.value); setTranslationMode(false) }}><option value="">{t('Default')}</option>{[...MODELS, ...DESKTOP_MODELS.filter(m => m.kind === 'chat')].filter(model => localModels.includes(model.id)).map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>}
             <div className="settings-menu-list" role="menu">
               <button
@@ -1753,7 +1757,7 @@ function AppContent() {
 
       {landingPanel === 'account' && <AccountDialog session={session} onProfileUpdate={setSession} onDeleted={() => {
         stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
-        clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false); setLocalModels([]); setLocalModel(''); setM2mReady(false); setDesktopTranslator(''); setChatColor('default'); setLocale('en'); setHistoryOpen(true); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
+        clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false); setLocalModels([]); setLocalModel(''); setM2mReady(false); setDesktopTranslator(''); setChatColor('system'); setLocale('en'); setHistoryOpen(true); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
       }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={async (account, history) => {
         clearChat()
         messagesRef.current = []

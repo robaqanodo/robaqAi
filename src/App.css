@@ -3599,3 +3599,7 @@
   color: #ff8585;
   background: rgba(255, 80, 80, 0.12);
 }
+/* Keep messages in their own scroll area instead of compressing or shifting the composer. */
+.history-lane > .msg-bubble{flex-shrink:0}
+.chat-panel{min-height:0;overflow:hidden}
+.chat-panel > .panel-top,.chat-panel > .composer{flex-shrink:0}
