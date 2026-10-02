@@ -2,6 +2,7 @@ import { providerThemeClass, type ProviderId } from '../providers'
 import './IntelligenceOrb.css'
 
 type OrbProps = {
+  linkTesla?: boolean
   tesla?: boolean
   memberCount?:number
   modelColor?:string
@@ -54,8 +55,9 @@ export function IntelligenceOrb(props: OrbProps) {
       <span className="cell-blob cell-blob-b" />
       {props.connectionIndicator
         ? <span className="cell-status-light" />
-        : <span className={`cell-nucleus${props.tesla ? ' tesla-nucleus' : ''}`}>
-          {props.tesla && <svg className="tesla-emblem" viewBox="0 0 100 120" focusable="false" aria-hidden="true">
+        : <span className={`cell-nucleus${props.linkTesla ? ' link-tesla-core' : props.tesla ? ' tesla-nucleus' : ''}`}>
+          {props.linkTesla && <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="43"/><path d="M28 30h44M50 30v44"/></svg>}
+          {!props.linkTesla && props.tesla && <svg className="tesla-emblem" viewBox="0 0 100 120" focusable="false" aria-hidden="true">
             <path fill="currentColor" d="M8 15 Q50 -3 92 15 L88 24 Q50 9 12 24 Z M16 30 Q50 16 84 30 L78 43 Q66 35 59 35 L50 111 L41 35 Q34 35 22 43 Z"/>
           </svg>}
         </span>}

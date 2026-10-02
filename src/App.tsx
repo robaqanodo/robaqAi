@@ -1,3 +1,5 @@
+import {useInstallationProgress} from './components/InstallProgress'
+import {TeslaPanel,TeslaStore,TESLA_KEY,removeTesla} from './tesla/TeslaSkill'
 import { OfflineModelLibrary } from './offline/OfflineModelLibrary'
 import { LiveChat } from './live/LiveChat'
 import { LiveSkillStore } from './live/LiveSkillStore'
@@ -293,6 +295,9 @@ function AppContent() {
   const liveSubmit = useRef<((text:string)=>void)|null>(null)
   const [liveSkills,setLiveSkills] = useState(()=>({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'}))
   useEffect(()=>{setLiveSkills({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'})},[session])
+  const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
+  const [teslaOpen,setTeslaOpen]=useState(false)
+  useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
   const [kasOpen, setKasOpen] = useState(false)
   const [kasCode, setKasCode] = useState('')
   const kasSubmit = useRef<((text:string)=>void)|null>(null)
@@ -389,6 +394,13 @@ function AppContent() {
   }, [landingPanel, chatOpen, session])
   const [, setSettingsMenuOpen] = useState(false)
   const modelFlow=useModelFlow()
+  const installation=useInstallationProgress()
+  const [labMinimized,setLabMinimized]=useState(false)
+  const labInstalling=Boolean(modelFlow.busy)||installation.count>0
+  const labProgress=modelFlow.busy ? (modelFlow.phase==='Downloading'?modelFlow.progress*.85:modelFlow.phase==='Verifying'?.85+modelFlow.progress*.1:modelFlow.phase==='Installing…'?.95+installation.progress*.04:.99) : installation.progress
+  useEffect(()=>{if(!labInstalling)setLabMinimized(false)},[labInstalling])
+  useEffect(()=>{setLabMinimized(false)},[session])
+
   const localModels=modelFlow.installed,localModel=modelFlow.active
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const birdPalette = (translatorReady || localModels.length > 0) ? 'mixed' : 'default'
@@ -1270,9 +1282,10 @@ function AppContent() {
 
   /** Big living-cell logo: single click always opens chat (stops voice if running). */
   const onLandingClick = useCallback(() => {
+    if(labMinimized&&labInstalling){setLandingPanel('store');return}
     if (chatOpen) return
     openChat()
-  }, [chatOpen, openChat])
+  }, [chatOpen, openChat,labMinimized,labInstalling])
 
   return (
     <div
@@ -1295,14 +1308,15 @@ function AppContent() {
           <button
             type="button"
             ref={teslaOrb.buttonRef}
-            className={`landing-entry${teslaOrb.tesla ? ' is-tesla-orb' : ''}${voiceMode ? ' is-voice-mode' : ''}`}
+            className={`landing-entry${labMinimized&&labInstalling?' has-install-progress':''}${teslaOrb.tesla ? ' is-tesla-orb' : ''}${voiceMode ? ' is-voice-mode' : ''}`}
             onClick={onLandingClick}
-            aria-label={t("Open chat")}
+            aria-label={t(labMinimized&&labInstalling?"Open AI Lab":"Open chat")}
             title={t("Open chat")}
             tabIndex={chatOpen ? -1 : 0}
           >
+            {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
             <LivingCell
-              tesla={teslaOrb.tesla}
+              linkTesla={teslaActive}
               hasApiKey={hasApiKey}
               provider={provider}
               speaking={speaking}
@@ -1322,7 +1336,7 @@ function AppContent() {
       </div>
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
-      <Navigation kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
+      <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)}} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
@@ -1673,11 +1687,12 @@ function AppContent() {
         </div>
       )}
 
+      {teslaActive && teslaOpen && <TeslaPanel onClose={()=>setTeslaOpen(false)} />}
       {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}
 
-      {landingPanel === 'store' && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setLandingPanel(null)}>
+      {(landingPanel === 'store'||labMinimized) && (
+        <div style={landingPanel!=='store'?{display:'none'}:undefined} className="modal-backdrop" role="presentation" onClick={() => setLandingPanel(null)}>
           <div
             className="modal-card side-panel store-panel"
             role="dialog"
@@ -1686,6 +1701,7 @@ function AppContent() {
           >
             <div className="store-update-header">
               <h2 id="store-title">{t("AI Lab")}</h2>
+              {labInstalling&&<button type="button" className="modal-btn lab-minimize" onClick={()=>{setLabMinimized(true);setLandingPanel(null);setChatOpen(false);setWatchOpen(false)}} aria-label={t("Minimize AI Lab")}>− {t("Minimize")}</button>}
               <small className="version-label">{t('Version')} {currentVersion}</small>
             </div>
             <p className="modal-help"> {t('Offline models and everyday tools — all in one place.')} </p>
@@ -1693,8 +1709,9 @@ function AppContent() {
             <p className="ai-lab-use-note">{t('For education and lawful use only. You are responsible for how you use these tools. Misuse is prohibited.')}</p>
             <h3 className="store-section-title store-section-title-info">{t('AI Skills')}<details className="store-info inline-store-info"><summary aria-label={t('AI Skills information')}>?</summary><p className="modal-help">{t('Install optional tools for secrets, shared videos and private live rooms. Active tools are ready to use; Delete removes them from this device.')} {t('After installation, type live or crossfire in the chat to start a private room.')}</p></details></h3>
             <div className="ai-skills-list">
-            <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
-            <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
+            <TeslaStore active={teslaActive} onChange={active=>{setTeslaActive(active);if(active)skillPreferences.setItem(TESLA_KEY,'true');else{removeTesla();setTeslaOpen(false)}}} onOpen={()=>{if(labMinimized)return;setLandingPanel(null);setTeslaOpen(true)}} />
+            <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { if(labMinimized)return;setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
+            <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { if(labMinimized)return;setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
 
             {(['syberlive','crossfire'] as const).map(kind=><LiveSkillStore key={kind} kind={kind} active={liveSkills[kind]} onChange={active=>{setLiveSkills(old=>({...old,[kind]:active}));if(active)skillPreferences.setItem(`robaq-${kind}-active`,'true');else skillPreferences.removeItem(`robaq-${kind}-active`);if(!active&&liveEntry?.kind===kind)setLiveEntry(null)}} />)}
             </div>
@@ -1741,11 +1758,12 @@ function AppContent() {
       {landingPanel === 'about' && (
         <div className="modal-backdrop" role="presentation" onClick={() => setLandingPanel(null)}>
           <div
-            className="modal-card side-panel"
+            className="modal-card side-panel about-premium"
             role="dialog"
             aria-labelledby="about-title"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="about-art" aria-hidden="true"><i/><i/><i/><span>r.</span></div>
             <h2 id="about-title">{t("About robaqAi")}</h2>
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
             <p className="modal-help">{t('I am building robaqAi with dedication and a simple goal: to make everyday tasks easier. I want to keep adding useful skills and tools that help us learn, create and get things done.')}</p>
@@ -1763,16 +1781,17 @@ function AppContent() {
       {landingPanel === 'donate' && (
         <div className="modal-backdrop" role="presentation" onClick={() => setLandingPanel(null)}>
           <div
-            className="modal-card side-panel"
+            className="modal-card side-panel about-premium donation-panel"
             role="dialog"
             aria-labelledby="donate-title"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="donate-title">{t('Support robaqAi')}</h2>
+            <p className="donation-assurance">{t("Thank you for supporting an independent idea. This app does not collect card details. A donation link is not connected yet; no payment can be taken here.")}</p>
             <p className="modal-help"> {t("Your voluntary support helps me develop new skills and tools and maintain robaqAi. Thank you for helping the project grow.")} </p>
             <p className="modal-help"> {t("The donation link will be added here soon. Payments are not available yet.")} </p>
             <p className="modal-help">{t('Support is optional and does not purchase a feature or guarantee future releases.')}</p>
-            <button type="button" className="modal-btn donation-button" disabled>{t('Donate — coming soon')}</button>
+            <button type="button" className="modal-btn donation-button" disabled>{t('Donation')} · {t('Coming soon')}</button>
             <div className="modal-actions">
               <button
                 type="button"

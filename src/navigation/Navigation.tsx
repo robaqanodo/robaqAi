@@ -1,8 +1,9 @@
+import {TeslaMark} from '../tesla/TeslaSkill'
 import { useLocale } from '../i18n/Locale'
 import './navigation.css'
 
-export function Navigation({ kasActive, onKas, movieSyncActive, onMovieSync, onHome, onLibrary, onSettings, onAbout, onAccount, email, historyOpen, onHistory, hasApiKey, voiceMode, voiceMoving, voiceDisabled, onVoice }: {
-  kasActive?: boolean; onKas?: () => void; movieSyncActive?: boolean; onMovieSync?: () => void; hasApiKey: boolean; voiceMode: boolean; voiceMoving: boolean; voiceDisabled: boolean; onVoice: () => void; email?: string; historyOpen: boolean; onHistory: () => void; onHome: () => void; onLibrary: () => void; onSettings: () => void; onAbout: () => void; onAccount: () => void
+export function Navigation({ teslaActive, onTesla, kasActive, onKas, movieSyncActive, onMovieSync, onHome, onLibrary, onSettings, onAbout, onAccount, email, historyOpen, onHistory, hasApiKey, voiceMode, voiceMoving, voiceDisabled, onVoice }: {
+  teslaActive?: boolean; onTesla?:()=>void; kasActive?: boolean; onKas?: () => void; movieSyncActive?: boolean; onMovieSync?: () => void; hasApiKey: boolean; voiceMode: boolean; voiceMoving: boolean; voiceDisabled: boolean; onVoice: () => void; email?: string; historyOpen: boolean; onHistory: () => void; onHome: () => void; onLibrary: () => void; onSettings: () => void; onAbout: () => void; onAccount: () => void
 }) {
   const { t } = useLocale()
 
@@ -14,6 +15,7 @@ export function Navigation({ kasActive, onKas, movieSyncActive, onMovieSync, onH
     {kasActive && <button onClick={onKas} aria-label="Kas 1.0" title="Keeping a secret"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg><span>Kas</span></button>}
     <button onClick={onLibrary} aria-label={t("AI Lab")} title={t("AI Lab")}><svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="16" rx="1"/><path d="M12 4v16M16 4l5 15"/></svg><span>{t("AI Lab")}</span></button>
 
+    {teslaActive && <button onClick={onTesla} aria-label="LinkyourTesla 1.0" title="LinkyourTesla 1.0"><TeslaMark/><span>Tesla</span></button>}
     <button onClick={onSettings} aria-label={t("Settings")} title={t("Settings")}><svg viewBox="0 0 24 24"><path d="M4 7h5m4 0h7M4 17h9m4 0h3"/><circle cx="11" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg><span>{t("Settings")}</span></button>
     <div className="rail-bottom">
       <button onClick={onAbout} aria-label={t("About robaqAI")} title={t("About robaqAI")}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01"/></svg></button>
