@@ -1327,7 +1327,7 @@ function AppContent() {
             tabIndex={chatOpen ? -1 : 0}
           >
             {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
-            {teslaActive&&teslaTouch>0&&<span key={teslaTouch} className="tesla-touch-ripple" aria-hidden="true"><span className="tesla-energy-halo"/>{[0,60,120,180,240,300].map(angle=><span className="tesla-energy-ray" key={angle} style={{transform:`rotate(${angle}deg)`}}><i/></span>)}<span className="tesla-energy-return"/></span>}
+            {teslaActive&&teslaTouch>0&&<span key={teslaTouch} className="tesla-touch-ripple" aria-hidden="true">{Array.from({length:12},(_,i)=><span className="tesla-smoke-direction" key={i} style={{transform:`rotate(${i*30}deg)`}}><i className="tesla-smoke-cloud" style={{animationDelay:`${i%3*45}ms`}}/><i className="tesla-smoke-dust" style={{animationDelay:`${i%4*30}ms`}}/></span>)}</span>}
             <LivingCell
               linkTesla={teslaActive}
               teslaHomeVisible={!chatOpen&&!landingPanel&&!teslaOpen&&!watchOpen}
