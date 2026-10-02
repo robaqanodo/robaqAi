@@ -1,3 +1,4 @@
+import {useTeslaLocation,stopTeslaLocation} from './tesla/location'
 import {useInstallationProgress} from './components/InstallProgress'
 import {TeslaPanel,TeslaStore,TESLA_KEY,removeTesla} from './tesla/TeslaSkill'
 import { OfflineModelLibrary } from './offline/OfflineModelLibrary'
@@ -297,6 +298,8 @@ function AppContent() {
   useEffect(()=>{setLiveSkills({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'})},[session])
   const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
   const [teslaOpen,setTeslaOpen]=useState(false)
+  const teslaLocation=useTeslaLocation()
+  useEffect(()=>{stopTeslaLocation();return()=>stopTeslaLocation()},[session,teslaActive])
   useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
   const [kasOpen, setKasOpen] = useState(false)
   const [kasCode, setKasCode] = useState('')
@@ -1317,6 +1320,7 @@ function AppContent() {
             {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
             <LivingCell
               linkTesla={teslaActive}
+              teslaSpeedKmh={teslaLocation.speedKmh}
               hasApiKey={hasApiKey}
               provider={provider}
               speaking={speaking}
