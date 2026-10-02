@@ -78,7 +78,7 @@ export function kasHandler(store: SecretStore = secretStore) {
     if(record.public && record.openedAt && record.releaseKey){
      const decipher=createDecipheriv('aes-256-gcm',Buffer.from(record.releaseKey,'base64'),Buffer.from(record.iv,'base64'));decipher.setAuthTag(Buffer.from(record.tag,'base64'))
      const text=Buffer.concat([decipher.update(Buffer.from(record.ciphertext,'base64')),decipher.final()]).toString('utf8')
-     respond(res,200,{text,deleteToken:signature(record,`delete:${code}`),expiresAt:record.expiresAt,remainingMs:Math.max(0,record.expiresAt-Date.now())});return
+     respond(res,200,{text,authorId:'KAS-'+signature(record,`author:${code}`).slice(0,12).toUpperCase(),deleteToken:signature(record,`delete:${code}`),expiresAt:record.expiresAt,remainingMs:Math.max(0,record.expiresAt-Date.now())});return
     }
     respond(res,200,{questions:[record.questions[0]],count:record.questions.length});return
    }
@@ -111,7 +111,7 @@ export function kasHandler(store: SecretStore = secretStore) {
    catch{respond(res,403,{error:'The answers are incorrect.'});return}finally{key.fill(0)}
    const opened=await store.open(code,releaseKey)
    if(!opened){respond(res,404,{error:'This secret has expired or does not exist.'});return}
-   respond(res,200,{text,deleteToken:signature(record,`delete:${code}`),expiresAt:opened.expiresAt,remainingMs:Math.max(0,opened.expiresAt-Date.now())})
+   respond(res,200,{text,authorId:'KAS-'+signature(record,`author:${code}`).slice(0,12).toUpperCase(),deleteToken:signature(record,`delete:${code}`),expiresAt:opened.expiresAt,remainingMs:Math.max(0,opened.expiresAt-Date.now())})
   }catch{respond(res,400,{error:'KAS request failed. Check your input and connection.'})}
  }
 }

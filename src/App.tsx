@@ -1716,6 +1716,7 @@ function AppContent() {
             </div>
             <p className="modal-help"> {t('Translators, offline models and connected skills — all in one place.')} </p>
 
+            <p className="ai-lab-use-note">{t('For education and lawful use only. You are responsible for how you use these tools. Misuse is prohibited.')}</p>
             <h3 className="store-section-title">{t('AI Skills')}</h3>
             <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
             <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
