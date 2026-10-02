@@ -1,0 +1,13 @@
+# One active offline model
+
+AI Lab renders only the active model. Fresh sessions default to Qwen3.5 2B; the first download is still required. Settings contains the phone/desktop catalog. Downloaded files remain in the existing IndexedDB model store when the active selection changes. Switching serializes engine unload/load through the existing wllama runtime. A failed download or failed load leaves the previous selection active. Chat does not silently run another offline model.
+
+Account downloads checkpoint 2 MiB ranges in `rai-model-partials-v1`, keyed by the pinned SHA-256 and range offset. Pause or a reload retains these ranges; Resume reuses them. Cancel removes the partial download, while an integrity failure removes corrupt checkpoints and allows a clean retry. Final files are written only after full SHA-256 validation. Guest downloads remain temporary in memory, preserving the existing guest policy; guest refresh/exit intentionally discards them. Browser storage eviction or explicit site-data deletion can remove account files too.
+
+Catalog entries contain real pinned Unsloth Hugging Face GGUF URLs, exact file sizes and LFS SHA-256 digests. Every configured URL was checked for HTTP 206, its expected total size and `GGUF` magic. The bundled main and compatibility WASM files contain the relevant Qwen3.5/Qwen3, Gemma4 and Phi3 architecture names. This is a file/architecture compatibility check, not a quality benchmark or a guarantee that large models fit each browser. The runtime remains CPU-based wllama, with no second engine or GPU backend added.
+
+Actual published files differ from several proposed estimates: Gemma 4 E2B Q4_K_M is 3,106,738,272 bytes, E4B is 4,977,171,584 bytes, and Qwen3.6 35B-A3B UD-Q4_K_M is 22,134,528,992 bytes. UI uses real values and the actual quantization name. No weights are committed.
+
+Memory recommendations are informational. Browsers that expose `navigator.deviceMemory` often provide rounded/capped estimates; Safari may omit it. The warning never blocks a download solely for RAM. Large-file storage, WebAssembly memory support and actual free RAM remain device-specific. Tests with mocked inference verify routing/unloading and the absence of network fetches, but full-weight inference on an actual offline phone/Mac has not been verified in this change.
+
+On-device model files, the application shell and WASM assets must finish caching while online before a subsequent offline reload can work. No download URL is needed for a model that is already stored.

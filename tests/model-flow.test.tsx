@@ -1,0 +1,17 @@
+// @vitest-environment jsdom
+import {act,cleanup,renderHook} from '@testing-library/react'
+import {afterEach,beforeEach,it,expect,vi} from 'vitest'
+const fake=vi.hoisted(()=>({installed:[] as string[],prefs:new Map<string,string>(),download:vi.fn(),install:vi.fn(),prepare:vi.fn(),unload:vi.fn(),remove:vi.fn()}))
+vi.mock('../src/offline/models',async()=>{const {default:MODELS}=await import('../src/offline/catalog.json');return {MODELS,downloadModel:fake.download,installModel:fake.install,installedModels:async()=>[...fake.installed],removeModel:fake.remove}})
+vi.mock('../src/offline/runtime',()=>({prepareOfflineModel:fake.prepare,unloadOfflineModel:fake.unload}))
+vi.mock('../src/components/InstallProgress',()=>({finishInstallation:async()=>{}}))
+vi.mock('../src/downloads/checkpoints',()=>({clearPartial:vi.fn()}))
+vi.mock('../src/skillSession',()=>({skillPreferences:{getItem:(k:string)=>fake.prefs.get(k),setItem:(k:string,v:string)=>fake.prefs.set(k,v),removeItem:(k:string)=>fake.prefs.delete(k)}}))
+import {useModelFlow,chooseModel,resetModelFlow,refreshModelFlow} from '../src/offline/modelFlow'
+beforeEach(async()=>{fake.installed=[];fake.prefs.clear();vi.clearAllMocks();fake.prepare.mockResolvedValue(undefined);fake.unload.mockResolvedValue(undefined);fake.download.mockResolvedValue(new Blob(['GGUF']));fake.install.mockImplementation(async(m)=>{fake.installed.push(m.id)});await resetModelFlow()})
+afterEach(cleanup)
+it('defaults to Qwen3.5 2B even before any file exists',()=>{const {result}=renderHook(useModelFlow);expect(result.current.active).toBe('qwen35-2');expect(result.current.installed).toEqual([])})
+it('does not activate a pending download until installation and loading finish',async()=>{const {result}=renderHook(useModelFlow);let release!:()=>void;fake.prepare.mockReturnValue(new Promise<void>(r=>{release=r}));let work!:Promise<void>;await act(async()=>{work=chooseModel('qwen35-4');await Promise.resolve()});expect(result.current.active).toBe('qwen35-2');expect(result.current.busy).toBe('qwen35-4');await act(async()=>{release();await work});expect(result.current.active).toBe('qwen35-4');expect(fake.prefs.get('rai-local-model')).toBe('qwen35-4')})
+it('uses retained files on subsequent switches with no re-download or deletion',async()=>{fake.installed=['qwen35-2','qwen35-4'];await refreshModelFlow();const {result}=renderHook(useModelFlow);await act(()=>chooseModel('qwen35-4'));expect(result.current.active).toBe('qwen35-4');await act(()=>chooseModel('qwen35-2'));expect(result.current.active).toBe('qwen35-2');expect(fake.download).not.toHaveBeenCalled();expect(fake.remove).not.toHaveBeenCalled();expect(result.current.installed).toHaveLength(2);expect(fake.prepare.mock.calls.map(c=>c[0])).toEqual(['qwen35-4','qwen35-2'])})
+it('keeps the old active selection when the chosen file cannot load',async()=>{fake.prepare.mockRejectedValue(new Error('Out of memory'));const {result}=renderHook(useModelFlow);await act(()=>chooseModel('qwen35-4'));expect(result.current.active).toBe('qwen35-2');expect(result.current.error).toBe('Out of memory');expect(result.current.installed).toContain('qwen35-4')})
+it('restores paused download choice without selecting it',async()=>{fake.prefs.set('robaq-model-download','qwen35-4');await refreshModelFlow();const {result}=renderHook(useModelFlow);expect(result.current.paused).toBe('qwen35-4');expect(result.current.active).toBe('qwen35-2')})

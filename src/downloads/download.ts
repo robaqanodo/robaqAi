@@ -1,3 +1,4 @@
+import { partialChunk } from './checkpoints'
 export class DownloadError extends Error {
   status: number
   constructor(message: string, status = 0) { super(message); this.status = status }
@@ -53,10 +54,12 @@ async function complete(response: Response, size: number, signal: AbortSignal, p
   return new Blob(chunks, {type:'application/octet-stream'})
 }
 /** Accept both HTTP range and full-file servers; callers verify the final SHA-256. */
-export async function downloadFile(url: string, size: number, signal: AbortSignal, progress: (n:number)=>void): Promise<Blob> {
+export async function downloadFile(url: string, size: number, signal: AbortSignal, progress: (n:number)=>void, checkpoint?: string): Promise<Blob> {
   const chunks: Blob[] = [], chunkSize = 2 * 1024 * 1024
   for (let offset = 0; offset < size; offset += chunkSize) {
     const end = Math.min(size - 1, offset + chunkSize - 1)
+    const saved=checkpoint?await partialChunk(checkpoint,offset):undefined
+    if(saved?.size===end-offset+1){chunks.push(saved);progress((end+1)/size);continue}
     let failure: unknown
     for (let attempt = 0; attempt < 3; attempt++) {
       signal.throwIfAborted()
@@ -74,6 +77,7 @@ export async function downloadFile(url: string, size: number, signal: AbortSigna
         const chunk = await response.blob()
         signal.throwIfAborted()
         if (chunk.size !== end - offset + 1) throw new DownloadError('Incomplete download. Please try again.')
+        if(checkpoint)await partialChunk(checkpoint,offset,chunk)
         chunks.push(chunk); progress((end + 1) / size); failure = undefined; break
       } catch (error) {
         signal.throwIfAborted(); failure = error

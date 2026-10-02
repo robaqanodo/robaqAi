@@ -1,6 +1,6 @@
 import type { ServerResponse } from 'node:http'
 import { bodyOf, limit, redis, respond, sameOrigin, type ApiRequest } from '../server/redis.ts'
-const presenceScript = `redis.call('ZREMRANGEBYSCORE',KEYS[1],'-inf',ARGV[1]); if ARGV[4]=='1' then redis.call('ZADD',KEYS[1],ARGV[2],ARGV[3]) else redis.call('ZREM',KEYS[1],ARGV[3]) end; redis.call('EXPIRE',KEYS[1],60); local members=redis.call('ZRANGE',KEYS[1],0,-1); local seen={}; local count=0; for _,m in ipairs(members) do local browser=string.match(m,'^([^:]+):'); if not seen[browser] then seen[browser]=true; count=count+1 end end; return count`
+const presenceScript = `for i=1,2 do redis.call('ZREMRANGEBYSCORE',KEYS[i],'-inf',ARGV[1]); redis.call('ZREM',KEYS[i],ARGV[3]) end; if ARGV[4]~='0' then redis.call('ZADD',KEYS[tonumber(ARGV[4])],ARGV[2],ARGV[3]) end; local users={}; local counts={0,0}; for i=2,1,-1 do redis.call('EXPIRE',KEYS[i],60); for _,m in ipairs(redis.call('ZRANGE',KEYS[i],0,-1)) do local b=string.match(m,'^([^:]+):'); if not users[b] then users[b]=true;counts[i]=counts[i]+1 end end end;return counts`
 export default async function handler(req: ApiRequest, res: ServerResponse) {
   if (!sameOrigin(req)) { respond(res, 403, { error: 'Same-origin requests only.' }); return }
   let body: Record<string, unknown>
@@ -10,7 +10,7 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
   try {
     if (!await limit(req, 'presence', 240, 60)) { respond(res, 429, { error: 'Too many requests.' }); return }
     const now = Date.now()
-    const guests = await redis<number>('EVAL', presenceScript, 1, 'robaq:presence', now - 35000, now, `${body.browser}:${body.tab}`, body.guest ? '1' : '0')
-    respond(res, 200, { guests })
+    const counts = await redis<number[]>('EVAL', presenceScript, 2, 'robaq:presence:guests', 'robaq:presence:members', now - 35000, now, `${body.browser}:${body.tab}`, body.active===false?'0':body.guest?'1':'2')
+    respond(res, 200, { guests:counts[0],members:counts[1] })
   } catch { respond(res, 503, { error: 'Presence is temporarily unavailable.' }) }
 }

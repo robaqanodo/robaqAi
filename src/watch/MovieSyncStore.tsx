@@ -23,7 +23,7 @@ export function MovieSyncStore({ stage, onChange, onOpen }: { stage: MovieSyncSt
     } catch { if (mounted.current && !abort.signal.aborted) setError('Could not prepare MovieSync. Please try again.') }
     finally { controller.current = null; installing.current = false; if (mounted.current) setBusy(false) }
   }
-  return <><div className="side-panel-item"><div className="side-panel-item-body"><span className="side-panel-item-name">{t("Moviesync 1.0")}</span><span className="side-panel-item-meta">{t("Synchronized video · Private room · Chat")}</span><span className="side-panel-item-meta">{t("Watch movies with friends, even when you’re in different places.")}</span></div><div className="model-actions">
+  return <><div className="side-panel-item"><div className="side-panel-item-body"><span className="side-panel-item-name">{t("Moviesync 1.0")}</span><span className="side-panel-item-meta">{t("Synchronized video · Private room · Chat")}</span></div><div className="model-actions">
     {busy ? <><InstallProgress label={t('Installing…')} finishing/><button type="button" className="modal-btn" onClick={()=>controller.current?.abort()}>{t('Cancel')}</button></> : stage === 'active' ? <><span className="translator-active-badge">{t("Active")}</span><button className="modal-btn danger" onClick={() => onChange('new')}>{t("Delete")}</button></> : <button className="modal-btn primary" onClick={() => void install()}>{t("Download")}</button>}
   </div></div>{error && <p className="modal-error" role="alert">{t(error)}</p>}</>
 }

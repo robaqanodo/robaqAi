@@ -10,6 +10,7 @@ export function guestFiles(scope: string) {
   return store
 }
 export const skillPreferences = {
+  removeItem(key:string){if(persistent)localStorage.removeItem(key);else preferences.delete(key)},
   getItem(key: string) { return persistent ? localStorage.getItem(key) : preferences.get(key) ?? null },
   setItem(key: string, value: string) { if (persistent) localStorage.setItem(key, value); else preferences.set(key, value) },
 }

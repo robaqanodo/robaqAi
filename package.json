@@ -12,9 +12,10 @@
     "ios:open": "cap open ios",
     "ios:run": "npm run ios:sync && cap run ios",
     "ios:check": "node scripts/check-ios.mjs",
-    "test": "node --test tests/*.test.mjs && vitest run tests/*.test.ts tests/*.test.tsx",
+    "test": "vitest run",
     "prebuild": "node scripts/offline-runtime.mjs",
-    "predev": "node scripts/offline-runtime.mjs"
+    "predev": "node scripts/offline-runtime.mjs",
+    "rooms:serve": "node --experimental-strip-types scripts/live-room-server.ts"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",

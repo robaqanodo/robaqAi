@@ -1,3 +1,7 @@
+import { LiveChat } from './live/LiveChat'
+import { LiveSkillStore } from './live/LiveSkillStore'
+import { roomInvite, type LiveKind } from './live/client'
+import { useModelFlow, resetModelFlow } from './offline/modelFlow'
 import { useTeslaOrb } from './components/useTeslaOrb'
 import { Kas, KasReader } from './kas/Kas'
 import { KasStore } from './kas/KasStore'
@@ -6,9 +10,9 @@ import { skillPreferences, setPersistentSkills, persistentSkills } from './skill
 import { useTemporaryChat } from './chat/useTemporaryChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
-import { DESKTOP_MODELS, desktopStatus, desktopInference, cancelDesktopReply } from './offline/desktop'
+import { desktopInference, cancelDesktopReply } from './offline/desktop'
 import { ModelStore } from './offline/ModelStore'
-import { MODELS, installedModels } from './offline/models'
+import { MODELS } from './offline/models'
 import { offlineReply, cancelOfflineReply, unloadOfflineModel } from './offline/runtime'
 import { useLocale, LocaleProvider } from './i18n/Locale'
 import { AccountDialog } from './accounts/AccountDialog'
@@ -38,7 +42,6 @@ import {
   type ProviderId,
 } from './providers'
 import {
-  answerFromOfflineBrains,
   ensureDefaultOfflineBrain,
 } from './brains'
 import './App.css'
@@ -146,8 +149,6 @@ function preferredRecognitionLang(hintText?: string): string {
   return primary || ''
 }
 
-const THINK_MIN_MS = 550
-const THINK_JITTER_MS = 350
 const TEXTAREA_MAX_LINES = 5
 const ACCEPT_FILES =
   'image/*,application/pdf,text/plain,text/markdown,text/csv,application/json,.txt,.md,.csv,.json,.pdf'
@@ -287,12 +288,16 @@ function AppContent() {
   const { t, locale, setLocale } = useLocale()
 
   const [session, setSession] = useState<Session | null>(null)
+  const [liveEntry, setLiveEntry] = useState<{kind:LiveKind;room?:string}|null>(()=>roomInvite())
+  const liveSubmit = useRef<((text:string)=>void)|null>(null)
+  const [liveSkills,setLiveSkills] = useState(()=>({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'}))
+  useEffect(()=>{setLiveSkills({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'})},[session])
   const [kasOpen, setKasOpen] = useState(false)
   const [kasCode, setKasCode] = useState('')
   const kasSubmit = useRef<((text:string)=>void)|null>(null)
   const [kasActive, setKasActive] = useState(() => skillPreferences.getItem('robaq-kas-active') === 'true')
   useEffect(() => { setKasActive(skillPreferences.getItem('robaq-kas-active') === 'true'); setKasCode(''); setKasOpen(false) }, [session])
-  const guestCount = useGuestPresence(!session)
+  const presence = useGuestPresence(!session)
   useEffect(() => {
     const leave = () => {
       if (persistentSkills()) return
@@ -309,12 +314,8 @@ function AppContent() {
   }, [])
   const [chats, setChats] = useState<Conversation[]>([])
   const [activeChatId, setActiveChatId] = useState<string | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(() => {
-    try { return localStorage.getItem('rai-history-expanded') !== 'false' } catch { return true }
-  })
-  useEffect(() => {
-    try { localStorage.setItem('rai-history-expanded', String(historyOpen)) } catch { /* Keep the preference for this session. */ }
-  }, [historyOpen])
+  const [historyOpen, setHistoryOpen] = useState(false)
+  useEffect(() => { setHistoryOpen(false) }, [session])
   const [saveError, setSaveError] = useState('')
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -354,13 +355,13 @@ function AppContent() {
   const [apiProviderPick, setApiProviderPick] = useState<ProviderId | null>('gemini')
   const [apiError, setApiError] = useState<string | null>(null)
   const [micHint, setMicHint] = useState<string | null>(null)
-  const [chatOpen, setChatOpen] = useState(false)
-  useEffect(() => { if (!chatOpen) setKasCode('') }, [chatOpen])
+  const [chatOpen, setChatOpen] = useState(()=>Boolean(roomInvite()))
+  useEffect(() => { if (!chatOpen) {setKasCode('');setLiveEntry(null)} }, [chatOpen])
   useTemporaryChat(chatOpen, messages, activeChatId)
   const [introShown, setIntroShown] = useState(false)
   const [introDisplay, setIntroDisplay] = useState('')
   const [introStreaming, setIntroStreaming] = useState(false)
-  const [landingPanel, setLandingPanel] = useState<LandingPanel>('account')
+  const [landingPanel, setLandingPanel] = useState<LandingPanel>(()=>roomInvite()?null:'account')
   useEffect(() => {
     let cancelled = false
     void restoreSession().then(result => {
@@ -386,43 +387,20 @@ function AppContent() {
     return () => { active = false }
   }, [landingPanel, chatOpen, session])
   const [, setSettingsMenuOpen] = useState(false)
-  const [localModels, setLocalModels] = useState<string[]>([])
-  const [localModel, setLocalModel] = useState(() => { try { return skillPreferences.getItem('rai-local-model') ?? '' } catch { return '' } })
+  const modelFlow=useModelFlow()
+  const localModels=modelFlow.installed,localModel=modelFlow.active
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const birdPalette = (translatorReady || localModels.length > 0) ? 'mixed' : 'default'
-  const birdColors = ['stock', 'stock', ...(translatorReady ? ['translator'] : []), ...(localModels.length > 0 ? ['rainbow-blue'] : [])]
+  const birdColors = ['stock', 'black', ...(kasActive ? ['kas'] : []), ...(localModels.includes(localModel) ? ['model','model','model-buddy'] : [])]
   const [displayBirdColors, setDisplayBirdColors] = useState<string[]>(birdColors)
   useEffect(() => {
     const target = birdColors
     if (target.length >= displayBirdColors.length) { setDisplayBirdColors(target); return }
     const timer = window.setTimeout(() => setDisplayBirdColors(target), 500)
     return () => window.clearTimeout(timer)
-  }, [birdColors.length, translatorReady, localModels.join(',')])
-  const refreshModels = useCallback((selection?: string) => {
-    void Promise.all([installedModels(), desktopStatus()]).then(([browserIds, desktop]) => {
-      const ids = [...browserIds, ...desktop.installed.filter(id => DESKTOP_MODELS.some(m => m.id === id && m.kind === 'chat'))]
-      let wanted = ''
-      try { wanted = skillPreferences.getItem('ostra-desktop-translator') ?? '' } catch { /* Session only */ }
-      const translators = DESKTOP_MODELS.filter(m => m.kind === 'translation' && desktop.installed.includes(m.id) && desktop.memoryGB >= m.minMemoryGB)
-      const translator = translators.find(m => m.id === wanted)?.id ?? translators.at(-1)?.id ?? ''
-      setDesktopTranslator(translator)
-      if (translator && !wanted) setTranslationMode(true)
-      if (translator) { try { skillPreferences.setItem('ostra-desktop-translator', translator) } catch { /* Session only */ } }
-      setLocalModels(ids)
-      if (selection !== undefined) {
-        setLocalModel(ids.includes(selection) ? selection : '')
-        if (selection) setTranslationMode(false)
-      } else setLocalModel(previous => {
-        let last = ''
-        try { last = skillPreferences.getItem('ostra-last-installed-model') ?? '' } catch { /* Use the current selection. */ }
-        if (ids.includes(previous)) return previous
-        if (last && ids.includes(last)) return last
-        return ids[0] ?? ''
-      })
-    }).catch(() => { setLocalModels([]); setLocalModel('') })
-  }, [])
-  useEffect(() => { refreshModels() }, [refreshModels, landingPanel, chatOpen, session])
-  useEffect(() => { try { skillPreferences.setItem('rai-local-model', localModel) } catch { /* Session selection still works. */ } }, [localModel])
+  }, [birdColors.join(','), kasActive, localModel])
+  useEffect(() => { void resetModelFlow() }, [session])
+  useEffect(()=>{if(localModels.includes(localModel))setTranslationMode(false)},[localModel,localModels.join(',')])
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
   const [attachBusy, setAttachBusy] = useState(false)
   const [speaking, setSpeaking] = useState(false)
@@ -820,13 +798,16 @@ function AppContent() {
   const sendMessage = useCallback(
     (text: string) => {
       const trimmed = text.trim()
+      if(liveSubmit.current){liveSubmit.current(text);setInput('');return}
       if(kasSubmit.current){kasSubmit.current(text);setInput('');return}
       if (/^KAS-/i.test(trimmed)) { setKasCode(trimmed.toUpperCase()); setInput(''); return }
+      const command=trimmed.toLowerCase();const liveKind=command==='live'?'syberlive':command==='crossfire'?'crossfire':null
+      if(liveKind){if(thinking||voiceModeRef.current)return;setInput('');if(liveSkills[liveKind]){setKasCode('');setLiveEntry({kind:liveKind})}else setMessages(old=>[...old,{id:crypto.randomUUID(),role:'assistant',text:t('Install this skill in AI Lab first.')}]);return}
       const files = pendingFilesRef.current
       const key = apiKeyRef.current.trim()
       const usingApi = Boolean(key)
 
-      if (thinking || voiceModeRef.current) return
+      if (thinking || modelFlow.busy || voiceModeRef.current) return
       if (!trimmed && !(usingApi && files.length > 0)) return
 
       // New send interrupts any in-progress stream
@@ -889,7 +870,7 @@ function AppContent() {
         return
       }
       if (!usingApi) {
-        if (localModel) {
+        if (localModels.includes(localModel)) {
           void offlineReply(localModel, priorHistory, trimmed).then(reply => {
             if (thisSend === sendGen.current) startTyping(reply)
           }).catch(error => {
@@ -897,15 +878,7 @@ function AppContent() {
           })
           return
         }
-        const delay = THINK_MIN_MS + Math.random() * THINK_JITTER_MS
-        thinkTimer.current = window.setTimeout(() => {
-          if (thisSend !== sendGen.current) return
-          const previousAssistantReply = [...priorHistory]
-            .reverse()
-            .find((message) => message.role === 'assistant')?.text
-          const reply = answerFromOfflineBrains(trimmed, { previousAssistantReply })
-          if (reply) startTyping(reply)
-        }, delay)
+        startTyping(t('Download the active model in AI Lab to chat offline. You can choose another model in Settings.'))
         return
       }
 
@@ -923,7 +896,7 @@ function AppContent() {
         }
       })()
     },
-    [thinking, cancelTyping, startTyping, translatorReady, translationMode, desktopTranslator, localModel, t],
+    [liveSkills, modelFlow.busy, thinking, cancelTyping, startTyping, translatorReady, translationMode, desktopTranslator, localModel, localModels, t],
   )
 
   const startVoiceListening = useCallback(() => {
@@ -1224,7 +1197,7 @@ function AppContent() {
   }
 
   const isBusy = thinking || attachBusy || voiceMode
-  const canSend =
+  const canSend = !modelFlow.busy &&
     !isBusy && (Boolean(input.trim()) || (hasApiKey && pendingFiles.length > 0))
 
   const collapseChat = useCallback(() => {
@@ -1238,6 +1211,7 @@ function AppContent() {
       setIntroShown(true)
     }
     setChatOpen(false)
+    setHistoryOpen(false)
   }, [introShown, introStreaming, introDisplay, cancelIntroTyping])
 
   /** X: wipe conversation and return to landing. Collapse keeps chat state. */
@@ -1336,7 +1310,7 @@ function AppContent() {
               listening={voiceMode && listening && !speaking}
               voiceLevel={voiceMode && listening && !speaking ? voiceLevel : 0}
               subtitle={voiceMode ? voiceCaption : ''}
-              guestCount={guestCount} movieSyncActive={movieSyncStage === 'active'}
+              guestCount={presence.guests} memberCount={presence.members} modelColor={localModels.includes(localModel)?MODELS.find(m=>m.id===localModel)?.color:undefined} movieSyncActive={movieSyncStage === 'active'}
               birdCount={displayBirdColors.length}
               birdPalette={birdPalette}
               birdColors={displayBirdColors}
@@ -1386,15 +1360,16 @@ function AppContent() {
           </div>
         </header>
 
-        {!kasCode && (introDisplay || introStreaming) && (
+        {!kasCode && !liveEntry && (introDisplay || introStreaming) && (
           <p className={`intro-text${introStreaming ? ' is-streaming' : ''}`} aria-live="polite">
             {introDisplay}
             {introStreaming && <span className="stream-caret" aria-hidden />}
           </p>
         )}
 
-        {kasCode && <KasReader key={kasCode} code={kasCode} submitRef={kasSubmit} onClose={() => {setKasCode('');setChatOpen(false)}} />}
-        <div className="history-lane" style={kasCode ? {display: 'none'} : undefined} ref={historyRef} aria-live="polite">
+        {liveEntry && chatOpen && <LiveChat key={liveEntry.kind+(liveEntry.room??'')} kind={liveEntry.kind} invite={liveEntry.room} name={session ? ([session.firstName,session.lastName].filter(Boolean).join(' ')||session.email.split('@')[0]) : 'Guest'} submitRef={liveSubmit} onClose={()=>{setLiveEntry(null);setChatOpen(false)}} />}
+        {kasCode && !liveEntry && <KasReader key={kasCode} code={kasCode} submitRef={kasSubmit} onClose={() => {setKasCode('');setChatOpen(false)}} />}
+        <div className="history-lane" style={kasCode || liveEntry ? {display: 'none'} : undefined} ref={historyRef} aria-live="polite">
           {messages.map((m) => {
             const streaming = streamingId === m.id
             return (
@@ -1453,7 +1428,7 @@ function AppContent() {
 
         {!hasApiKey && localModel && thinking && <button type="button" className="modal-btn offline-stop" onClick={() => { cancelOfflineReply(); sendGen.current += 1; setThinking(false) }}>{t('Stop generating')}</button>}
         {translatorReady && translationMode && <span className="translation-connection" role="status">Translator · {translationStatus}</span>}
-        <form className={`composer${hasApiKey && voiceMode ? ' is-voice-active' : ''}`}
+        <form className={`composer${liveEntry?' live-composer':''}${hasApiKey && voiceMode ? ' is-voice-active' : ''}`}
           data-provider={hasApiKey ? provider ?? 'gemini' : undefined}
           data-voice-moving={hasApiKey && voiceMode && (listening || speaking) ? 'true' : 'false'}
           onSubmit={onSubmit}>
@@ -1510,11 +1485,7 @@ function AppContent() {
           <div className="composer-right">
             {!hasApiKey && <div className="offline-model-menu">
               <button type="button" className={`offline-model-trigger${modelMenuOpen ? ' is-open' : ''}`} aria-label={t('Offline AI')} aria-expanded={modelMenuOpen} onClick={() => setModelMenuOpen(open => !open)} disabled={thinking || Boolean(streamingId)}>AI</button>
-              {modelMenuOpen && <div className="offline-model-popover" role="menu">{[...MODELS.filter(m => m.id === 'qwen35-2' || localModels.includes(m.id)), ...DESKTOP_MODELS.filter(m => m.kind === 'chat')].map(model => {
-                const installed = localModels.includes(model.id)
-                const active = localModel === model.id
-                return <div className="offline-model-menu-row" key={model.id}><span>{model.name}</span>{active ? <span className="offline-model-status active">{t('Active')}</span> : installed ? <button type="button" className="offline-model-use" onClick={() => { setLocalModel(model.id); setTranslationMode(false); setModelMenuOpen(false) }}>{t('Use')}</button> : <button type="button" className="offline-model-use download" onClick={() => { setModelMenuOpen(false); openLandingPanel('store') }}>{t('Download')}</button>}</div>
-              })}</div>}
+              {modelMenuOpen && <div className="offline-model-popover"><span>{MODELS.find(m=>m.id===localModel)?.name}</span><button className="modal-btn" onClick={()=>{setModelMenuOpen(false);openLandingPanel('settings');setTimeout(()=>document.getElementById('offline-ai-settings')?.scrollIntoView(),100)}}>{t('Settings')}</button></div>}
             </div>}
             {(thinking || Boolean(streamingId)) ? <button type="button" className="send-btn generation-stop-btn" aria-label={t('Stop generating')} title={t('Stop generating')} onClick={() => { cancelTyping(); sendGen.current += 1; stopTranslationWorker(); cancelDesktopReply(); cancelOfflineReply(); streamGen.current += 1; setThinking(false); setStreamingId(null) }}><IconStop /></button> : <button type="submit" className="send-btn" disabled={!canSend} aria-label={t("Send")}><IconSendUp /></button>}
           </div>
@@ -1595,7 +1566,7 @@ function AppContent() {
             <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option><option value="ka">ქართული</option><option value="ru">Русский</option></select></label>
             <p className="modal-help">{t("API credentials and updates.")}</p>
             <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'System theme' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
-            {localModels.length > 0 && <label className="settings-language">{t('Active offline AI')}<select value={localModel} onChange={event => { setLocalModel(event.target.value); setTranslationMode(false) }}><option value="">{t('Default')}</option>{[...MODELS, ...DESKTOP_MODELS.filter(m => m.kind === 'chat')].filter(model => localModels.includes(model.id)).map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>}
+            <div id="offline-ai-settings"><ModelStore catalog disabled={thinking || Boolean(streamingId)} /></div>
             <div className="settings-menu-list" role="menu">
               <button
                 type="button"
@@ -1719,12 +1690,15 @@ function AppContent() {
             <p className="modal-help"> {t('Offline models and everyday tools — all in one place.')} </p>
 
             <p className="ai-lab-use-note">{t('For education and lawful use only. You are responsible for how you use these tools. Misuse is prohibited.')}</p>
-            <h3 className="store-section-title">{t('AI Skills')}</h3>
+            <h3 className="store-section-title store-section-title-info">{t('AI Skills')}<details className="store-info inline-store-info"><summary aria-label={t('AI Skills information')}>?</summary><p className="modal-help">{t('Install optional tools for secrets, shared videos and private live rooms. Active tools are ready to use; Delete removes them from this device.')} {t('After installation, type live or crossfire in the chat to start a private room.')}</p></details></h3>
+            <div className="ai-skills-list">
             <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
             <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
 
+            {(['syberlive','crossfire'] as const).map(kind=><LiveSkillStore key={kind} kind={kind} active={liveSkills[kind]} onChange={active=>{setLiveSkills(old=>({...old,[kind]:active}));if(active)skillPreferences.setItem(`robaq-${kind}-active`,'true');else skillPreferences.removeItem(`robaq-${kind}-active`);if(!active&&liveEntry?.kind===kind)setLiveEntry(null)}} />)}
+            </div>
             <h3 className="store-section-title store-section-title-info">{t("Offline AI")}<details className="store-info inline-store-info"><summary aria-label="Offline AI information">?</summary><p className="modal-help">{t('Download once, then chat offline. Keep AI Lab open during installation.')}</p></details></h3>
-            <ModelStore installed={localModels} selected={localModel} onChange={refreshModels} disabled={thinking || Boolean(streamingId)} />
+            <ModelStore onSettings={()=>{openLandingPanel('settings');setTimeout(()=>document.getElementById('offline-ai-settings')?.scrollIntoView(),100)}} disabled={thinking || Boolean(streamingId)} />
 
 
 
@@ -1744,7 +1718,7 @@ function AppContent() {
 
       {landingPanel === 'account' && <AccountDialog session={session} onProfileUpdate={setSession} onDeleted={() => {
         stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
-        clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false); setLocalModels([]); setLocalModel(''); setM2mReady(false); setDesktopTranslator(''); setChatColor('system'); setLocale('en'); setHistoryOpen(true); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
+        clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false);  setM2mReady(false); setDesktopTranslator(''); setChatColor('system'); setLocale('en'); setHistoryOpen(false); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
       }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={async (account, history) => {
         clearChat()
         messagesRef.current = []
@@ -1762,7 +1736,7 @@ function AppContent() {
         messagesRef.current = []
         if (session) void saveChats(session, chats).catch(() => setSaveError('The last changes could not be saved.'))
         stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
-        setMovieSyncStage('new'); setLocalModel(''); setM2mReady(false)
+        setMovieSyncStage('new'); setM2mReady(false)
         setSession(null)
         setChats([])
         setActiveChatId(null)

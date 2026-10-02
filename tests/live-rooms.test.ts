@@ -1,0 +1,26 @@
+import {describe,it,expect} from 'vitest'
+import {LiveRooms} from '../server/live-rooms'
+function setup(kind='crossfire',limit=4){let time=100000;const server=new LiveRooms(()=>time,()=>0);const host=server.act('create',{kind,limit,motion:'Public libraries matter',name:'Host'}) as any
+ const call=(action:string,member=host,extra={})=>server.act(action,{room:host.id,token:member.token,...extra}) as any
+ const join=(side='for',password='')=>server.act('join',{room:host.id,side,password,name:side}) as any
+ const advance=(ms:number)=>{while(ms>0){const tick=Math.min(1000,ms);time+=tick;for(const m of server.rooms.get(host.id)?.members.values()??[])m.seen=time;ms-=tick;server.sweep()}return call('poll')}
+ return {server,host,call,join,advance,setTime:(n:number)=>{time=n}}
+}
+describe('ephemeral direct rooms',()=>{
+ it('caps SyberLive at the chosen size and never returns capability tokens in the member list',()=>{const s=setup('syberlive',2);s.join();expect(()=>s.join()).toThrow('full');const r=s.call('poll');expect(r.members).toHaveLength(2);expect(r.members.every((m:any)=>!('token'in m))).toBe(true)})
+ it('rejects invalid sizes and limits Crossfire to eight guests plus host',()=>{const s=setup();for(let i=0;i<8;i++)s.join(i%2?'against':'for');expect(()=>s.join()).toThrow('full');expect(()=>new LiveRooms().act('create',{kind:'syberlive',limit:10})).toThrow('2, 3 or 4')})
+ it('checks password and side without exposing the password',()=>{const server=new LiveRooms();const h=server.act('create',{kind:'crossfire',motion:'Debate',password:'private'}) as any;expect(h.password).toBeUndefined();expect(()=>server.act('join',{room:h.id,password:'wrong',side:'for'})).toThrow('password');expect(()=>server.act('join',{room:h.id,password:'private',side:'none'})).toThrow('Choose');expect((server.act('join',{room:h.id,password:'private',side:'against'}) as any).host).toBe(false)})
+ it('enforces host authority and membership',()=>{const s=setup();const guest=s.join();expect(()=>s.call('end',guest)).toThrow('host');expect(()=>s.call('ask',guest)).toThrow('host');expect(()=>s.call('message',{token:'forged'} as any,{text:'bad'})).toThrow('session')})
+ it('delivers handshake only to the recipient and forgets it after polling',()=>{const s=setup();const guest=s.join();s.call('signal',s.host,{to:guest.self,data:{description:{type:'offer',sdp:'opaque'}}});expect(s.call('poll').signals).toEqual([]);expect(s.call('poll',guest).signals).toHaveLength(1);expect(s.call('poll',guest).signals).toEqual([])})
+ it('deletes room, messages and link on host end',()=>{const s=setup();s.call('message',s.host,{text:'temporary'});s.join();s.call('end');expect(s.server.rooms.size).toBe(0);expect(()=>s.join()).toThrow('ended');expect(()=>s.call('poll')).toThrow('ended')})
+ it('expires a disconnected host and discards all data',()=>{const s=setup();s.setTime(121000);s.server.sweep();expect(s.server.rooms.size).toBe(0)})
+ it('invalidates departed guest credentials without ending the host room',()=>{const s=setup();const g=s.join();s.call('leave',g);expect(()=>s.call('poll',g)).toThrow('session');expect(s.call('poll').members).toHaveLength(1)})
+})
+describe('Crossfire floor clock',()=>{
+ it('requires both sides and runs exactly two sixty-second turns then waits',()=>{const s=setup();s.join('for');expect(()=>s.call('ask')).toThrow('Both');s.join('against');const first=s.call('ask').round;expect(first.side).toBe('for');expect(first.end-first.start).toBe(60000);const second=s.advance(60000).round;expect(second.side).toBe('against');expect(second.second).toBe(true);expect(s.advance(60000).round).toBeNull()})
+ it('protects first and last ten seconds and retains original deadline during a Point',()=>{const s=setup();s.join('for');const g=s.join('against');const q=s.call('ask').round;expect(()=>s.call('point',g)).toThrow('middle');s.advance(10000);s.call('point',g);const p=s.call('allow-point',s.host,{member:g.self}).round;expect(p.point.end).toBe(125000);expect(p.end).toBe(q.end);expect(s.advance(15000).round.point).toBeUndefined();s.advance(25000);expect(()=>s.call('point',g)).toThrow('middle')})
+ it('only current speaker or host can grant requested Points',()=>{const s=setup();const a=s.join('for'),b=s.join('against'),c=s.join('against');s.call('ask');s.advance(11000);s.call('point',b);expect(()=>s.call('allow-point',c,{member:b.self})).toThrow('host or speaker');expect(s.call('allow-point',a,{member:b.self}).round.point.id).toBe(b.self)})
+ it('never lets a late Point enter the protected tail',()=>{const s=setup();s.join('for');const g=s.join('against');s.call('ask');s.advance(45000);s.call('point',g);const p=s.call('allow-point',s.host,{member:g.self}).round;expect(p.point.end).toBe(p.end-10000)})
+ it('avoids consecutive same-side speakers when another is available',()=>{const s=setup();s.join('for');s.join('for');s.join('against');const first=s.call('ask').round.speaker;s.advance(120000);const next=s.call('ask').round.speaker;expect(next).not.toBe(first)})
+ it('lets host skip or stop at any time',()=>{const s=setup();s.join('for');s.join('against');s.call('ask');expect(s.call('skip').round.side).toBe('against');expect(s.call('cut').round).toBeNull();s.call('ask');expect(s.call('stop-round').round).toBeNull()})
+})
