@@ -2674,5 +2674,37 @@
   "Collapse menu": [
     "მენიუს ჩაკეცვა",
     "Свернуть меню"
+  ],
+  "This browser does not provide location access.": [
+    "ამ ბრაუზერში მდებარეობაზე წვდომა მიუწვდომელია.",
+    "Этот браузер не предоставляет доступ к геолокации."
+  ],
+  "Location requires HTTPS. Open https://www.robaq.app.": [
+    "მდებარეობისთვის საჭიროა HTTPS. გახსენით https://www.robaq.app.",
+    "Для геолокации нужен HTTPS. Откройте https://www.robaq.app."
+  ],
+  "Waiting for a fresh location…": [
+    "ახალი მდებარეობის მოლოდინი…",
+    "Ожидание свежих координат…"
+  ],
+  "Location blocked. Allow location for robaq.app in your browser, then try again.": [
+    "მდებარეობა დაბლოკილია. ბრაუზერში დაუშვით robaq.app-ის მდებარეობაზე წვდომა და სცადეთ ხელახლა.",
+    "Геолокация заблокирована. Разрешите доступ для robaq.app в браузере и повторите попытку."
+  ],
+  "Location timed out. Retrying…": [
+    "მდებარეობის მოლოდინის დრო ამოიწურა. ხელახალი მცდელობა…",
+    "Время ожидания геолокации истекло. Повторная попытка…"
+  ],
+  "Location signal unavailable. Retrying…": [
+    "მდებარეობის სიგნალი მიუწვდომელია. ხელახალი მცდელობა…",
+    "Сигнал геолокации недоступен. Повторная попытка…"
+  ],
+  "The browser is not providing location. Check its location permission and try again.": [
+    "ბრაუზერი მდებარეობას არ გვაწვდის. შეამოწმეთ მდებარეობის ნებართვა და სცადეთ ხელახლა.",
+    "Браузер не передаёт геолокацию. Проверьте разрешение и повторите попытку."
+  ],
+  "Connect requests location access. Choose Allow in your browser to enable GPS speed.": [
+    "Connect ითხოვს მდებარეობაზე წვდომას. GPS სიჩქარის ჩასართავად ბრაუზერის მოთხოვნაზე აირჩიეთ Allow.",
+    "Connect запрашивает доступ к геолокации. Выберите «Разрешить» в браузере, чтобы включить скорость GPS."
   ]
 }
