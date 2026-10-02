@@ -44,7 +44,7 @@ export function IntelligenceOrb(props: OrbProps) {
       style={{ ['--model-color' as string]:props.modelColor??'#fff', ['--voice-level' as string]: String(Math.max(0, Math.min(1, props.voiceLevel ?? 0))) }}
       aria-hidden="true"
     >
-      <span className="capability-orbits">{satellites.map((kind, index) => <span key={kind + index} className={`capability-satellite satellite-${kind}`} style={{ ['--satellite-angle' as string]: `${index * 360 / Math.max(1, satellites.length)}deg` }}><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle className="satellite-highlight" cx="9" cy="9" r="2"/></svg>{kind==='model-buddy'&&<span className="satellite-buddy"/>}</span>)}</span>
+      <span className="capability-orbits">{satellites.map((kind, index) => <span key={kind + index} className={`capability-satellite satellite-${kind}`} style={{ ['--satellite-angle' as string]: `${index * 360 / Math.max(1, satellites.length)}deg` }}><svg viewBox="5 5 14 14"><circle cx="12" cy="12" r="7"/><circle className="satellite-highlight" cx="9" cy="9" r="2"/></svg>{kind==='model-buddy'&&<span className="satellite-buddy"/>}</span>)}</span>
       <span className="guest-orbits">{Array.from({ length: props.guestCount ?? 0 }, (_, index) => <span className="guest-seed firefly-guest" key={index} style={{ ['--satellite-angle' as string]: `${index * 137.508}deg`, ['--firefly-delay' as string]: `${-index*.71}s` }} />)}</span>
       <span className="guest-orbits">{Array.from({length:props.memberCount??0},(_,index)=><span className="guest-seed firefly-member" key={index} style={{['--satellite-angle' as string]:`${index*137.508+45}deg`,['--firefly-delay' as string]:`${-index*.83}s`}}/>)}</span>
       <span className="cell-boundary" />

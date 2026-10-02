@@ -1,3 +1,4 @@
+import { OfflineModelLibrary } from './offline/OfflineModelLibrary'
 import { LiveChat } from './live/LiveChat'
 import { LiveSkillStore } from './live/LiveSkillStore'
 import { roomInvite, type LiveKind } from './live/client'
@@ -11,7 +12,7 @@ import { useTemporaryChat } from './chat/useTemporaryChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
 import { desktopInference, cancelDesktopReply } from './offline/desktop'
-import { ModelStore } from './offline/ModelStore'
+import { OfflineModelSelect } from './offline/OfflineModelSelect'
 import { MODELS } from './offline/models'
 import { offlineReply, cancelOfflineReply, unloadOfflineModel } from './offline/runtime'
 import { useLocale, LocaleProvider } from './i18n/Locale'
@@ -1566,7 +1567,7 @@ function AppContent() {
             <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option><option value="ka">ქართული</option><option value="ru">Русский</option></select></label>
             <p className="modal-help">{t("API credentials and updates.")}</p>
             <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'System theme' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
-            <div id="offline-ai-settings"><ModelStore catalog disabled={thinking || Boolean(streamingId)} /></div>
+            <OfflineModelSelect disabled={thinking || Boolean(streamingId)} />
             <div className="settings-menu-list" role="menu">
               <button
                 type="button"
@@ -1697,13 +1698,7 @@ function AppContent() {
 
             {(['syberlive','crossfire'] as const).map(kind=><LiveSkillStore key={kind} kind={kind} active={liveSkills[kind]} onChange={active=>{setLiveSkills(old=>({...old,[kind]:active}));if(active)skillPreferences.setItem(`robaq-${kind}-active`,'true');else skillPreferences.removeItem(`robaq-${kind}-active`);if(!active&&liveEntry?.kind===kind)setLiveEntry(null)}} />)}
             </div>
-            <h3 className="store-section-title store-section-title-info">{t("Offline AI")}<details className="store-info inline-store-info"><summary aria-label="Offline AI information">?</summary><p className="modal-help">{t('Download once, then chat offline. Keep AI Lab open during installation.')}</p></details></h3>
-            <ModelStore onSettings={()=>{openLandingPanel('settings');setTimeout(()=>document.getElementById('offline-ai-settings')?.scrollIntoView(),100)}} disabled={thinking || Boolean(streamingId)} />
-
-
-
-
-
+            <OfflineModelLibrary disabled={thinking || Boolean(streamingId)} />
 
             <div className="modal-actions">
               <button
