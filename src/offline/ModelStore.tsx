@@ -27,7 +27,10 @@ export function ModelStore({ installed, selected, onChange, disabled }: {install
       try { skillPreferences.setItem('ostra-last-installed-model', model.id) } catch { /* Selection still updates for this session. */ }
       onChange(model.id)
     } catch (e) {
-      if (!abort.signal.aborted) setError(e instanceof Error ? e.message : 'Model installation failed. Please try again.')
+      if (abort.signal.aborted) {
+        try { await removeModel(model.id); onChange() }
+        catch { setError('Could not remove the model. Please try again.'); onChange() }
+      } else setError(e instanceof Error ? e.message : 'Model installation failed. Please try again.')
     } finally { controller.current = null; setFinishing(false); setBusy('') }
   }
   async function remove(id: string) {

@@ -1781,16 +1781,12 @@ function AppContent() {
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
             <p className="modal-help">{t('I am building robaqAi with dedication and a simple goal: to make everyday tasks easier. I want to keep adding useful skills and tools that help us learn, create and get things done.')}</p>
             <p className="modal-help">{t('This independent project is growing step by step. Your feedback helps shape what comes next.')}</p>
-            <p className="about-credit">{t('Created by')} <strong>Nodar Robakidze</strong></p>
             <p className="modal-help about-responsibility">{t('Use these tools lawfully and respect others’ privacy and rights. AI can make mistakes; verify important results. Features may change as the project develops.')}</p>
-            <button type="button" className="modal-btn donation-button" onClick={() => setLandingPanel('donate')}>{t('Support the project')}</button>
-            <div className="modal-actions">
-              <button
-                type="button"
-                className="modal-btn primary"
-                onClick={() => setLandingPanel(null)}
-              > {t("Close")} </button>
+            <div className="modal-actions about-actions">
+              <button type="button" className="modal-btn about-support" onClick={() => setLandingPanel('donate')}>{t('Support the project')}</button>
+              <button type="button" className="modal-btn" onClick={() => setLandingPanel(null)}>{t('Cancel')}</button>
             </div>
+            <small className="about-author version-label">{t('Author')}: N.ROBAKIDZE</small>
           </div>
         </div>
       )}
