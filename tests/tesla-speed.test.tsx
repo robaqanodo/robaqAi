@@ -45,6 +45,27 @@ it('resolveSpeedKmh prefers native speed and falls back to haversine delta',()=>
  const junk=resolveSpeedKmh(null,41.71,44.8,2_500,5,first.prev,null)
  // dt 0.5s < MIN_DT → keep previous smoothed (null)
  expect(junk.speedKmh).toBeNull()
- const badAcc=resolveSpeedKmh(null,41.7001,44.8,2_000,120,first.prev,null)
+ const badAcc=resolveSpeedKmh(null,41.7001,44.8,2_000,10_000,first.prev,null)
  expect(badAcc.speedKmh).toBeNull()
+ // ~4 km/h walk: 0.00002° ≈ 2.22m. Coarse accuracy must not zero it.
+ const walkA=resolveSpeedKmh(null,41.7,44.8,5_000,120,null,null)
+ const walkB=resolveSpeedKmh(null,41.70002,44.8,7_000,120,walkA.prev,walkA.smoothed)
+ expect(walkB.speedKmh).toBeGreaterThan(3)
+ expect(walkB.speedKmh).toBeLessThan(6)
+})
+
+it('polls getCurrentPosition so a quiet Tesla watch can still derive walking speed',()=>{
+ const getCurrentPosition=vi.fn()
+ navigator.geolocation.getCurrentPosition=getCurrentPosition
+ const {container}=render(<Core/>)
+ act(()=>enableTeslaLocation())
+ act(()=>vi.advanceTimersByTime(1200))
+ expect(getCurrentPosition).toHaveBeenCalled()
+ const deliver=getCurrentPosition.mock.calls[0][0] as PositionCallback
+ const t0=Date.now()
+ act(()=>deliver(position(null,{latitude:41.7,longitude:44.8,accuracy:100,timestamp:t0-60000})))
+ expect(container.querySelector('.tesla-core-speed')).toBeNull()
+ act(()=>vi.advanceTimersByTime(2000))
+ act(()=>deliver(position(null,{latitude:41.70004,longitude:44.8,accuracy:100,timestamp:Date.now()-60000})))
+ expect(screen.getByText('8')).toBeTruthy()
 })

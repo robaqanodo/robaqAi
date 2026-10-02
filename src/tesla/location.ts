@@ -4,19 +4,23 @@ type LocationState={coordinates:GeolocationCoordinates|null;status:string;enable
 type Fix={lat:number;lon:number;t:number;accuracy:number}
 
 let state:LocationState={coordinates:null,status:'Location is off',enabled:false,speedKmh:null,permission:'unknown'}
-let watch:number|null=null,expiry:ReturnType<typeof setTimeout>|undefined,retry:ReturnType<typeof setTimeout>|undefined,generation=0
+let watch:number|null=null,expiry:ReturnType<typeof setTimeout>|undefined,retry:ReturnType<typeof setTimeout>|undefined,poll:ReturnType<typeof setInterval>|undefined,generation=0
 let prevFix:Fix|null=null,smoothedKmh:number|null=null
 const listeners=new Set<()=>void>()
 
 const EARTH_M=6371000
-const MAX_ACCURACY_M=60
+/** Fixes worse than this are not a position. Car browsers often report 30–150m. */
+const REJECT_ACCURACY_M=3000
+const ASSUMED_ACCURACY_M=40
 const MIN_DT_S=0.75
-const MAX_DT_S=10
+const MAX_DT_S=30
 const MAX_PLAUSIBLE_KMH=260
-const SMOOTH_ALPHA=0.4
+const SMOOTH_ALPHA=0.45
+const POLL_MS=1200
 
 function update(next:Partial<LocationState>){state={...state,...next};listeners.forEach(fn=>fn())}
 function resetSpeedTracking(){prevFix=null;smoothedKmh=null}
+function clearPoll(){if(poll!==undefined){clearInterval(poll);poll=undefined}}
 
 export function useTeslaLocation(){return useSyncExternalStore(cb=>{listeners.add(cb);return()=>{listeners.delete(cb)}},()=>state)}
 
@@ -29,8 +33,8 @@ export function haversineMeters(lat1:number,lon1:number,lat2:number,lon2:number)
 
 /**
  * Prefer native coords.speed (m/s → km/h) when it is a finite number >= 0.
- * Otherwise derive km/h from successive fixes (haversine / Δt) with accuracy,
- * time-gap, plausibility filters and light EMA smoothing.
+ * Otherwise derive km/h from successive fixes. The noise floor stays small so
+ * walking (~3–6 km/h) is not discarded as GPS jitter, including coarse car-browser fixes.
  */
 export function resolveSpeedKmh(
  nativeSpeedMs:number|null|undefined,
@@ -41,7 +45,7 @@ export function resolveSpeedKmh(
  prev:Fix|null,
  previousSmoothed:number|null,
 ):{speedKmh:number|null;prev:Fix|null;smoothed:number|null}{
- const next:Fix={lat,lon,t:timestamp,accuracy:typeof accuracy==='number'&&Number.isFinite(accuracy)?accuracy:MAX_ACCURACY_M}
+ const next:Fix={lat,lon,t:timestamp,accuracy:typeof accuracy==='number'&&Number.isFinite(accuracy)&&accuracy>=0?accuracy:ASSUMED_ACCURACY_M}
  if(typeof nativeSpeedMs==='number'&&Number.isFinite(nativeSpeedMs)&&nativeSpeedMs>=0){
   const raw=nativeSpeedMs*3.6
   return {speedKmh:raw,prev:next,smoothed:raw}
@@ -51,16 +55,23 @@ export function resolveSpeedKmh(
  if(!Number.isFinite(dt)||dt<=0)return {speedKmh:previousSmoothed,prev,smoothed:previousSmoothed}
  if(dt<MIN_DT_S)return {speedKmh:previousSmoothed,prev,smoothed:previousSmoothed}
  if(dt>MAX_DT_S)return {speedKmh:null,prev:next,smoothed:null}
- if(next.accuracy>MAX_ACCURACY_M||prev.accuracy>MAX_ACCURACY_M)return {speedKmh:previousSmoothed,prev:next,smoothed:previousSmoothed}
+ if(next.accuracy>REJECT_ACCURACY_M||prev.accuracy>REJECT_ACCURACY_M)return {speedKmh:previousSmoothed,prev:next,smoothed:previousSmoothed}
  const dist=haversineMeters(prev.lat,prev.lon,lat,lon)
- const noise=Math.max(next.accuracy,prev.accuracy,8)*0.45
- let raw=dist<=noise?0:(dist/dt)*3.6
+ // Small floor so walking is not zeroed. Do not advance the baseline while the move is still inside noise,
+ // otherwise slow steps never add up between Tesla-browser polls.
+ const noise=Math.min(1.5,Math.max(0.4,Math.min(next.accuracy,prev.accuracy)*0.008))
+ if(dist<=noise){
+  if(dt>8)return {speedKmh:0,prev:next,smoothed:0}
+  const held=previousSmoothed??0
+  return {speedKmh:held,prev,smoothed:held}
+ }
+ const raw=(dist/dt)*3.6
  if(!Number.isFinite(raw)||raw<0||raw>MAX_PLAUSIBLE_KMH)return {speedKmh:previousSmoothed,prev:next,smoothed:previousSmoothed}
  const smoothed=previousSmoothed==null?raw:previousSmoothed*(1-SMOOTH_ALPHA)+raw*SMOOTH_ALPHA
  return {speedKmh:smoothed,prev:next,smoothed}
 }
 
-export function stopTeslaLocation(){generation++;if(watch!==null)navigator.geolocation?.clearWatch(watch);watch=null;clearTimeout(expiry);clearTimeout(retry);resetSpeedTracking();update({coordinates:null,status:'Location is off',enabled:false,speedKmh:null})}
+export function stopTeslaLocation(){generation++;clearPoll();if(watch!==null)navigator.geolocation?.clearWatch(watch);watch=null;clearTimeout(expiry);clearTimeout(retry);resetSpeedTracking();update({coordinates:null,status:'Location is off',enabled:false,speedKmh:null})}
 
 export function enableTeslaLocation(){
  if(state.enabled)return
@@ -72,7 +83,7 @@ export function enableTeslaLocation(){
  update({enabled:true,status:'Waiting for location…'})
  if(navigator.permissions?.query)void navigator.permissions.query({name:'geolocation'}).then(result=>{if(current===generation)update({permission:result.state})}).catch(()=>{})
  const recover=(status:string)=>{
-  clearTimeout(expiry);clearTimeout(retry)
+  clearTimeout(expiry);clearTimeout(retry);clearPoll()
   if(watch!==null)navigator.geolocation.clearWatch(watch)
   watch=null;watchVersion++
   resetSpeedTracking()
@@ -85,18 +96,25 @@ export function enableTeslaLocation(){
   const version=++watchVersion
   if(watch!==null)navigator.geolocation.clearWatch(watch)
   watch=null
+  clearPoll()
   const receive=(position:GeolocationPosition)=>{
    if(current!==generation||version!==watchVersion)return
    const age=Date.now()-position.timestamp
-   if(!Number.isFinite(age)||age< -5000||age>15000){recover('The browser returned an old location. Requesting a fresh fix…');return}
+   const stale=!Number.isFinite(age)||age<-5000||age>15000
+   const native=position.coords.speed
+   const nativeUsable=typeof native==='number'&&Number.isFinite(native)&&native>=0
+   // A stale sample that already carries speed is ignored (phone path stays honest).
+   // Tesla's browser often emits null speed with a cached timestamp — keep the coordinates and clock them locally.
+   if(stale&&nativeUsable){recover('The browser returned an old location. Requesting a fresh fix…');return}
    attempts=0
-   const {speed,latitude,longitude,accuracy}=position.coords
-   const resolved=resolveSpeedKmh(speed,latitude,longitude,position.timestamp,accuracy,prevFix,smoothedKmh)
+   const {latitude,longitude,accuracy}=position.coords
+   const timestamp=stale?Date.now():position.timestamp
+   const resolved=resolveSpeedKmh(nativeUsable?native:null,latitude,longitude,timestamp,accuracy,prevFix,smoothedKmh)
    prevFix=resolved.prev
    smoothedKmh=resolved.smoothed
    update({coordinates:position.coords,status:'Location enabled',permission:'granted',speedKmh:resolved.speedKmh})
    clearTimeout(expiry)
-   expiry=setTimeout(()=>{if(current===generation&&version===watchVersion)recover('Location updates stopped. Requesting a fresh fix…')},Math.max(0,15000-age))
+   expiry=setTimeout(()=>{if(current===generation&&version===watchVersion)recover('Location updates stopped. Requesting a fresh fix…')},stale?15000:Math.max(0,15000-age))
   }
   const fail=(error:GeolocationPositionError)=>{
    if(current!==generation||version!==watchVersion)return
@@ -107,8 +125,13 @@ export function enableTeslaLocation(){
   try{
    const options={enableHighAccuracy:highAccuracy,timeout:30000,maximumAge:0}
    watch=navigator.geolocation.watchPosition(receive,fail,options)
-   // A one-shot request can recover browsers whose existing watch stopped delivering fixes.
-   if(attempts>0&&navigator.geolocation.getCurrentPosition)navigator.geolocation.getCurrentPosition(receive,fail,options)
+   const pollOnce=()=>{
+    if(current!==generation||version!==watchVersion)return
+    navigator.geolocation.getCurrentPosition?.(receive,()=>{},options)
+   }
+   // Tesla's in-car browser often never re-fires watchPosition. Poll so walking deltas exist.
+   poll=setInterval(pollOnce,POLL_MS)
+   if(attempts>0)pollOnce()
   }catch{stopTeslaLocation();update({status:'This browser does not provide location access.'})}
  }
  start(true)

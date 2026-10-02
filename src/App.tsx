@@ -312,7 +312,12 @@ function AppContent() {
     enabled:teslaActive,
     onLongPress:()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)},
   })
-  useEffect(()=>{stopTeslaLocation();return()=>stopTeslaLocation()},[session])
+  // Default connected mode keeps browser geolocation on, including after refresh/session restore.
+  useEffect(()=>{
+    if(teslaActive) enableTeslaLocation()
+    else stopTeslaLocation()
+    return ()=>stopTeslaLocation()
+  },[teslaActive,session])
   useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
   const [kasOpen, setKasOpen] = useState(false)
   const [kasCode, setKasCode] = useState('')

@@ -2,12 +2,12 @@ import {useCallback,useEffect,useRef,useState,type MouseEvent,type PointerEvent}
 
 const LONG_PRESS_MS=3000
 const MOVE_CANCEL_PX=14
-const SPIN_MS=1050
+const SPIN_MS=3000
 const SETTLE_MS=1100
 
 type Options={enabled:boolean;onLongPress:()=>void}
 
-/** Connected LinkyourTesla core: one natural spin per tap; mid-spin taps ignored; 3s long-press opens panel. */
+/** Connected LinkyourTesla core: one startup-style spin per tap; mid-spin taps ignored; 3s long-press opens panel. */
 export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
   const [spinning,setSpinning]=useState(false)
   const [settling,setSettling]=useState(false)
