@@ -28,3 +28,171 @@
 .app-shell.has-navigation .tesla-menu-toggle{left:calc(var(--rail-left) + var(--rail-width));right:auto;top:50%;transform:translate(-50%,-50%);width:30px;min-width:30px;height:44px;min-height:44px;padding:4px;border-radius:10px;background:#303239ed}.app-shell.has-navigation.tesla-menu-collapsed .tesla-menu-toggle{left:0;transform:translateY(-50%);border-radius:0 10px 10px 0}.theme-white.app-shell.has-navigation .tesla-menu-toggle{background:#f0f2f5;color:#20242c}@media(max-width:600px){.app-shell.has-navigation .tesla-menu-toggle{left:50%;top:auto;bottom:66px;transform:translate(-50%,50%)}.app-shell.has-navigation.tesla-menu-collapsed .tesla-menu-toggle{left:0;top:50%;bottom:auto;transform:translateY(-50%)}}
 
 .app-shell.has-navigation .tesla-menu-toggle{top:auto;bottom:max(28px,env(safe-area-inset-bottom));transform:translateX(-50%)}.app-shell.has-navigation.tesla-menu-collapsed .tesla-menu-toggle{top:auto;left:max(10px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));transform:none;border-radius:12px}@media(max-width:600px){.app-shell.has-navigation .tesla-menu-toggle{left:24px;top:auto;bottom:66px;transform:none}.app-shell.has-navigation.tesla-menu-collapsed .tesla-menu-toggle{left:10px;top:auto;bottom:12px;transform:none}}
+
+/* LinkyourTesla connected: EN/RU only — keep rail as narrow as labels allow (no wrap). */
+.app-shell.has-navigation.tesla-connected{--rail-width:74px;--rail-gap:6px}
+.app-shell.has-navigation.tesla-connected .navigation-rail>button{width:66px}
+.app-shell.has-navigation.tesla-connected .navigation-rail>button>span{white-space:nowrap;overflow-wrap:normal;letter-spacing:0;font-size:10px;max-width:none}
+
+/* Mobile / landscape phone: bottom dock — collapse control and motion are top → bottom. */
+@media(max-width:760px), (pointer:coarse) and (max-height:500px){
+ .app-shell.has-navigation .tesla-menu-toggle{
+  left:50%;
+  right:auto;
+  top:auto;
+  bottom:calc(var(--mobile-dock-space, 80px) - 6px);
+  width:44px;
+  min-width:44px;
+  height:30px;
+  min-height:30px;
+  padding:4px;
+  transform:translate(-50%,50%);
+  border-radius:10px 10px 0 0;
+ }
+ /* Left/right chevron rotated so expanded = down (fold away), collapsed = up (bring back). */
+ .app-shell.has-navigation .tesla-menu-toggle svg{transform:rotate(-90deg)}
+ .app-shell.has-navigation.tesla-menu-collapsed .tesla-menu-toggle{
+  left:50%;
+  top:auto;
+  bottom:max(10px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  border-radius:12px;
+ }
+ /* Slide the dock downward (fold from its top edge) instead of snapping sideways. */
+ .app-shell.has-navigation .navigation-rail{
+  transition:transform .28s ease,opacity .22s ease;
+ }
+ .app-shell.has-navigation.tesla-menu-collapsed{
+  --mobile-dock-space:max(12px,env(safe-area-inset-bottom));
+  padding-bottom:var(--mobile-dock-space);
+ }
+ .app-shell.has-navigation.tesla-menu-collapsed .navigation-rail{
+  display:flex!important;
+  transform:translateY(calc(100% + 24px));
+  opacity:0;
+  pointer-events:none;
+ }
+}
+@media(prefers-reduced-motion:reduce){
+ .app-shell.has-navigation .navigation-rail{transition:none}
+}
+
+/* Connected core: tap spins logo; rapid taps queue faster spins; orbs ride the wind. */
+.link-tesla-core>svg.tesla-core-logo.is-spinning{
+  animation:tesla-logo-spin var(--tesla-spin-ms,1100ms) cubic-bezier(.35,.02,.25,1) 1 forwards;
+  will-change:transform;
+}
+@keyframes tesla-logo-spin{
+  from{transform:rotate(0deg) scale(1)}
+  40%{transform:rotate(160deg) scale(1.04)}
+  to{transform:rotate(360deg) scale(1)}
+}
+
+.intelligence-orb.tesla-spinning .link-tesla-core:after{
+  animation:tesla-tornado-ring calc(var(--tesla-spin-ms,1100ms) * .45) linear infinite;
+  border-style:solid;
+  border-color:#e8212766 transparent #ffffff55 transparent;
+  inset:-22%;
+  box-shadow:0 0 18px #e8212744,inset 0 0 12px #e8212733;
+}
+@keyframes tesla-tornado-ring{to{transform:rotate(360deg)}}
+
+.tesla-tornado{
+  position:absolute;inset:8%;z-index:8;pointer-events:none;border-radius:50%;
+  --energy-rgb:255,255,255;
+}
+.theme-white .tesla-tornado{--energy-rgb:20,24,32}
+.tesla-tornado>i{
+  position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;
+  background:rgba(var(--energy-rgb),.55);
+  box-shadow:0 0 8px rgba(var(--energy-rgb),.35),0 0 2px #e8212788;
+  opacity:0;
+  animation:tesla-tornado-leaf var(--tesla-spin-ms,1100ms) linear infinite;
+}
+.tesla-tornado>i:nth-child(1){--leaf-r:38%;--leaf-delay:0ms;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .55)}
+.tesla-tornado>i:nth-child(2){--leaf-r:48%;--leaf-delay:80ms;width:4px;height:4px;margin:-2px;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .7)}
+.tesla-tornado>i:nth-child(3){--leaf-r:58%;--leaf-delay:140ms;width:5px;height:5px;margin:-2.5px;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .48)}
+.tesla-tornado>i:nth-child(4){--leaf-r:44%;--leaf-delay:210ms;width:3px;height:3px;margin:-1.5px;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .62)}
+.intelligence-orb.tesla-settling .tesla-tornado>i{animation-name:tesla-tornado-fade;animation-duration:.9s;animation-iteration-count:1;animation-fill-mode:forwards}
+@keyframes tesla-tornado-leaf{
+  0%{opacity:0;transform:rotate(0deg) translateX(var(--leaf-r,42%)) scale(.4)}
+  12%{opacity:.85}
+  100%{opacity:.15;transform:rotate(360deg) translateX(calc(var(--leaf-r,42%) * 1.25)) scale(.9)}
+}
+@keyframes tesla-tornado-fade{
+  to{opacity:0;transform:rotate(40deg) translateX(calc(var(--leaf-r,42%) * .85)) scale(.3)}
+}
+
+/* Orbs/balls: whipped by the spin like leaves, then ease home. */
+.intelligence-orb.tesla-spinning .capability-satellite,
+.intelligence-orb.tesla-spinning .guest-seed{
+  animation-name:tesla-wind-orbit!important;
+  animation-duration:calc(var(--tesla-spin-ms,1100ms) * .42)!important;
+  animation-timing-function:linear!important;
+  animation-iteration-count:infinite!important;
+  animation-delay:0s!important;
+}
+.intelligence-orb.tesla-spinning .guest-seed{
+  animation-name:tesla-wind-orbit,firefly-pulse!important;
+  animation-duration:calc(var(--tesla-spin-ms,1100ms) * .42),.55s!important;
+  animation-timing-function:linear,ease-in-out!important;
+  animation-iteration-count:infinite,infinite!important;
+}
+@keyframes tesla-wind-orbit{
+  from{transform:rotate(var(--satellite-angle)) translateX(calc(var(--satellite-radius) * 1.2)) rotate(calc(var(--satellite-angle) * -1))}
+  to{transform:rotate(calc(var(--satellite-angle) + 360deg)) translateX(calc(var(--satellite-radius) * 1.7)) rotate(calc((var(--satellite-angle) + 360deg) * -1))}
+}
+.intelligence-orb.tesla-settling .capability-satellite,
+.intelligence-orb.tesla-settling .guest-seed{
+  animation-name:tesla-wind-settle!important;
+  animation-duration:1.35s!important;
+  animation-timing-function:cubic-bezier(.2,.8,.2,1)!important;
+  animation-iteration-count:1!important;
+  animation-fill-mode:forwards!important;
+  animation-delay:0s!important;
+}
+.intelligence-orb.tesla-settling .guest-seed{
+  animation-name:tesla-wind-settle,firefly-pulse!important;
+  animation-duration:1.35s,3.7s!important;
+  animation-timing-function:cubic-bezier(.2,.8,.2,1),ease-in-out!important;
+  animation-iteration-count:1,infinite!important;
+  animation-fill-mode:forwards,none!important;
+}
+@keyframes tesla-wind-settle{
+  from{transform:rotate(calc(var(--satellite-angle) + 200deg)) translateX(calc(var(--satellite-radius) * 1.55)) rotate(calc((var(--satellite-angle) + 200deg) * -1))}
+  to{transform:rotate(var(--satellite-angle)) translateX(var(--satellite-radius)) rotate(calc(var(--satellite-angle) * -1))}
+}
+
+.intelligence-orb.tesla-spinning .cell-blob{
+  animation:tesla-blob-whirl calc(var(--tesla-spin-ms,1100ms) * .85) ease-in-out infinite!important;
+}
+.intelligence-orb.tesla-spinning .cell-blob-b{
+  animation:tesla-blob-whirl calc(var(--tesla-spin-ms,1100ms) * 1.05) ease-in-out infinite reverse!important;
+}
+@keyframes tesla-blob-whirl{
+  0%,100%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(18deg) scale(1.06)}
+}
+.intelligence-orb.tesla-settling .cell-blob,
+.intelligence-orb.tesla-settling .cell-blob-b{
+  animation:tesla-blob-rest 1.2s ease-out forwards!important;
+}
+@keyframes tesla-blob-rest{
+  from{transform:rotate(12deg) scale(1.04)}
+  to{transform:rotate(0deg) scale(1)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .link-tesla-core>svg.tesla-core-logo.is-spinning{animation:tesla-logo-spin-reduced .35s ease-out 1 forwards}
+  @keyframes tesla-logo-spin-reduced{50%{opacity:.7}to{opacity:1}}
+  .intelligence-orb.tesla-spinning .capability-satellite,
+  .intelligence-orb.tesla-spinning .guest-seed,
+  .intelligence-orb.tesla-settling .capability-satellite,
+  .intelligence-orb.tesla-settling .guest-seed,
+  .intelligence-orb.tesla-spinning .cell-blob,
+  .intelligence-orb.tesla-spinning .cell-blob-b,
+  .intelligence-orb.tesla-settling .cell-blob,
+  .intelligence-orb.tesla-settling .cell-blob-b,
+  .tesla-tornado>i,
+  .intelligence-orb.tesla-spinning .link-tesla-core:after{animation:none!important}
+}

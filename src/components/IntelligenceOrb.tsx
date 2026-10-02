@@ -7,6 +7,11 @@ type OrbProps = {
   teslaUnit?: 'km/h'|'mph'
   teslaSpeedKmh?: number|null
   teslaHomeVisible?: boolean
+  teslaSpinning?: boolean
+  teslaSettling?: boolean
+  teslaSpinMs?: number
+  teslaSpinKey?: number
+  onTeslaSpinEnd?: () => void
   linkTesla?: boolean
   tesla?: boolean
   memberCount?:number
@@ -42,14 +47,16 @@ export function IntelligenceOrb(props: OrbProps) {
   const state = orbStateLabel(props).toLowerCase()
   const theme = props.hasApiKey ? providerThemeClass(props.provider ?? null) : ''
   const satellites = [...(props.birdColors ?? ['stock', 'stock']), ...(props.movieSyncActive ? ['movie'] : [])]
+  const teslaWind = Boolean(props.linkTesla && (props.teslaSpinning || props.teslaSettling))
+  const spinMs = Math.max(320, props.teslaSpinMs ?? 1100)
   return (
     <span
-      className={`living-cell intelligence-orb${props.hasApiKey ? ' has-api-key' : ''}${theme ? ` ${theme}` : ''}${props.speaking ? ' is-speaking' : ''}${props.listening ? ' is-listening' : ''}`}
+      className={`living-cell intelligence-orb${props.hasApiKey ? ' has-api-key' : ''}${theme ? ` ${theme}` : ''}${props.speaking ? ' is-speaking' : ''}${props.listening ? ' is-listening' : ''}${props.linkTesla && props.teslaSpinning ? ' tesla-spinning' : ''}${props.linkTesla && props.teslaSettling ? ' tesla-settling' : ''}`}
       data-model-active={props.modelColor?'true':undefined}
       data-state={state}
       data-provider={props.hasApiKey ? props.provider ?? 'neutral' : 'neutral'}
       data-connection={props.connectionIndicator ? (props.hasApiKey ? 'ready' : 'offline') : undefined}
-      style={{ ['--model-color' as string]:props.modelColor??'#fff', ['--voice-level' as string]: String(Math.max(0, Math.min(1, props.voiceLevel ?? 0))) }}
+      style={{ ['--model-color' as string]:props.modelColor??'#fff', ['--voice-level' as string]: String(Math.max(0, Math.min(1, props.voiceLevel ?? 0))), ['--tesla-spin-ms' as string]: `${spinMs}ms` }}
       aria-hidden="true"
     >
       <span className="capability-orbits">{satellites.map((kind, index) => <span key={kind + index} className={`capability-satellite satellite-${kind}`} style={{ ['--satellite-angle' as string]: `${index * 360 / Math.max(1, satellites.length)}deg` }}><svg viewBox="5 5 14 14"><circle cx="12" cy="12" r="7"/><circle className="satellite-highlight" cx="9" cy="9" r="2"/></svg>{kind==='model-buddy'&&<span className="satellite-buddy"/>}</span>)}</span>
@@ -63,12 +70,13 @@ export function IntelligenceOrb(props: OrbProps) {
       {props.connectionIndicator
         ? <span className="cell-status-light" />
         : <span className={`cell-nucleus${props.linkTesla ? ' link-tesla-core' : props.tesla ? ' tesla-nucleus' : ''}`}>
-          {props.linkTesla && <><svg className={`tesla-core-logo${props.teslaHomeVisible!==false&&!teslaIntroPlayed?' is-opening':''}`} onAnimationEnd={()=>setTeslaIntroPlayed(true)} style={{visibility:typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1?'hidden':'visible'}} viewBox="1000 300 1000 1000" overflow="hidden" aria-hidden="true"><image href={teslaLogo} width="3000" height="2000"/></svg>{typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1&&<span className="tesla-core-speed"><strong>{Math.round(props.teslaSpeedKmh/(props.teslaUnit!=='km/h'?1.609344:1))}</strong><small>GPS · {props.teslaUnit??'mph'}</small></span>}</>}
+          {props.linkTesla && <><svg key={props.teslaSpinning?`spin-${props.teslaSpinKey??0}`:'logo'} className={`tesla-core-logo${props.teslaHomeVisible!==false&&!teslaIntroPlayed&&!props.teslaSpinning?' is-opening':''}${props.teslaSpinning?' is-spinning':''}`} onAnimationEnd={event=>{if(event.target!==event.currentTarget)return;if(props.teslaSpinning&&event.animationName.includes('tesla-logo-spin')){props.onTeslaSpinEnd?.();return}if(!teslaIntroPlayed)setTeslaIntroPlayed(true)}} style={{visibility:typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1?'hidden':'visible'}} viewBox="1000 300 1000 1000" overflow="hidden" aria-hidden="true"><image href={teslaLogo} width="3000" height="2000"/></svg>{typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1&&<span className="tesla-core-speed"><strong>{Math.round(props.teslaSpeedKmh/(props.teslaUnit!=='km/h'?1.609344:1))}</strong><small>GPS · {props.teslaUnit??'mph'}</small></span>}</>}
           {!props.linkTesla && props.tesla && <svg className="tesla-emblem" viewBox="0 0 100 120" focusable="false" aria-hidden="true">
             <path fill="currentColor" d="M8 15 Q50 -3 92 15 L88 24 Q50 9 12 24 Z M16 30 Q50 16 84 30 L78 43 Q66 35 59 35 L50 111 L41 35 Q34 35 22 43 Z"/>
           </svg>}
         </span>}
       {props.hasApiKey && <span className="cell-api-glow" />}
+      {teslaWind && <span className="tesla-tornado" aria-hidden="true"><i/><i/><i/><i/></span>}
     </span>
   )
 }

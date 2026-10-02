@@ -1,7 +1,9 @@
 import {IdeaForm} from './components/IdeaForm'
-import {useTeslaLocation,stopTeslaLocation} from './tesla/location'
+import {useTeslaLocation,stopTeslaLocation,enableTeslaLocation} from './tesla/location'
+import {requestApiFeaturePermissions} from './tesla/permissions'
 import {useInstallationProgress} from './components/InstallProgress'
 import {TeslaPanel,TeslaStore,TeslaSettings,TESLA_UNIT_KEY,TESLA_KEY,removeTesla} from './tesla/TeslaSkill'
+import {useTeslaCoreInteraction} from './tesla/useTeslaCoreInteraction'
 import { OfflineModelLibrary } from './offline/OfflineModelLibrary'
 import { LiveChat } from './live/LiveChat'
 import { LiveSkillStore } from './live/LiveSkillStore'
@@ -300,13 +302,16 @@ function AppContent() {
   const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
   const [teslaOpen,setTeslaOpen]=useState(false)
   const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
-  const [teslaTouch,setTeslaTouch]=useState(0)
   const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
   useEffect(()=>{setTeslaMenuCollapsed(false)},[teslaActive,session])
   useEffect(()=>{if(teslaActive&&locale==='ka')setLocale('en')},[teslaActive,locale,setLocale])
   useEffect(()=>{setTeslaUnit(skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')},[session,teslaActive])
 
   const teslaLocation=useTeslaLocation()
+  const teslaCore=useTeslaCoreInteraction({
+    enabled:teslaActive,
+    onLongPress:()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)},
+  })
   useEffect(()=>{stopTeslaLocation();return()=>stopTeslaLocation()},[session])
   useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
   const [kasOpen, setKasOpen] = useState(false)
@@ -1164,6 +1169,10 @@ function AppContent() {
     saveCredentials(trimmed, finalProvider)
     setApiError(null)
     setApiOpen(false)
+    // While LinkyourTesla is connected, activating API prompts for mic, camera, location, etc.
+    if (teslaActive) {
+      void requestApiFeaturePermissions().then(() => { enableTeslaLocation() })
+    }
   }
 
   const clearApiKey = () => {
@@ -1294,14 +1303,14 @@ function AppContent() {
   /** Big living-cell logo: single click always opens chat (stops voice if running). */
   const onLandingClick = useCallback(() => {
     if(labMinimized&&labInstalling){setLandingPanel('store');return}
-    if(teslaActive){setTeslaTouch(n=>n+1);return}
+    if(teslaActive)return
     if (chatOpen) return
     openChat()
   }, [chatOpen, openChat,labMinimized,labInstalling,teslaActive])
 
   return (
     <div
-      className={`app-shell has-navigation${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
+      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
         hasApiKey && provider ? ` ${providerThemeClass(provider)}` : ''
       }`}
     >
@@ -1322,15 +1331,24 @@ function AppContent() {
             ref={teslaOrb.buttonRef}
             className={`landing-entry${labMinimized&&labInstalling?' has-install-progress':''}${teslaOrb.tesla ? ' is-tesla-orb' : ''}${voiceMode ? ' is-voice-mode' : ''}`}
             onClick={onLandingClick}
+            onClickCapture={teslaActive&&!(labMinimized&&labInstalling)?teslaCore.onClickCapture:undefined}
+            onPointerDown={teslaActive&&!(labMinimized&&labInstalling)?teslaCore.onPointerDown:undefined}
+            onPointerMove={teslaActive&&!(labMinimized&&labInstalling)?teslaCore.onPointerMove:undefined}
+            onPointerUp={teslaActive&&!(labMinimized&&labInstalling)?teslaCore.onPointerUp:undefined}
+            onPointerCancel={teslaActive&&!(labMinimized&&labInstalling)?teslaCore.onPointerCancel:undefined}
             aria-label={t(labMinimized&&labInstalling?"Open AI Lab":teslaActive?"Tesla core":"Open chat")}
             title={t(teslaActive?"Tesla core":"Open chat")}
             tabIndex={chatOpen ? -1 : 0}
           >
             {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
-            {teslaActive&&teslaTouch>0&&<span key={teslaTouch} className="tesla-touch-ripple" aria-hidden="true">{Array.from({length:12},(_,i)=><span className="tesla-smoke-direction" key={i} style={{transform:`rotate(${i*30}deg)`}}><i className="tesla-smoke-cloud" style={{animationDelay:`${i%3*45}ms`}}/><i className="tesla-smoke-dust" style={{animationDelay:`${i%4*30}ms`}}/></span>)}</span>}
             <LivingCell
               linkTesla={teslaActive}
               teslaHomeVisible={!chatOpen&&!landingPanel&&!teslaOpen&&!watchOpen}
+              teslaSpinning={teslaCore.spinning}
+              teslaSettling={teslaCore.settling}
+              teslaSpinMs={teslaCore.spinMs}
+              teslaSpinKey={teslaCore.spinKey}
+              onTeslaSpinEnd={teslaCore.onSpinEnd}
               teslaSpeedKmh={teslaLocation.speedKmh}
               teslaUnit={teslaUnit}
               hasApiKey={hasApiKey}

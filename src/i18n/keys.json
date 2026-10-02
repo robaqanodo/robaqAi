@@ -180,5 +180,6 @@
   "Your encrypted chat history stays on this device. Sign in again after closing or reloading the app.",
   "Your local account keeps chat history on this device. You choose the tools, the model and when to connect.",
   "Your profile and chat history will be permanently deleted. All robaqAI settings, saved API keys and downloaded files on this device will also be cleared, including shared AI and translation packs. This cannot be undone. Other local accounts will remain. Files you saved outside the app are not affected.",
-  "＋ New chat"
+  "＋ New chat",
+  "While connected, activating an API key requests microphone, camera, and other browser permissions."
 ]
