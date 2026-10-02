@@ -2,7 +2,7 @@ import { Profile } from './Profile'
 import { useLocale } from '../i18n/Locale'
 import { useState } from 'react'
 import { register, signIn, rememberSession, type Session, type Conversation } from './vault'
-export function AccountDialog({ session, onSignedIn, onSignOut, onClose, onGuest, onProfileUpdate, onDeleted }: { session: Session | null; onSignedIn: (session: Session, chats: Conversation[]) => void; onSignOut: () => void; onClose: () => void; onGuest: () => void; onProfileUpdate: (session: Session) => void; onDeleted: () => void }) {
+export function AccountDialog({ teslaConnected=false, session, onSignedIn, onSignOut, onClose, onGuest, onProfileUpdate, onDeleted }: { teslaConnected?:boolean; session: Session | null; onSignedIn: (session: Session, chats: Conversation[]) => void; onSignOut: () => void; onClose: () => void; onGuest: () => void; onProfileUpdate: (session: Session) => void; onDeleted: () => void }) {
   const { t, locale, setLocale } = useLocale()
 
   const [remember, setRemember] = useState(false)
@@ -47,7 +47,7 @@ export function AccountDialog({ session, onSignedIn, onSignOut, onClose, onGuest
       <button type="button" className="modal-btn ghost" disabled={busy} onClick={() => setGuestWarning(true)}>{t("Continue as guest")}</button>
     </form>}
     <div className="account-bottom-bar">
-      {!session && <div className="welcome-languages" aria-label={t('Language')}><button type="button" className={locale === 'en' ? 'is-selected' : ''} onClick={() => setLocale('en')} aria-label="English">EN</button><button type="button" className={locale === 'ka' ? 'is-selected' : ''} onClick={() => setLocale('ka')} aria-label="ქართული">KA</button><button type="button" className={locale === 'ru' ? 'is-selected' : ''} onClick={() => setLocale('ru')} aria-label="Русский">RU</button></div>}
+      {!session && <div className="welcome-languages" aria-label={t('Language')}><button type="button" className={locale === 'en' ? 'is-selected' : ''} onClick={() => setLocale('en')} aria-label="English">EN</button>{!teslaConnected&&<button type="button" className={locale === 'ka' ? 'is-selected' : ''} onClick={() => setLocale('ka')} aria-label="ქართული">KA</button>}<button type="button" className={locale === 'ru' ? 'is-selected' : ''} onClick={() => setLocale('ru')} aria-label="Русский">RU</button></div>}
     </div>
   </section></div>
 }

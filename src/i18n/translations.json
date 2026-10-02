@@ -2574,5 +2574,97 @@
   "Location stays on when you close this panel. While moving, browser GPS speed appears in the home core. Stop location turns it off.": [
     "პანელის დახურვის შემდეგ მდებარეობა ჩართული რჩება. მოძრაობისას მთავარ ბირთვში გამოჩნდება ბრაუზერის GPS სიჩქარე. გამოსართავად დააჭირე „მდებარეობის გამორთვას“.",
     "Геолокация остаётся включённой после закрытия панели. При движении скорость GPS браузера отображается в главном ядре. Для отключения нажмите «Отключить геолокацию»."
+  ],
+  "Connect": [
+    "დაკავშირება",
+    "Подключить"
+  ],
+  "Disconnect": [
+    "გათიშვა",
+    "Отключить"
+  ],
+  "Connecting": [
+    "უკავშირდება",
+    "Подключение"
+  ],
+  "Open only in the Tesla browser.": [
+    "გახსენით მხოლოდ Tesla-ს ბრაუზერში.",
+    "Открывайте только в браузере Tesla."
+  ],
+  "Connect, then open Tesla below AI Lab.": [
+    "დაუკავშირდი და გახსენი Tesla AI Lab-ის ქვემოთ.",
+    "Подключитесь и откройте Tesla под AI Lab."
+  ],
+  "Enable location and choose km/h or mph in TESLA Settings.": [
+    "ჩართე მდებარეობა და აირჩიე km/h ან mph TESLA Settings-ში.",
+    "Включите геолокацию и выберите km/h или mph в TESLA Settings."
+  ],
+  "Live data shows browser signals only, not vehicle diagnostics.": [
+    "Live data აჩვენებს მხოლოდ ბრაუზერის მონაცემებს, არა მანქანის დიაგნოსტიკას.",
+    "Live data показывает только данные браузера, не диагностику автомобиля."
+  ],
+  "Speed unit": [
+    "სიჩქარის ერთეული",
+    "Единица скорости"
+  ],
+  "Live data": [
+    "ცოცხალი მონაცემები",
+    "Данные в реальном времени"
+  ],
+  "Tesla core": [
+    "Tesla ბირთვი",
+    "Ядро Tesla"
+  ],
+  "Disconnect LinkyourTesla to download offline AI models. Offline AI is not intended for the Tesla car browser.": [
+    "Offline AI მოდელების ჩამოსატვირთად გათიშეთ LinkyourTesla. Offline AI არ არის განკუთვნილი Tesla-ს მანქანის ბრაუზერისთვის.",
+    "Отключите LinkyourTesla, чтобы скачать офлайн-модели AI. Офлайн-AI не предназначен для автомобильного браузера Tesla."
+  ],
+  "Share my idea": [
+    "ჩემი იდეის გაზიარება",
+    "Поделиться идеей"
+  ],
+  "After donating, copy your donation confirmation number and choose Share my idea. Send us a prompt or describe the skill you would like to see. Email and confirmation number are required.": [
+    "დონაციის შემდეგ დააკოპირეთ დადასტურების ნომერი და აირჩიეთ „ჩემი იდეის გაზიარება“. გამოგვიგზავნეთ პრომპტი ან აღწერეთ სასურველი სკილი. ელფოსტა და დადასტურების ნომერი აუცილებელია.",
+    "После пожертвования скопируйте номер подтверждения и выберите «Поделиться идеей». Пришлите промпт или опишите желаемый навык. Email и номер подтверждения обязательны."
+  ],
+  "Share a prompt or a complete idea. Copy the confirmation number from your donation receipt. Your email and confirmation number are required.": [
+    "გაგვიზიარეთ პრომპტი ან სრული იდეა. დადასტურების ნომერი დააკოპირეთ დონაციის ქვითრიდან. ელფოსტა და დადასტურების ნომერი აუცილებელია.",
+    "Поделитесь промптом или полной идеей. Скопируйте номер подтверждения из квитанции. Email и номер подтверждения обязательны."
+  ],
+  "Donation confirmation number": [
+    "დონაციის დადასტურების ნომერი",
+    "Номер подтверждения пожертвования"
+  ],
+  "Submission type": [
+    "შეტყობინების ტიპი",
+    "Тип сообщения"
+  ],
+  "Complete idea": [
+    "სრული იდეა",
+    "Полная идея"
+  ],
+  "Prompt": [
+    "პრომპტი",
+    "Промпт"
+  ],
+  "Your idea or prompt": [
+    "თქვენი იდეა ან პრომპტი",
+    "Ваша идея или промпт"
+  ],
+  "Open email to send": [
+    "ელფოსტის გახსნა გასაგზავნად",
+    "Открыть почту для отправки"
+  ],
+  "Opens your email app with a draft to idea@robaq.app. Review it and press Send there. This form does not verify donation receipts.": [
+    "გაიხსნება თქვენი ელფოსტის პროგრამა მომზადებული წერილით idea@robaq.app-ზე. გადაამოწმეთ და იქ დააჭირეთ გაგზავნას. ფორმა დონაციის ქვითრებს არ ამოწმებს.",
+    "Откроется почтовое приложение с черновиком для idea@robaq.app. Проверьте и отправьте письмо там. Форма не проверяет квитанции о пожертвованиях."
+  ],
+  "Your email draft was requested. If no email app opened, send these details to idea@robaq.app. Nothing has been sent automatically.": [
+    "მოთხოვნილია ელფოსტის მონახაზის გახსნა. თუ პროგრამა არ გაიხსნა, მონაცემები გაგზავნეთ idea@robaq.app-ზე. ავტომატურად არაფერი გაგზავნილა.",
+    "Запрошено открытие черновика. Если почта не открылась, отправьте данные на idea@robaq.app. Ничего не отправлено автоматически."
+  ],
+  "Speed": [
+    "სიჩქარე",
+    "Скорость"
   ]
 }

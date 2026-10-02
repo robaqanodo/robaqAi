@@ -1,6 +1,7 @@
+import {IdeaForm} from './components/IdeaForm'
 import {useTeslaLocation,stopTeslaLocation} from './tesla/location'
 import {useInstallationProgress} from './components/InstallProgress'
-import {TeslaPanel,TeslaStore,TESLA_KEY,removeTesla} from './tesla/TeslaSkill'
+import {TeslaPanel,TeslaStore,TeslaSettings,TESLA_UNIT_KEY,TESLA_KEY,removeTesla} from './tesla/TeslaSkill'
 import { OfflineModelLibrary } from './offline/OfflineModelLibrary'
 import { LiveChat } from './live/LiveChat'
 import { LiveSkillStore } from './live/LiveSkillStore'
@@ -286,7 +287,7 @@ function getSpeechRecognition(): (new () => SpeechRecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null
 }
 
-type LandingPanel = 'settings' | 'store' | 'plugin' | 'about' | 'donate' | 'updates' | 'update-menu' | 'account' | null
+type LandingPanel = 'settings' | 'store' | 'plugin' | 'about' | 'donate' | 'idea' | 'updates' | 'update-menu' | 'account' | null
 
 function AppContent() {
   const { t, locale, setLocale } = useLocale()
@@ -298,6 +299,11 @@ function AppContent() {
   useEffect(()=>{setLiveSkills({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'})},[session])
   const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
   const [teslaOpen,setTeslaOpen]=useState(false)
+  const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='mph'?'mph':'km/h')
+  const [teslaTouch,setTeslaTouch]=useState(0)
+  useEffect(()=>{if(teslaActive&&locale==='ka')setLocale('en')},[teslaActive,locale,setLocale])
+  useEffect(()=>{setTeslaUnit(skillPreferences.getItem(TESLA_UNIT_KEY)==='mph'?'mph':'km/h')},[session,teslaActive])
+
   const teslaLocation=useTeslaLocation()
   useEffect(()=>{stopTeslaLocation();return()=>stopTeslaLocation()},[session,teslaActive])
   useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
@@ -1281,14 +1287,15 @@ function AppContent() {
     if ((chat.deleted || chat.archived) && chat.id === activeChatId) newConversation()
   }
 
-  const teslaOrb = useTeslaOrb(!chatOpen && !watchOpen && !landingPanel)
+  const teslaOrb = useTeslaOrb(!teslaActive && !chatOpen && !watchOpen && !landingPanel)
 
   /** Big living-cell logo: single click always opens chat (stops voice if running). */
   const onLandingClick = useCallback(() => {
     if(labMinimized&&labInstalling){setLandingPanel('store');return}
+    if(teslaActive){setTeslaTouch(n=>n+1);return}
     if (chatOpen) return
     openChat()
-  }, [chatOpen, openChat,labMinimized,labInstalling])
+  }, [chatOpen, openChat,labMinimized,labInstalling,teslaActive])
 
   return (
     <div
@@ -1313,14 +1320,16 @@ function AppContent() {
             ref={teslaOrb.buttonRef}
             className={`landing-entry${labMinimized&&labInstalling?' has-install-progress':''}${teslaOrb.tesla ? ' is-tesla-orb' : ''}${voiceMode ? ' is-voice-mode' : ''}`}
             onClick={onLandingClick}
-            aria-label={t(labMinimized&&labInstalling?"Open AI Lab":"Open chat")}
-            title={t("Open chat")}
+            aria-label={t(labMinimized&&labInstalling?"Open AI Lab":teslaActive?"Tesla core":"Open chat")}
+            title={t(teslaActive?"Tesla core":"Open chat")}
             tabIndex={chatOpen ? -1 : 0}
           >
             {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
+            {teslaActive&&teslaTouch>0&&<span key={teslaTouch} className="tesla-touch-ripple" aria-hidden="true"/>}
             <LivingCell
               linkTesla={teslaActive}
               teslaSpeedKmh={teslaLocation.speedKmh}
+              teslaUnit={teslaUnit}
               hasApiKey={hasApiKey}
               provider={provider}
               speaking={speaking}
@@ -1582,10 +1591,10 @@ function AppContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="settings-title">{t("Settings")}</h2>
-            <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option><option value="ka">ქართული</option><option value="ru">Русский</option></select></label>
+            <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option>{!teslaActive&&<option value="ka">ქართული</option>}<option value="ru">Русский</option></select></label>
             <p className="modal-help">{t("API credentials and updates.")}</p>
             <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'System theme' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
-            <OfflineModelSelect disabled={thinking || Boolean(streamingId)} />
+            {teslaActive?<TeslaSettings unit={teslaUnit} onUnit={unit=>{setTeslaUnit(unit);skillPreferences.setItem(TESLA_UNIT_KEY,unit)}}/>:<OfflineModelSelect disabled={thinking || Boolean(streamingId)} />}
             <div className="settings-menu-list" role="menu">
               <button
                 type="button"
@@ -1691,7 +1700,7 @@ function AppContent() {
         </div>
       )}
 
-      {teslaActive && teslaOpen && <TeslaPanel onClose={()=>setTeslaOpen(false)} />}
+      {teslaActive && teslaOpen && <TeslaPanel unit={teslaUnit} onClose={()=>setTeslaOpen(false)} />}
       {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}
 
@@ -1719,7 +1728,7 @@ function AppContent() {
 
             {(['syberlive','crossfire'] as const).map(kind=><LiveSkillStore key={kind} kind={kind} active={liveSkills[kind]} onChange={active=>{setLiveSkills(old=>({...old,[kind]:active}));if(active)skillPreferences.setItem(`robaq-${kind}-active`,'true');else skillPreferences.removeItem(`robaq-${kind}-active`);if(!active&&liveEntry?.kind===kind)setLiveEntry(null)}} />)}
             </div>
-            <OfflineModelLibrary disabled={thinking || Boolean(streamingId)} />
+            {teslaActive?<p className="modal-help tesla-offline-note">{t('Disconnect LinkyourTesla to download offline AI models. Offline AI is not intended for the Tesla car browser.')}</p>:<OfflineModelLibrary disabled={thinking || Boolean(streamingId)} />}
 
             <div className="modal-actions">
               <button
@@ -1732,7 +1741,8 @@ function AppContent() {
         </div>
       )}
 
-      {landingPanel === 'account' && <AccountDialog session={session} onProfileUpdate={setSession} onDeleted={() => {
+      {landingPanel === 'idea' && <IdeaForm onClose={()=>setLandingPanel('about')}/>}
+      {landingPanel === 'account' && <AccountDialog teslaConnected={teslaActive} session={session} onProfileUpdate={setSession} onDeleted={() => {
         stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
         clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false);  setM2mReady(false); setDesktopTranslator(''); setChatColor('system'); setLocale('en'); setHistoryOpen(false); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
       }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={async (account, history) => {
@@ -1770,9 +1780,8 @@ function AppContent() {
             <div className="about-art" aria-hidden="true"><i/><i/><i/><span>r.</span></div>
             <h2 id="about-title">{t("About robaqAi")}</h2>
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
-            <p className="modal-help">{t('I am building robaqAi with dedication and a simple goal: to make everyday tasks easier. I want to keep adding useful skills and tools that help us learn, create and get things done.')}</p>
-            <p className="modal-help">{t('This independent project is growing step by step. Your feedback helps shape what comes next.')}</p>
-            <p className="modal-help about-responsibility">{t('Use these tools lawfully and respect others’ privacy and rights. AI can make mistakes; verify important results. Features may change as the project develops.')}</p>
+            <p className="modal-help">{t('After donating, copy your donation confirmation number and choose Share my idea. Send us a prompt or describe the skill you would like to see. Email and confirmation number are required.')}</p>
+            <button type="button" className="modal-btn primary" onClick={()=>setLandingPanel('idea')}>{t('Share my idea')}</button>
             <div className="modal-actions about-actions">
               <button type="button" className="modal-btn about-support" onClick={() => setLandingPanel('donate')}>{t('Support the project')}</button>
               <button type="button" className="modal-btn" onClick={() => setLandingPanel(null)}>{t('Cancel')}</button>
