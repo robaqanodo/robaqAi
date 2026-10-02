@@ -2090,12 +2090,23 @@
   z-index: 50;
   display: grid;
   place-items: center;
+  grid-template-rows: minmax(0, 1fr);
+  top: var(--viewport-top, 0px);
+  bottom: auto;
+  height: var(--app-height, 100dvh);
+  box-sizing: border-box;
   padding: 24px;
   background: rgba(0, 0, 0, 0.55);
   backdrop-filter: blur(6px);
 }
 
 .modal-card {
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
   width: min(400px, 100%);
   padding: 22px 22px 18px;
   border-radius: 20px;
