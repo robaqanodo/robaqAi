@@ -48,7 +48,7 @@ export function IntelligenceOrb(props: OrbProps) {
   const theme = props.hasApiKey ? providerThemeClass(props.provider ?? null) : ''
   const satellites = [...(props.birdColors ?? ['stock', 'stock']), ...(props.movieSyncActive ? ['movie'] : [])]
   const teslaWind = Boolean(props.linkTesla && (props.teslaSpinning || props.teslaSettling))
-  const spinMs = Math.max(320, props.teslaSpinMs ?? 1100)
+  const spinMs = Math.max(320, props.teslaSpinMs ?? 1050)
   return (
     <span
       className={`living-cell intelligence-orb${props.hasApiKey ? ' has-api-key' : ''}${theme ? ` ${theme}` : ''}${props.speaking ? ' is-speaking' : ''}${props.listening ? ' is-listening' : ''}${props.linkTesla && props.teslaSpinning ? ' tesla-spinning' : ''}${props.linkTesla && props.teslaSettling ? ' tesla-settling' : ''}`}

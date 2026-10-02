@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest'
-import {LiveRooms} from '../server/live-rooms'
+import {LiveRooms,serializeLiveRoom,deserializeLiveRoom} from '../server/live-rooms'
 function setup(kind='crossfire',limit=4){let time=100000;const server=new LiveRooms(()=>time,()=>0);const host=server.act('create',{kind,limit,motion:'Public libraries matter',name:'Host'}) as any
  const call=(action:string,member=host,extra={})=>server.act(action,{room:host.id,token:member.token,...extra}) as any
  const join=(side='for',password='')=>server.act('join',{room:host.id,side,password,name:side}) as any
@@ -23,4 +23,16 @@ describe('Crossfire floor clock',()=>{
  it('never lets a late Point enter the protected tail',()=>{const s=setup();s.join('for');const g=s.join('against');s.call('ask');s.advance(45000);s.call('point',g);const p=s.call('allow-point',s.host,{member:g.self}).round;expect(p.point.end).toBe(p.end-10000)})
  it('avoids consecutive same-side speakers when another is available',()=>{const s=setup();s.join('for');s.join('for');s.join('against');const first=s.call('ask').round.speaker;s.advance(120000);const next=s.call('ask').round.speaker;expect(next).not.toBe(first)})
  it('lets host skip or stop at any time',()=>{const s=setup();s.join('for');s.join('against');s.call('ask');expect(s.call('skip').round.side).toBe('against');expect(s.call('cut').round).toBeNull();s.call('ask');expect(s.call('stop-round').round).toBeNull()})
+})
+
+describe('live room persistence encoding',()=>{
+ it('round-trips SyberLive and Crossfire through serialize/deserialize',()=>{
+  const a=new LiveRooms();const host=a.act('create',{kind:'syberlive',limit:3,name:'Host'}) as any
+  const room=[...a.rooms.values()][0];const b=new LiveRooms();b.rooms.set(room.id,deserializeLiveRoom(serializeLiveRoom(room)))
+  expect((b.act('poll',{room:host.id,token:host.token}) as any).limit).toBe(3)
+  const c=new LiveRooms();const ch=c.act('create',{kind:'crossfire',motion:'Motion',password:'x'}) as any
+  const cr=[...c.rooms.values()][0];const d=new LiveRooms();d.rooms.set(cr.id,deserializeLiveRoom(serializeLiveRoom(cr)))
+  expect(()=>d.act('join',{room:ch.id,password:'no',side:'for'})).toThrow('password')
+  expect((d.act('join',{room:ch.id,password:'x',side:'against'}) as any).members).toHaveLength(2)
+ })
 })

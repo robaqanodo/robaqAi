@@ -1,30 +1,30 @@
 # SyberLive 1.0 / Crossfire 1.0
 
-Both skills ship in AI Lab and activate through the existing three-second install flow. They add no navigation item. After installation, type `live` or `crossfire` in the normal chat. Their room messages never enter normal chat history, account history, Redis, or a database.
+Both skills ship in AI Lab and activate through the existing three-second install flow. They add no navigation item. After installation, type `live` (or `syberlive`) or `crossfire` in the normal chat. Their room messages never enter normal chat history or account history.
 
-## Owned signaling process
+## Signaling backends
 
-Local `npm run dev` includes the in-memory room service. Production must run `scripts/live-room-server.ts` on an owned, persistent Node.js 22.18+ process, behind HTTPS. It must not run as a Vercel serverless function.
+Local `npm run dev` keeps an in-memory room service via the Vite plugin (no Redis required).
 
-Example on the owned host, using the site's exact canonical origin:
+Production on Vercel uses `api/rooms/[action].ts` with the same Upstash Redis already connected for MovieSync. Room records are short-lived keys (`robaq:live:*`) with a TTL tied to the host heartbeat (about 20 seconds after the last poll, and at most 6 hours). Ending or leaving deletes the key. This is ephemeral signaling state only — not chat history and not a media archive.
+
+Optionally, an owned persistent process remains supported for dedicated hosts:
 
 ```sh
 ROBAQ_APP_ORIGIN=https://www.robaq.app PORT=8790 npm run rooms:serve
 ```
 
-The process binds only to `127.0.0.1`. Reverse-proxy `/api/rooms/` from an HTTPS subdomain to `127.0.0.1:8790`. Keep request-body logging disabled. Run one instance: its room state intentionally cannot be shared between workers or restored after a restart. Do not enable database persistence, request-body logging, or a media relay.
+Set `VITE_ROOMS_SERVER_URL` to that HTTPS origin and rebuild only when you intentionally bypass the Vercel `/api/rooms` route. Leave it unset to use same-origin `/api/rooms/*`.
 
-Set the frontend build variable `VITE_ROOMS_SERVER_URL` to the actual HTTPS origin of that process, then rebuild the frontend. There is deliberately no fabricated default production host. If the service is absent or unreachable, the chat says that the room cannot start, before requesting camera access.
-
-No deployment or environment variable was changed by this implementation. A Vercel-only deployment will show the unavailable-service message until this owned process is configured.
+If Redis is missing in production, or the owned process is unreachable when configured, the chat says that the room cannot start, before requesting camera access.
 
 ## Lifecycle and media
 
-The server stores room membership, capability tokens, short-lived signaling, current round state and session messages in RAM. A 192-bit random invite identifies a room; a separate private capability identifies each participant. Crossfire passwords are salted and hashed in RAM. The invitation is reusable only during the current room so multiple guests can join; it cannot reopen a completed session.
+Membership, capability tokens, short-lived signaling, current round state and session messages live only for the active room. A 192-bit random invite identifies a room; a separate private capability identifies each participant. Crossfire passwords are salted and hashed. The invitation is reusable only during the current room so multiple guests can join; it cannot reopen a completed session.
 
 Media uses browser-to-browser WebRTC. The sole ICE helper is Google's public STUN endpoint for address discovery; it does not relay media. No TURN, external video service, MediaRecorder, media upload or media database is used. Some NAT/firewall combinations therefore cannot connect. The UI reports that failure rather than silently relaying.
 
-Explicit host End/Leave deletes the room immediately. Other clients learn this on the next poll (about 1.2 seconds) and stop their tracks/connections. Tab close sends a leave beacon; if a browser crashes or loses connectivity before delivery, a 20-second heartbeat timeout plus the 5-second sweep removes the orphan. Browser refresh never restores membership credentials. Messages, invite UI and media are cleared on exit. Infrastructure/network logs are outside this in-memory data guarantee.
+Explicit host End/Leave deletes the room immediately. Other clients learn this on the next poll (about 1.2 seconds) and stop their tracks/connections. Tab close sends a leave beacon; if a browser crashes or loses connectivity before delivery, a 20-second heartbeat timeout removes the orphan. Browser refresh never restores membership credentials. Messages, invite UI and media are cleared on exit.
 
 SyberLive requires camera and microphone permission before creating a room and caps membership at 2–4. The host and guests use the same stage: alone, two equal views, or one promoted view with a row of smaller tiles. A guest joins through the link without an account or prior skill installation.
 

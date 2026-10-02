@@ -386,8 +386,12 @@ function AppContent() {
   const [landingPanel, setLandingPanel] = useState<LandingPanel>(()=>roomInvite()?null:'account')
   useEffect(() => {
     let cancelled = false
-    void restoreSession().then(result => {
-      if (!cancelled && result) { setPersistentSkills(true); setSession(result.session); setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null) }
+    void restoreSession().then(async result => {
+      if (!cancelled && result) {
+        try { await retainGuestSkills() } catch { /* Guest downloads are optional; account session still opens. */ }
+        if (cancelled) return
+        setSession(result.session); setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null)
+      }
     }).catch(() => {})
     return () => { cancelled = true }
   }, [])
@@ -830,8 +834,8 @@ function AppContent() {
       if(liveSubmit.current){liveSubmit.current(text);setInput('');return}
       if(kasSubmit.current){kasSubmit.current(text);setInput('');return}
       if (/^KAS-/i.test(trimmed)) { setKasCode(trimmed.toUpperCase()); setInput(''); return }
-      const command=trimmed.toLowerCase();const liveKind=command==='live'?'syberlive':command==='crossfire'?'crossfire':null
-      if(liveKind){if(thinking||voiceModeRef.current)return;setInput('');if(liveSkills[liveKind]){setKasCode('');setLiveEntry({kind:liveKind})}else setMessages(old=>[...old,{id:crypto.randomUUID(),role:'assistant',text:t('Install this skill in AI Lab first.')}]);return}
+      const command=trimmed.toLowerCase();const liveKind=command==='live'||command==='syberlive'?'syberlive':command==='crossfire'?'crossfire':null
+      if(liveKind){if(thinking||voiceModeRef.current)return;setInput('');if(liveSkills[liveKind]){setKasCode('');setLandingPanel(null);setChatOpen(true);setLiveEntry({kind:liveKind})}else setMessages(old=>[...old,{id:crypto.randomUUID(),role:'assistant',text:t('Install this skill in AI Lab first.')}]);return}
       const files = pendingFilesRef.current
       const key = apiKeyRef.current.trim()
       const usingApi = Boolean(key)

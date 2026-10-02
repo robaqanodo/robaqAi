@@ -77,108 +77,112 @@
  .app-shell.has-navigation .navigation-rail{transition:none}
 }
 
-/* Connected core: tap spins logo; rapid taps queue faster spins; orbs ride the wind. */
+
+/* Connected core: one natural logo spin; soft wind on orbs, gentle settle. */
 .link-tesla-core>svg.tesla-core-logo.is-spinning{
-  animation:tesla-logo-spin var(--tesla-spin-ms,1100ms) cubic-bezier(.35,.02,.25,1) 1 forwards;
+  animation:tesla-logo-spin var(--tesla-spin-ms,1050ms) cubic-bezier(.45,.05,.25,1) 1 forwards;
   will-change:transform;
 }
 @keyframes tesla-logo-spin{
   from{transform:rotate(0deg) scale(1)}
-  40%{transform:rotate(160deg) scale(1.04)}
+  50%{transform:rotate(180deg) scale(1.02)}
   to{transform:rotate(360deg) scale(1)}
 }
 
 .intelligence-orb.tesla-spinning .link-tesla-core:after{
-  animation:tesla-tornado-ring calc(var(--tesla-spin-ms,1100ms) * .45) linear infinite;
+  animation:tesla-tornado-ring calc(var(--tesla-spin-ms,1050ms) * .9) ease-in-out 1;
   border-style:solid;
-  border-color:#e8212766 transparent #ffffff55 transparent;
-  inset:-22%;
-  box-shadow:0 0 18px #e8212744,inset 0 0 12px #e8212733;
+  border-color:#e8212744 transparent #ffffff33 transparent;
+  inset:-18%;
+  box-shadow:0 0 10px #e8212728,inset 0 0 8px #e8212718;
 }
 @keyframes tesla-tornado-ring{to{transform:rotate(360deg)}}
 
 .tesla-tornado{
-  position:absolute;inset:8%;z-index:8;pointer-events:none;border-radius:50%;
+  position:absolute;inset:12%;z-index:8;pointer-events:none;border-radius:50%;
   --energy-rgb:255,255,255;
 }
 .theme-white .tesla-tornado{--energy-rgb:20,24,32}
 .tesla-tornado>i{
-  position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;
-  background:rgba(var(--energy-rgb),.55);
-  box-shadow:0 0 8px rgba(var(--energy-rgb),.35),0 0 2px #e8212788;
+  position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px;border-radius:50%;
+  background:rgba(var(--energy-rgb),.4);
+  box-shadow:0 0 5px rgba(var(--energy-rgb),.25);
   opacity:0;
-  animation:tesla-tornado-leaf var(--tesla-spin-ms,1100ms) linear infinite;
+  animation:tesla-tornado-leaf var(--tesla-spin-ms,1050ms) ease-in-out 1 forwards;
 }
-.tesla-tornado>i:nth-child(1){--leaf-r:38%;--leaf-delay:0ms;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .55)}
-.tesla-tornado>i:nth-child(2){--leaf-r:48%;--leaf-delay:80ms;width:4px;height:4px;margin:-2px;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .7)}
-.tesla-tornado>i:nth-child(3){--leaf-r:58%;--leaf-delay:140ms;width:5px;height:5px;margin:-2.5px;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .48)}
-.tesla-tornado>i:nth-child(4){--leaf-r:44%;--leaf-delay:210ms;width:3px;height:3px;margin:-1.5px;animation-duration:calc(var(--tesla-spin-ms,1100ms) * .62)}
-.intelligence-orb.tesla-settling .tesla-tornado>i{animation-name:tesla-tornado-fade;animation-duration:.9s;animation-iteration-count:1;animation-fill-mode:forwards}
+.tesla-tornado>i:nth-child(1){--leaf-r:36%;--leaf-from:0deg}
+.tesla-tornado>i:nth-child(2){--leaf-r:44%;--leaf-from:90deg;width:3px;height:3px;margin:-1.5px;animation-delay:40ms}
+.tesla-tornado>i:nth-child(3){--leaf-r:52%;--leaf-from:180deg;width:3px;height:3px;margin:-1.5px;animation-delay:70ms}
+.tesla-tornado>i:nth-child(4){--leaf-r:40%;--leaf-from:270deg;width:2px;height:2px;margin:-1px;animation-delay:100ms}
+.intelligence-orb.tesla-settling .tesla-tornado>i{animation-name:tesla-tornado-fade;animation-duration:.85s;animation-delay:0ms;animation-fill-mode:forwards}
 @keyframes tesla-tornado-leaf{
-  0%{opacity:0;transform:rotate(0deg) translateX(var(--leaf-r,42%)) scale(.4)}
-  12%{opacity:.85}
-  100%{opacity:.15;transform:rotate(360deg) translateX(calc(var(--leaf-r,42%) * 1.25)) scale(.9)}
+  0%{opacity:0;transform:rotate(var(--leaf-from,0deg)) translateX(var(--leaf-r,40%)) scale(.5)}
+  20%{opacity:.55}
+  100%{opacity:.12;transform:rotate(calc(var(--leaf-from,0deg) + 360deg)) translateX(calc(var(--leaf-r,40%) * 1.12)) scale(.85)}
 }
 @keyframes tesla-tornado-fade{
-  to{opacity:0;transform:rotate(40deg) translateX(calc(var(--leaf-r,42%) * .85)) scale(.3)}
+  to{opacity:0;transform:rotate(calc(var(--leaf-from,0deg) + 20deg)) translateX(calc(var(--leaf-r,40%) * .92)) scale(.35)}
 }
 
-/* Orbs/balls: whipped by the spin like leaves, then ease home. */
+/* Orbs: gentle drift with the spin, then ease home. */
 .intelligence-orb.tesla-spinning .capability-satellite,
 .intelligence-orb.tesla-spinning .guest-seed{
   animation-name:tesla-wind-orbit!important;
-  animation-duration:calc(var(--tesla-spin-ms,1100ms) * .42)!important;
-  animation-timing-function:linear!important;
-  animation-iteration-count:infinite!important;
+  animation-duration:var(--tesla-spin-ms,1050ms)!important;
+  animation-timing-function:ease-in-out!important;
+  animation-iteration-count:1!important;
+  animation-fill-mode:forwards!important;
   animation-delay:0s!important;
 }
 .intelligence-orb.tesla-spinning .guest-seed{
   animation-name:tesla-wind-orbit,firefly-pulse!important;
-  animation-duration:calc(var(--tesla-spin-ms,1100ms) * .42),.55s!important;
-  animation-timing-function:linear,ease-in-out!important;
-  animation-iteration-count:infinite,infinite!important;
+  animation-duration:var(--tesla-spin-ms,1050ms),3.7s!important;
+  animation-timing-function:ease-in-out,ease-in-out!important;
+  animation-iteration-count:1,infinite!important;
+  animation-fill-mode:forwards,none!important;
 }
 @keyframes tesla-wind-orbit{
-  from{transform:rotate(var(--satellite-angle)) translateX(calc(var(--satellite-radius) * 1.2)) rotate(calc(var(--satellite-angle) * -1))}
-  to{transform:rotate(calc(var(--satellite-angle) + 360deg)) translateX(calc(var(--satellite-radius) * 1.7)) rotate(calc((var(--satellite-angle) + 360deg) * -1))}
+  from{transform:rotate(var(--satellite-angle)) translateX(var(--satellite-radius)) rotate(calc(var(--satellite-angle) * -1))}
+  50%{transform:rotate(calc(var(--satellite-angle) + 180deg)) translateX(calc(var(--satellite-radius) * 1.18)) rotate(calc((var(--satellite-angle) + 180deg) * -1))}
+  to{transform:rotate(calc(var(--satellite-angle) + 360deg)) translateX(calc(var(--satellite-radius) * 1.08)) rotate(calc((var(--satellite-angle) + 360deg) * -1))}
 }
 .intelligence-orb.tesla-settling .capability-satellite,
 .intelligence-orb.tesla-settling .guest-seed{
   animation-name:tesla-wind-settle!important;
-  animation-duration:1.35s!important;
-  animation-timing-function:cubic-bezier(.2,.8,.2,1)!important;
+  animation-duration:1.05s!important;
+  animation-timing-function:cubic-bezier(.33,.1,.2,1)!important;
   animation-iteration-count:1!important;
   animation-fill-mode:forwards!important;
   animation-delay:0s!important;
 }
 .intelligence-orb.tesla-settling .guest-seed{
   animation-name:tesla-wind-settle,firefly-pulse!important;
-  animation-duration:1.35s,3.7s!important;
-  animation-timing-function:cubic-bezier(.2,.8,.2,1),ease-in-out!important;
+  animation-duration:1.05s,3.7s!important;
+  animation-timing-function:cubic-bezier(.33,.1,.2,1),ease-in-out!important;
   animation-iteration-count:1,infinite!important;
   animation-fill-mode:forwards,none!important;
 }
 @keyframes tesla-wind-settle{
-  from{transform:rotate(calc(var(--satellite-angle) + 200deg)) translateX(calc(var(--satellite-radius) * 1.55)) rotate(calc((var(--satellite-angle) + 200deg) * -1))}
+  from{transform:rotate(calc(var(--satellite-angle) + 30deg)) translateX(calc(var(--satellite-radius) * 1.08)) rotate(calc((var(--satellite-angle) + 30deg) * -1))}
   to{transform:rotate(var(--satellite-angle)) translateX(var(--satellite-radius)) rotate(calc(var(--satellite-angle) * -1))}
 }
 
 .intelligence-orb.tesla-spinning .cell-blob{
-  animation:tesla-blob-whirl calc(var(--tesla-spin-ms,1100ms) * .85) ease-in-out infinite!important;
+  animation:tesla-blob-whirl var(--tesla-spin-ms,1050ms) ease-in-out 1!important;
 }
 .intelligence-orb.tesla-spinning .cell-blob-b{
-  animation:tesla-blob-whirl calc(var(--tesla-spin-ms,1100ms) * 1.05) ease-in-out infinite reverse!important;
+  animation:tesla-blob-whirl var(--tesla-spin-ms,1050ms) ease-in-out 1 reverse!important;
 }
 @keyframes tesla-blob-whirl{
   0%,100%{transform:rotate(0deg) scale(1)}
-  50%{transform:rotate(18deg) scale(1.06)}
+  50%{transform:rotate(8deg) scale(1.025)}
 }
 .intelligence-orb.tesla-settling .cell-blob,
 .intelligence-orb.tesla-settling .cell-blob-b{
-  animation:tesla-blob-rest 1.2s ease-out forwards!important;
+  animation:tesla-blob-rest .95s ease-out forwards!important;
 }
 @keyframes tesla-blob-rest{
-  from{transform:rotate(12deg) scale(1.04)}
+  from{transform:rotate(4deg) scale(1.015)}
   to{transform:rotate(0deg) scale(1)}
 }
 

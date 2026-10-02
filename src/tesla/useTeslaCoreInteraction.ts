@@ -1,31 +1,18 @@
 import {useCallback,useEffect,useRef,useState,type MouseEvent,type PointerEvent} from 'react'
 
-const RAPID_MS=450
 const LONG_PRESS_MS=3000
 const MOVE_CANCEL_PX=14
-const BASE_SPIN_MS=1100
-const SETTLE_MS=1400
-
-function spinDuration(burstSize:number){
-  return Math.max(320,Math.round(BASE_SPIN_MS/Math.pow(Math.max(1,burstSize),.65)))
-}
+const SPIN_MS=1050
+const SETTLE_MS=1100
 
 type Options={enabled:boolean;onLongPress:()=>void}
 
-/**
- * Connected LinkyourTesla core: rapid-tap spin queue + 3s long-press to open panel.
- * Isolated taps mid-spin are ignored; taps within RAPID_MS of the previous tap grow the queue.
- * Taps still inside the opening rapid window retune the whole burst to a faster speed.
- */
+/** Connected LinkyourTesla core: one natural spin per tap; mid-spin taps ignored; 3s long-press opens panel. */
 export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
   const [spinning,setSpinning]=useState(false)
   const [settling,setSettling]=useState(false)
   const [spinKey,setSpinKey]=useState(0)
-  const [spinMs,setSpinMs]=useState(BASE_SPIN_MS)
-  const remaining=useRef(0)
-  const burstSize=useRef(0)
-  const lastTapAt=useRef(0)
-  const burstStartedAt=useRef(0)
+  const spinningRef=useRef(false)
   const handledKey=useRef(0)
   const spinKeyRef=useRef(0)
   const settleTimer=useRef(0)
@@ -37,7 +24,7 @@ export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
   const startY=useRef(0)
   const cancelled=useRef(false)
   const onLongPressRef=useRef(onLongPress)
-  const advanceRef=useRef<()=>void>(()=>{})
+  const finishRef=useRef<()=>void>(()=>{})
   onLongPressRef.current=onLongPress
 
   const clearLong=useCallback(()=>{
@@ -57,24 +44,36 @@ export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
   useEffect(()=>{
     if(enabled)return
     clearLong();clearSettle();clearSpinWatch()
-    remaining.current=0;burstSize.current=0;lastTapAt.current=0;burstStartedAt.current=0
-    setSpinning(false);setSettling(false);setSpinMs(BASE_SPIN_MS)
+    spinningRef.current=false
+    setSpinning(false);setSettling(false)
   },[enabled,clearLong,clearSettle,clearSpinWatch])
 
   const beginSettle=useCallback(()=>{
     clearSpinWatch()
+    spinningRef.current=false
     setSpinning(false)
     setSettling(true)
     clearSettle()
     settleTimer.current=window.setTimeout(()=>{
       settleTimer.current=0
       setSettling(false)
-      burstSize.current=0
     },SETTLE_MS)
   },[clearSettle,clearSpinWatch])
 
-  const runSpin=useCallback((ms:number)=>{
-    setSpinMs(ms)
+  const finishSpin=useCallback(()=>{
+    const key=spinKeyRef.current
+    if(handledKey.current===key)return
+    handledKey.current=key
+    beginSettle()
+  },[beginSettle])
+
+  finishRef.current=finishSpin
+
+  const startSpin=useCallback(()=>{
+    if(spinningRef.current)return
+    clearSettle()
+    setSettling(false)
+    spinningRef.current=true
     setSpinning(true)
     setSpinKey(k=>{
       const next=k+1
@@ -82,56 +81,15 @@ export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
       clearSpinWatch()
       spinWatch.current=window.setTimeout(()=>{
         spinWatch.current=0
-        advanceRef.current()
-      },ms+80)
+        finishRef.current()
+      },SPIN_MS+80)
       return next
     })
-  },[clearSpinWatch])
-
-  const advanceAfterSpin=useCallback(()=>{
-    const key=spinKeyRef.current
-    if(handledKey.current===key)return
-    handledKey.current=key
-    clearSpinWatch()
-    if(remaining.current<=0){beginSettle();return}
-    remaining.current-=1
-    if(remaining.current>0){
-      runSpin(spinDuration(burstSize.current))
-      return
-    }
-    beginSettle()
-  },[clearSpinWatch,beginSettle,runSpin])
-
-  advanceRef.current=advanceAfterSpin
-
-  const startOrQueueTap=useCallback(()=>{
-    const now=performance.now()
-    const rapid=now-lastTapAt.current<=RAPID_MS
-    lastTapAt.current=now
-
-    if(remaining.current>0){
-      if(!rapid)return
-      remaining.current+=1
-      burstSize.current+=1
-      // Still in the opening burst window: retune speed and restart current spin.
-      if(now-burstStartedAt.current<=RAPID_MS){
-        handledKey.current=spinKeyRef.current
-        runSpin(spinDuration(burstSize.current))
-      }
-      return
-    }
-
-    clearSettle()
-    setSettling(false)
-    remaining.current=1
-    burstSize.current=1
-    burstStartedAt.current=now
-    runSpin(spinDuration(1))
-  },[clearSettle,runSpin])
+  },[clearSettle,clearSpinWatch])
 
   const onSpinEnd=useCallback(()=>{
-    advanceAfterSpin()
-  },[advanceAfterSpin])
+    finishSpin()
+  },[finishSpin])
 
   const onPointerDown=useCallback((event:PointerEvent)=>{
     if(!enabled||!event.isPrimary||event.button!==0)return
@@ -162,8 +120,8 @@ export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
     pointerId.current=null
     clearLong()
     if(!commitTap||longFired.current||cancelled.current)return
-    startOrQueueTap()
-  },[enabled,clearLong,startOrQueueTap])
+    startSpin()
+  },[enabled,clearLong,startSpin])
 
   const onPointerUp=useCallback((event:PointerEvent)=>{
     endPointer(event,true)
@@ -183,7 +141,7 @@ export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
     spinning,
     settling,
     spinKey,
-    spinMs,
+    spinMs:SPIN_MS,
     onSpinEnd,
     onPointerDown,
     onPointerMove,
