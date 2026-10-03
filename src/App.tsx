@@ -315,6 +315,49 @@ function AppContent() {
   teslaActiveRef.current = teslaActive
   const [teslaOpen,setTeslaOpen]=useState(false)
   const [mapOpen,setMapOpen]=useState(false)
+  const [mapEntering,setMapEntering]=useState(false)
+  const [mapLeaving,setMapLeaving]=useState(false)
+  const mapLogoFrom=useRef<DOMRect|null>(null)
+  useEffect(()=>{
+    if(!mapOpen){setMapEntering(false);setMapLeaving(false);return}
+    if(!mapEntering) return
+    const id=window.setTimeout(()=>setMapEntering(false),620)
+    return ()=>window.clearTimeout(id)
+  },[mapOpen,mapEntering])
+  useEffect(()=>{
+    if(!mapLeaving) return
+    const id=window.setTimeout(()=>{setMapLeaving(false);setMapOpen(false)},480)
+    return ()=>window.clearTimeout(id)
+  },[mapLeaving])
+  useLayoutEffect(()=>{
+    if(!mapOpen||!mapEntering||!teslaActive) return
+    const el=document.querySelector<HTMLElement>('.landing-entry')
+    const toEl=document.querySelector<HTMLElement>('.owned-map-core')
+    if(!el||!toEl) return
+    const now=el.getBoundingClientRect()
+    const saved=mapLogoFrom.current
+    const origin=saved&&saved.width>2?saved:now
+    const to=toEl.getBoundingClientRect()
+    if(now.width<2||to.width<2) return
+    const shift=(rect:DOMRect)=>{
+      const dx=(rect.left+rect.width/2)-(now.left+now.width/2)
+      const dy=(rect.top+rect.height/2)-(now.top+now.height/2)
+      return `translate3d(${dx}px,${dy}px,0) scale(${rect.width/now.width})`
+    }
+    el.classList.add('is-map-flight')
+    el.style.transition='none'
+    el.style.transform=shift(origin)
+    const frame=requestAnimationFrame(()=>{
+      el.style.transition='transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+      el.style.transform=shift(to)
+    })
+    return ()=>{
+      cancelAnimationFrame(frame)
+      el.style.transition=''
+      el.style.transform=''
+      el.classList.remove('is-map-flight')
+    }
+  },[mapOpen,mapEntering,teslaActive])
   const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
   const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
   useEffect(()=>{setTeslaMenuCollapsed(false);if(teslaActive)setHistoryOpen(false)},[teslaActive,session])
@@ -1400,9 +1443,32 @@ function AppContent() {
     openChat()
   }, [chatOpen, openChat,labMinimized,labInstalling,teslaActive])
 
+  const openMap = () => {
+    const el = document.querySelector<HTMLElement>('.landing-entry')
+    if (el) {
+      const style = getComputedStyle(el)
+      mapLogoFrom.current = style.visibility !== 'hidden' && Number(style.opacity) > 0.2 ? el.getBoundingClientRect() : null
+    } else mapLogoFrom.current = null
+    setLandingPanel(null)
+    setWatchOpen(false)
+    setKasOpen(false)
+    setChatOpen(false)
+    setTeslaOpen(false)
+    setHistoryOpen(false)
+    setMapLeaving(false)
+    setMapOpen(true)
+    setMapEntering(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  }
+  const closeMap = () => {
+    if (!mapOpen || mapLeaving) return
+    setMapEntering(false)
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setMapOpen(false); return }
+    setMapLeaving(true)
+  }
+
   return (
     <div
-      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''}${mapOpen ? ' is-map-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
+      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''}${mapOpen ? ' is-map-open' : ''}${mapEntering ? ' is-map-entering' : ''}${mapLeaving ? ' is-map-leaving' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
         hasApiKey && provider ? ` ${providerThemeClass(provider)}` : ''
       }`}
     >
@@ -1463,7 +1529,7 @@ function AppContent() {
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
       {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false);setMapOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>}
-      <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)}} onMap={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(false);setHistoryOpen(false);setMapOpen(true)}} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setMapOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setMapOpen(false); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); setMapOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
+      <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)}} onMap={openMap} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setMapOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setMapOpen(false); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); setMapOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && !teslaActive && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
@@ -1815,7 +1881,7 @@ function AppContent() {
         </div>
       )}
 
-      {mapOpen && <MapPage onClose={()=>setMapOpen(false)} showCore={teslaActive} speedKmh={teslaLocation.speedKmh} speedUnit={teslaUnit} />}
+      {mapOpen && <MapPage onClose={closeMap} showCore={teslaActive} speedKmh={teslaLocation.speedKmh} speedUnit={teslaUnit} />}
       {teslaActive && teslaOpen && <TeslaPanel unit={teslaUnit} onClose={()=>setTeslaOpen(false)} />}
       {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}

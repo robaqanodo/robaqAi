@@ -1,27 +1,29 @@
 /* Full-screen satellite. Menus stay off, same idea as a live page. */
 .app-shell.is-map-open{padding:0!important}
-.app-shell.is-map-open .navigation-rail,
-.app-shell.is-map-open.has-navigation .navigation-rail,
-.app-shell.is-map-open.has-navigation.tesla-menu-collapsed .navigation-rail,
-.app-shell.is-map-open .tesla-menu-toggle,
 .app-shell.is-map-open .history-drawer,
 .app-shell.is-map-open .chat-panel,
-.app-shell.is-map-open .landing-stage,
 .app-shell.is-map-open .landing-voice-status,
 .app-shell.is-map-open .history-save-error{display:none!important}
+.app-shell.is-map-open:not(.is-map-entering) .navigation-rail,
+.app-shell.is-map-open:not(.is-map-entering).has-navigation .navigation-rail,
+.app-shell.is-map-open:not(.is-map-entering).has-navigation.tesla-menu-collapsed .navigation-rail,
+.app-shell.is-map-open:not(.is-map-entering) .tesla-menu-toggle,
+.app-shell.is-map-open:not(.is-map-entering) .landing-stage{display:none!important}
 
 .owned-map{position:fixed;inset:0;z-index:40000;background:#071018}
 .owned-map-canvas{position:absolute;inset:0}
 .owned-map-canvas .maplibregl-map{width:100%;height:100%}
 .owned-map-close{
-  position:absolute;z-index:2;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));
-  min-height:40px;padding:0 14px;border-radius:999px;color:#fff;font:inherit;cursor:pointer;
+  position:absolute;z-index:6;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));
+  width:40px;height:40px;min-height:40px;padding:0;border-radius:999px;color:#fff;font:inherit;cursor:pointer;
+  display:grid;place-items:center;
   background:linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 42%, rgba(255,255,255,.08) 100%), rgba(16,16,22,.42);
   border:1px solid rgba(255,255,255,.22);
   box-shadow:0 18px 50px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.16) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
   backdrop-filter:blur(28px) saturate(1.55);
   -webkit-backdrop-filter:blur(28px) saturate(1.55);
 }
+.owned-map-close svg{width:16px;height:16px;display:block}
 .owned-map-close:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .owned-map .maplibregl-ctrl-attrib{
   background:rgba(8,12,18,.72);color:#e8edf2;font-size:11px;border-radius:10px 0 0 0;
@@ -31,24 +33,20 @@
 .owned-map-pin.is-puck{width:28px;height:34px}
 .owned-map-puck{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px #000) drop-shadow(0 3px 5px #000a)}
 
-.owned-map-side{
-  position:absolute;z-index:4;
-  top:calc(max(10px, env(safe-area-inset-top)) + 52px);
-  right:max(10px, env(safe-area-inset-right));
-  display:flex;flex-direction:column;align-items:flex-end;gap:10px;
-  pointer-events:none;
-}
 .owned-map-places{
-  position:relative;z-index:3;
-  width:auto;
-  max-width:min(460px, calc(100vw - 28px));
-  display:flex;flex-direction:row-reverse;align-items:flex-start;gap:8px;
+  position:absolute;z-index:5;
+  top:max(10px, env(safe-area-inset-top));
+  left:50%;
+  transform:translateX(-50%);
+  width:max-content;
+  max-width:min(460px, calc(100vw - 220px));
+  display:flex;flex-direction:column;align-items:center;gap:8px;
   pointer-events:none;
 }
 .owned-map-places-bar,
 .owned-map-edit,
 .owned-map-hint,
-.owned-map-side .owned-map-pill{pointer-events:auto}
+.owned-map-dock .owned-map-pill{pointer-events:auto}
 .owned-map-edit,
 .owned-map-hint{
   color:#fff;
@@ -59,7 +57,7 @@
   -webkit-backdrop-filter:blur(28px) saturate(1.55);
 }
 .owned-map-places-bar{
-  display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:0;
+  display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:0;
   background:none;border:0;box-shadow:none;
 }
 .owned-map-pill{
@@ -87,7 +85,7 @@
 .owned-map-suggest button:focus-visible,
 .owned-map-edit input:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .owned-map-edit{
-  width:min(300px, calc(100vw - 150px));box-sizing:border-box;padding:12px;border-radius:20px;
+  width:min(340px, calc(100vw - 32px));box-sizing:border-box;padding:12px;border-radius:20px;
   max-height:min(46vh, 360px);display:flex;flex-direction:column;min-height:0;
 }
 .owned-map-edit-for{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
@@ -133,10 +131,18 @@
   backdrop-filter:blur(18px) saturate(1.25);
   -webkit-backdrop-filter:blur(18px) saturate(1.25);
 }
-.owned-map-settings-btn{
+.owned-map-dock{
   position:absolute;z-index:5;
   right:max(10px, env(safe-area-inset-right));
   bottom:max(48px, calc(env(safe-area-inset-bottom) + 40px));
+  display:flex;flex-direction:column;align-items:flex-end;gap:10px;
+  width:min(320px, calc(100vw - 24px));
+  pointer-events:none;
+}
+.owned-map-dock > *{pointer-events:auto}
+.owned-map-settings-btn{
+  position:relative;z-index:5;
+  right:auto;bottom:auto;
   font-size:11px;font-weight:680;letter-spacing:.08em;text-transform:uppercase;
 }
 .owned-map-gps{
@@ -145,23 +151,31 @@
 }
 .owned-map-gps svg{width:22px;height:22px}
 .owned-map-core{
-  width:156px;height:156px;pointer-events:none;
+  position:absolute;z-index:4;
+  top:max(6px, env(safe-area-inset-top));
+  left:max(6px, env(safe-area-inset-left));
+  width:120px;height:120px;padding:0;border:0;background:transparent;color:inherit;
+  cursor:pointer;pointer-events:auto;
+  outline:2px solid transparent;outline-offset:4px;
+  -webkit-user-select:none;user-select:none;touch-action:none;
 }
-.owned-map-core .living-cell{
-  width:156px;height:156px;
-}
+.owned-map-core .living-cell{width:120px;height:120px}
+.owned-map-core.is-holding{animation:map-hold 3s linear forwards}
+.owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
+@keyframes map-hold{to{outline-color:rgba(255,255,255,.8)}}
 .owned-map-core .tesla-core-speed{gap:2px}
-.owned-map-core .tesla-core-speed strong{font-size:28px;-webkit-text-stroke:.8px #000}
+.owned-map-core .tesla-core-speed strong{font-size:22px;-webkit-text-stroke:.8px #000}
 .owned-map-core .tesla-core-speed small{font-size:9px;letter-spacing:.04em}
-@media (max-height: 680px){
-  .owned-map-core,.owned-map-core .living-cell{width:124px;height:124px}
-  .owned-map-core .tesla-core-speed strong{font-size:22px}
+@media (max-width: 760px), (max-height: 680px){
+  .owned-map-places{max-width:calc(100vw - 150px)}
+  .owned-map-core,.owned-map-core .living-cell{width:80px;height:80px}
+  .owned-map-core .tesla-core-speed strong{font-size:16px}
 }
 .owned-map-settings-btn:focus-visible,
 .owned-map-marker-pick select:focus-visible{outline:2px solid #fff;outline-offset:3px}
-.owned-map-settings{
-  bottom:max(98px, calc(env(safe-area-inset-bottom) + 90px));
-  width:min(320px, calc(100vw - 24px));
+.owned-map-dock .owned-map-settings{
+  position:relative;right:auto;bottom:auto;
+  width:100%;
   max-height:min(58vh, 440px);
   overflow:auto;
   box-sizing:border-box;
@@ -206,3 +220,74 @@
   font:inherit;font-size:22px;line-height:1;cursor:pointer;
 }
 .owned-map-arrival-x:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+/* Open / close. Calm Tesla-like ease, short travel, light blur only on the map. */
+.app-shell.is-map-entering .owned-map{z-index:6;background:transparent}
+.app-shell.is-map-entering .owned-map-canvas{animation:map-canvas-settle 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
+@keyframes map-canvas-settle{from{opacity:.5;filter:blur(6px)}to{opacity:1;filter:blur(0)}}
+.app-shell.is-map-entering .landing-stage{display:grid!important;z-index:25;pointer-events:none}
+.app-shell.is-map-entering .landing-entry:not(.is-map-flight){
+  animation:map-logo-leave 520ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events:none;
+}
+@keyframes map-logo-leave{to{opacity:0;transform:translate3d(0,-12px,0)}}
+.app-shell.is-map-entering .landing-entry.is-map-flight{
+  animation:none!important;pointer-events:none;opacity:1!important;filter:none!important;
+}
+.app-shell.is-map-entering .owned-map-core{visibility:hidden}
+.app-shell.is-map-entering.has-navigation:not(.tesla-menu-collapsed) .navigation-rail{
+  pointer-events:none;z-index:12;transition:none;
+  animation:map-rail-leave 520ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.app-shell.is-map-entering.has-navigation:not(.tesla-menu-collapsed) .navigation-rail > *{
+  animation:map-menu-leave 460ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+@keyframes map-rail-leave{to{opacity:0;transform:translate3d(-12px,0,0)}}
+@keyframes map-menu-leave{to{opacity:0;transform:translate3d(-8px,0,0)}}
+@media (max-width:760px), (pointer:coarse) and (max-height:500px){
+  @keyframes map-rail-leave{to{opacity:0;transform:translate3d(0,10px,0)}}
+  @keyframes map-menu-leave{to{opacity:0;transform:translate3d(0,8px,0)}}
+}
+.app-shell.is-map-entering .tesla-menu-toggle{
+  animation:map-fade-out 420ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events:none;
+}
+@keyframes map-fade-out{to{opacity:0}}
+.app-shell.is-map-entering .owned-map-places-bar > .owned-map-pill,
+.app-shell.is-map-entering .owned-map-close{
+  animation:map-chrome-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.app-shell.is-map-entering .owned-map-places-bar > .owned-map-pill:nth-child(2){animation-delay:40ms}
+.app-shell.is-map-entering .owned-map-gps,
+.app-shell.is-map-entering .owned-map-settings-btn{
+  animation:map-chrome-up 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.app-shell.is-map-entering .owned-map-gps{animation-delay:50ms}
+.app-shell.is-map-entering .owned-map-settings-btn{animation-delay:70ms}
+@keyframes map-chrome-in{from{opacity:0;transform:translate3d(0,-8px,0)}to{opacity:1;transform:none}}
+@keyframes map-chrome-up{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
+.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings{animation:map-panel-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
+@keyframes map-panel-in{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
+.owned-map-arrival{animation:map-arrival-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
+@keyframes map-arrival-in{from{opacity:0;transform:translate(-50%,calc(-50% + 8px))}to{opacity:1;transform:translate(-50%,-50%)}}
+.app-shell.is-map-leaving .owned-map{
+  animation:map-leave 480ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events:none;
+}
+@keyframes map-leave{to{opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .app-shell.is-map-entering .owned-map-canvas,
+  .app-shell.is-map-entering .navigation-rail,
+  .app-shell.is-map-entering .navigation-rail > *,
+  .app-shell.is-map-entering .tesla-menu-toggle,
+  .app-shell.is-map-entering .owned-map-places-bar > .owned-map-pill,
+  .app-shell.is-map-entering .owned-map-gps,
+  .app-shell.is-map-entering .owned-map-settings-btn,
+  .app-shell.is-map-entering .owned-map-close,
+  .app-shell.is-map-entering .landing-entry,
+  .app-shell.is-map-leaving .owned-map,
+  .owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings,.owned-map-arrival,.owned-map-core.is-holding{
+    animation:none!important;
+  }
+  .landing-entry.is-map-flight{transition:none!important}
+}

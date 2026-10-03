@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'react'
+import {useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react'
 import {Map, Marker, NavigationControl, type GeoJSONSource} from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
@@ -519,11 +519,33 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
   const workOn = trip ? trip.id === 'work' : editing && selected === 'work'
+  const holdRef = useRef<number | null>(null)
+  const [holding, setHolding] = useState(false)
+  useEffect(() => () => { if (holdRef.current != null) window.clearTimeout(holdRef.current) }, [])
+  function clearHold() {
+    if (holdRef.current != null) window.clearTimeout(holdRef.current)
+    holdRef.current = null
+    setHolding(false)
+  }
+  function startHold(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!event.isPrimary || event.button !== 0) return
+    clearHold()
+    setHolding(true)
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* already released */ }
+    holdRef.current = window.setTimeout(() => {
+      holdRef.current = null
+      setHolding(false)
+      onClose()
+    }, 3000)
+  }
+  function endHold(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    clearHold()
+  }
 
   return (
     <section className="owned-map" role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
-      <div className="owned-map-side">
       <div className="owned-map-places">
         <div className="owned-map-places-bar">
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
@@ -563,14 +585,18 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         {hint && !editing && <p className="owned-map-hint">{t(hint)}</p>}
       </div>
       {showCore && (
-        <div className="owned-map-core" aria-hidden="true">
+        <button
+          type="button"
+          className={`owned-map-core${holding ? ' is-holding' : ''}`}
+          aria-label={t('Hold to close the map')}
+          onPointerDown={startHold}
+          onPointerUp={endHold}
+          onPointerCancel={endHold}
+          onContextMenu={event => event.preventDefault()}
+        >
           <IntelligenceOrb linkTesla teslaHomeVisible={false} teslaSpeedKmh={speedKmh} teslaUnit={speedUnit} />
-        </div>
+        </button>
       )}
-      <button type="button" className={`owned-map-pill owned-map-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('GPS')} onClick={recenter}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 20.2 20.2c.35.78-.48 1.55-1.24 1.16L12 17.7l-6.96 3.66c-.76.39-1.59-.38-1.24-1.16L12 2.6z"/></svg>
-      </button>
-      </div>
       {arrival && (
         <div className="owned-map-arrival" role="status" aria-live="polite">
           <button type="button" className="owned-map-arrival-x" aria-label={t('Close')} onClick={dismissArrival}>×</button>
@@ -579,7 +605,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           <div className="owned-map-arrival-count" aria-hidden="true">{arrival.left}</div>
         </div>
       )}
-      <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
+      <div className="owned-map-dock">
       {settingsOpen && (
         <div className="owned-map-settings" role="dialog" aria-label={t('Map Settings')}>
           <AddressField title={t('HOME')} saved={places.home} onSave={place => commitPlace('home', place)} />
@@ -600,7 +626,14 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           </label>
         </div>
       )}
-      <button type="button" className="owned-map-close" onClick={onClose}>{t('Close')}</button>
+      <button type="button" className={`owned-map-pill owned-map-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('GPS')} onClick={recenter}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 20.2 20.2c.35.78-.48 1.55-1.24 1.16L12 17.7l-6.96 3.66c-.76.39-1.59-.38-1.24-1.16L12 2.6z"/></svg>
+      </button>
+      <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
+      </div>
+      <button type="button" className="owned-map-close" aria-label={t('Close')} onClick={onClose}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+      </button>
     </section>
   )
 }
