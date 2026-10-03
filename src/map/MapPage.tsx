@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react'
-import {Map, Marker, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
+import {Map, Marker, Popup, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
@@ -8,6 +8,7 @@ import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
 import {EXTRA_IDS, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, type MarkerKind} from './marker'
+import {loadChargers, type Charger} from './chargers'
 import {DARK_STYLE_URL, satelliteStyle} from './style'
 import './map.css'
 
@@ -287,6 +288,53 @@ function basemapStyle(mode: BasemapMode) {
   return mode === 'street' ? DARK_STYLE_URL : satelliteStyle
 }
 
+const CHARGER_NEAR = 4
+
+function chargerBolt(): ImageData {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const pen = canvas.getContext('2d')
+  if (!pen) return new ImageData(size, size)
+  pen.clearRect(0, 0, size, size)
+  pen.fillStyle = '#111'
+  pen.strokeStyle = '#fff'
+  pen.lineWidth = 4
+  pen.beginPath()
+  pen.arc(32, 32, 22, 0, Math.PI * 2)
+  pen.fill()
+  pen.stroke()
+  pen.fillStyle = '#fff'
+  pen.translate(8, 8)
+  pen.scale(2, 2)
+  pen.beginPath()
+  pen.moveTo(13.2, 2.6)
+  pen.lineTo(6.1, 13)
+  pen.lineTo(11, 13)
+  pen.lineTo(9.4, 21.4)
+  pen.lineTo(18.2, 10.2)
+  pen.lineTo(13.1, 10.2)
+  pen.closePath()
+  pen.fill()
+  return pen.getImageData(0, 0, size, size)
+}
+
+function viewHolds(map: Map, lat: number, lon: number) {
+  const bounds = map.getBounds()
+  const south = bounds.getSouth()
+  const north = bounds.getNorth()
+  const west = bounds.getWest()
+  const east = bounds.getEast()
+  const latPad = Math.max(0.02, (north - south) * 0.2)
+  if (lat < south - latPad || lat > north + latPad) return false
+  const crosses = west > east
+  const span = crosses ? (180 - west) + (east + 180) : east - west
+  const lonPad = Math.max(0.02, span * 0.2)
+  if (crosses) return lon >= west - lonPad || lon <= east + lonPad
+  return lon >= west - lonPad && lon <= east + lonPad
+}
+
 /** Shared with the follow camera so a 3D-off choice is not overwritten by the next GPS tick. */
 let map3dOn = readMap3d()
 
@@ -437,6 +485,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [following, setFollowing] = useState(mapMemory.following)
   const [buildings3d, setBuildings3d] = useState(map3dOn)
   const [basemap, setBasemap] = useState<BasemapMode>(readBasemap)
+  const [chargersOn, setChargersOn] = useState(false)
   const [driving, setDriving] = useState(mapMemory.driving)
   const [query, setQuery] = useState(mapMemory.query)
   const [queryHits, setQueryHits] = useState<Hit[]>([])
@@ -463,6 +512,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const suppressPlaceClick = useRef(false)
   const placeHoldAt = useRef({x: 0, y: 0, pointerId: -1})
   const chosenHitRef = useRef<Hit | null>(null)
+  const chargersOnRef = useRef(false)
+  const chargerPopupRef = useRef<Popup | null>(null)
+  const syncChargersRef = useRef<(map: Map) => void>(() => {})
   useEffect(() => () => {
     if (placeHoldTimer.current) window.clearTimeout(placeHoldTimer.current)
   }, [])
@@ -757,7 +809,22 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       followRef.current = false
       setFollowing(false)
     })
+    map.on('moveend', () => syncChargersRef.current(map))
+    map.on('style.load', () => syncChargersRef.current(map))
     map.on('click', (event) => {
+      if (map.getLayer('chargers-bolt')) {
+        const hit = map.queryRenderedFeatures(event.point, {layers: ['chargers-bolt']})[0]
+        const name = hit && typeof hit.properties?.name === 'string' ? hit.properties.name : ''
+        if (name) {
+          chargerPopupRef.current?.remove()
+          const popup = new Popup({closeButton: true, closeOnClick: true, offset: 18, maxWidth: '240px'})
+            .setLngLat(event.lngLat)
+            .setText(name)
+            .addTo(map)
+          chargerPopupRef.current = popup
+          return
+        }
+      }
       const target = event.originalEvent?.target
       if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea, .owned-map-drop')) return
       const panel = queryOpenRef.current || editingRef.current || addingRef.current || clearAskRef.current || !!arrivalRef.current
@@ -996,6 +1063,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     const marker = markerRef.current
     if (!map || !marker || lat == null || lon == null) return
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+    if (chargersOnRef.current) syncChargersRef.current(map)
     const active = tripRef.current
     if (active && !arrivalRef.current && metersBetween(lat, lon, active.place.lat, active.place.lon) <= ARRIVAL_M) {
       showArrival(active.place)
@@ -1201,6 +1269,79 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     applyMap3d(map, next, true)
   }
 
+  function syncChargers(map: Map) {
+    if (!map.isStyleLoaded()) return
+    if (!chargersOnRef.current) {
+      chargerPopupRef.current?.remove()
+      const source = map.getSource('chargers') as GeoJSONSource | undefined
+      source?.setData({type: 'FeatureCollection', features: []})
+      return
+    }
+    if (!map.hasImage('charger-bolt')) map.addImage('charger-bolt', chargerBolt(), {pixelRatio: 2})
+    if (!map.getSource('chargers')) map.addSource('chargers', {type: 'geojson', data: {type: 'FeatureCollection', features: []}})
+    if (!map.getLayer('chargers-ring')) {
+      map.addLayer({
+        id: 'chargers-ring',
+        type: 'circle',
+        source: 'chargers',
+        filter: ['==', ['get', 'near'], 1],
+        paint: {'circle-radius': 18, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-width': 3, 'circle-stroke-color': '#fff'},
+      })
+    }
+    if (!map.getLayer('chargers-bolt')) {
+      map.addLayer({
+        id: 'chargers-bolt',
+        type: 'symbol',
+        source: 'chargers',
+        layout: {
+          'icon-image': 'charger-bolt',
+          'icon-size': ['case', ['==', ['get', 'near'], 1], 1.35, 1],
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+        },
+      })
+    }
+    if (map.getLayer('route-casing')) {
+      map.moveLayer('chargers-ring', 'route-casing')
+      map.moveLayer('chargers-bolt', 'route-casing')
+    }
+    void loadChargers().then(sites => {
+      if (!chargersOnRef.current || mapRef.current !== map) return
+      paintChargers(map, sites)
+    }).catch(() => { /* Leave the layer empty until the next toggle. */ })
+  }
+
+  function paintChargers(map: Map, sites: Charger[]) {
+    const source = map.getSource('chargers') as GeoJSONSource | undefined
+    if (!source || !chargersOnRef.current) return
+    const center = map.getCenter()
+    const origin = pointRef.current ?? {lat: center.lat, lon: center.lng}
+    const ranked = sites.map(site => ({site, distance: metersBetween(origin.lat, origin.lon, site.lat, site.lon)}))
+    ranked.sort((a, b) => a.distance - b.distance)
+    const near = new Set(ranked.slice(0, CHARGER_NEAR).map(row => row.site.id))
+    const features = []
+    for (const site of sites) {
+      const highlighted = near.has(site.id)
+      if (!highlighted && !viewHolds(map, site.lat, site.lon)) continue
+      features.push({
+        type: 'Feature' as const,
+        id: site.id,
+        properties: {name: site.name, near: highlighted ? 1 : 0},
+        geometry: {type: 'Point' as const, coordinates: [site.lon, site.lat] as [number, number]},
+      })
+    }
+    source.setData({type: 'FeatureCollection', features})
+  }
+
+  function toggleChargers() {
+    const next = !chargersOnRef.current
+    chargersOnRef.current = next
+    setChargersOn(next)
+    const map = mapRef.current
+    if (!map) return
+    syncChargers(map)
+  }
+
   function toggleBasemap() {
     const next: BasemapMode = basemap === 'satellite' ? 'street' : 'satellite'
     setBasemap(next)
@@ -1319,6 +1460,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [holding, setHolding] = useState(false)
   const [clearAsk, setClearAsk] = useState(false)
   clearAskRef.current = clearAsk
+  syncChargersRef.current = syncChargers
   const mapCore = useTeslaCoreInteraction({enabled: showCore, onTap: onClose})
   function startHold(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || event.button !== 0) return
@@ -1592,6 +1734,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       {routeCard}
       {routeBanner}
       <div className="owned-map-rail">
+        <button type="button" className={`is-chargers${chargersOn ? ' is-on' : ''}`} aria-pressed={chargersOn} aria-label={t('Superchargers')} onClick={toggleChargers}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M13.2 3.4 7.2 12.6h3.6l-1.2 7.2 6.6-10.2h-3.7l.7-6.2z"/></svg>
+        </button>
         <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
         <button type="button" className={`is-basemap${basemap === 'street' ? ' is-on' : ''}`} aria-pressed={basemap === 'street'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>
           {basemap === 'street' ? (

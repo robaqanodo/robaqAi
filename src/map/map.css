@@ -28,6 +28,11 @@
 .owned-map .maplibregl-ctrl-attrib{
   background:rgba(8,12,18,.72);color:#e8edf2;font-size:11px;border-radius:10px 0 0 0;
 }
+.owned-map .maplibregl-popup-content{
+  background:rgba(255,255,255,.94);color:#111;border-radius:12px;padding:8px 12px;
+  font-size:13px;font-weight:650;box-shadow:0 8px 22px rgba(0,0,0,.18);
+}
+.owned-map .maplibregl-popup-close-button{font-size:16px;padding:2px 6px}
 .owned-map .maplibregl-ctrl-attrib a{color:#fff}
 .owned-map-pin{position:relative;width:22px;height:22px}
 .owned-map-pin.is-puck{width:28px;height:34px}
@@ -605,6 +610,7 @@
 .owned-map-rail button.is-3d{font-size:13px;font-weight:750;letter-spacing:.04em}
 .owned-map-rail button.is-3d.is-on{background:#111;color:#fff}
 .owned-map-rail button.is-basemap.is-on{background:#111;color:#fff}
+.owned-map-rail button.is-chargers.is-on{background:#111;color:#fff}
 
 .owned-map-rail button:hover,
 .owned-map-rail button:focus-visible{background:rgba(244,245,247,.9)}
@@ -686,6 +692,7 @@
 .app-shell.theme-default .owned-map-rail button.is-on{color:#fff}
 .app-shell.theme-default .owned-map-rail button.is-3d.is-on{background:#f4f7fb;color:#111}
 .app-shell.theme-default .owned-map-rail button.is-basemap.is-on{background:#f4f7fb;color:#111}
+.app-shell.theme-default .owned-map-rail button.is-chargers.is-on{background:#f4f7fb;color:#111}
 
 
 /* Map logo only. Same dark home-logo paint. Tesla mark stays red. Home logo is untouched. */
