@@ -2008,8 +2008,8 @@ function AppContent() {
             <div className="about-art" aria-hidden="true"><i/><i/><i/><span>r.</span></div>
             <h2 id="about-title">{t("About robaqAi")}</h2>
             <p className="about-lead">{t('A little space for bigger ideas.')}</p>
-            <p className="modal-help">{t('After donating, copy your donation confirmation number and choose Share my idea. Send us a prompt or describe the skill you would like to see. Email and confirmation number are required.')}</p>
-            <button type="button" className="modal-btn primary" onClick={()=>setLandingPanel('idea')}>{t('Share my idea')}</button>
+            <p className="modal-help">{t('After donating, copy your donation confirmation number and choose Share your idea. Send us a prompt or describe the skill you would like to see. Email and confirmation number are required.')}</p>
+            <button type="button" className="modal-btn primary" onClick={()=>setLandingPanel('idea')}>{t('Share your idea')}</button>
             <div className="modal-actions about-actions">
               <button type="button" className="modal-btn about-support" onClick={() => setLandingPanel('donate')}>{t('Support the project')}</button>
               <button type="button" className="modal-btn" onClick={() => setLandingPanel(null)}>{t('Cancel')}</button>

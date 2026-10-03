@@ -2619,12 +2619,12 @@
     "Offline AI მოდელების ჩამოსატვირთად გათიშეთ LinkyourTesla. Offline AI არ არის განკუთვნილი Tesla-ს მანქანის ბრაუზერისთვის.",
     "Отключите LinkyourTesla, чтобы скачать офлайн-модели AI. Офлайн-AI не предназначен для автомобильного браузера Tesla."
   ],
-  "Share my idea": [
-    "ჩემი იდეის გაზიარება",
-    "Поделиться идеей"
+  "Share your idea": [
+    "შენი იდეის გაზიარება",
+    "Поделитесь своей идеей"
   ],
-  "After donating, copy your donation confirmation number and choose Share my idea. Send us a prompt or describe the skill you would like to see. Email and confirmation number are required.": [
-    "დონაციის შემდეგ დააკოპირეთ დადასტურების ნომერი და აირჩიეთ „ჩემი იდეის გაზიარება“. გამოგვიგზავნეთ პრომპტი ან აღწერეთ სასურველი სკილი. ელფოსტა და დადასტურების ნომერი აუცილებელია.",
+  "After donating, copy your donation confirmation number and choose Share your idea. Send us a prompt or describe the skill you would like to see. Email and confirmation number are required.": [
+    "დონაციის შემდეგ დააკოპირეთ დადასტურების ნომერი და აირჩიეთ „შენი იდეის გაზიარება“. გამოგვიგზავნეთ პრომპტი ან აღწერეთ სასურველი სკილი. ელფოსტა და დადასტურების ნომერი აუცილებელია.",
     "После пожертвования скопируйте номер подтверждения и выберите «Поделиться идеей». Пришлите промпт или опишите желаемый навык. Email и номер подтверждения обязательны."
   ],
   "Share a prompt or a complete idea. Copy the confirmation number from your donation receipt. Your email and confirmation number are required.": [
