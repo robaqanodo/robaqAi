@@ -5,6 +5,9 @@ const ROUTE_BLUE = '#3E9BFF'
 /** OpenFreeMap planet vector tiles. No key. Overlay only; the Esri raster stays the basemap. */
 const OPENFREEMAP = 'https://tiles.openfreemap.org/planet'
 
+/** Street basemap. No key. Liberty already draws roads, labels, land, and buildings. */
+export const LIBERTY_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty'
+
 const labelName: ExpressionSpecification = ['coalesce', ['get', 'name_en'], ['get', 'name']]
 
 /** render_height, else building:levels * 3, else about 8m. OpenFreeMap buildings carry render_height. */

@@ -8,7 +8,7 @@ import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
 import {EXTRA_IDS, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, type MarkerKind} from './marker'
-import {satelliteStyle} from './style'
+import {LIBERTY_STYLE_URL, satelliteStyle} from './style'
 import './map.css'
 
 // Vite bundles maplibre-gl.mjs into the app chunk, so the default worker URL
@@ -270,9 +270,19 @@ function directLine(from: Fix, place: SavedPlace): [number, number][] {
 }
 
 const MAP_3D_KEY = 'robaq-map-3d'
+const MAP_BASEMAP_KEY = 'robaq-map-basemap'
+type BasemapMode = 'satellite' | 'street'
 
 function readMap3d() {
   try { return localStorage.getItem(MAP_3D_KEY) !== '0' } catch { return true }
+}
+
+function readBasemap(): BasemapMode {
+  try { return localStorage.getItem(MAP_BASEMAP_KEY) === 'street' ? 'street' : 'satellite' } catch { return 'satellite' }
+}
+
+function basemapStyle(mode: BasemapMode) {
+  return mode === 'street' ? LIBERTY_STYLE_URL : satelliteStyle
 }
 
 /** Shared with the follow camera so a 3D-off choice is not overwritten by the next GPS tick. */
@@ -280,7 +290,8 @@ let map3dOn = readMap3d()
 
 function applyMap3d(map: Map, on: boolean, animate: boolean) {
   map3dOn = on
-  for (const id of ['buildings-walls', 'buildings-roofs']) {
+  // Satellite uses our extrusions. Liberty already has building-3d; do not add a second set.
+  for (const id of ['buildings-walls', 'buildings-roofs', 'building-3d']) {
     if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none')
   }
   if (on) {
@@ -422,6 +433,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(mapMemory.following)
   const [buildings3d, setBuildings3d] = useState(map3dOn)
+  const [basemap, setBasemap] = useState<BasemapMode>(readBasemap)
   const [driving, setDriving] = useState(mapMemory.driving)
   const [query, setQuery] = useState(mapMemory.query)
   const [queryHits, setQueryHits] = useState<Hit[]>([])
@@ -700,7 +712,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     if (!el) return
     const map = new Map({
       container: el,
-      style: satelliteStyle,
+      style: basemapStyle(readBasemap()),
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       maxZoom: 19,
@@ -1185,6 +1197,17 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     applyMap3d(map, next, true)
   }
 
+  function toggleBasemap() {
+    const next: BasemapMode = basemap === 'satellite' ? 'street' : 'satellite'
+    setBasemap(next)
+    try { localStorage.setItem(MAP_BASEMAP_KEY, next) } catch { /* The choice still applies for this view. */ }
+    const map = mapRef.current
+    if (!map) return
+    // Full swap so the Esri raster is gone in street mode and Liberty layers are not stacked on it.
+    // style.load re-applies 3D visibility and puts the route line back.
+    map.setStyle(basemapStyle(next), {diff: false})
+  }
+
   function onPlace(id: PlaceId) {
     if (tripRef.current?.id === id) {
       cancelRoute()
@@ -1377,6 +1400,33 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     <section className={`owned-map${driving ? ' is-driving' : ''}`} role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
+        <div className="owned-map-search-line">
+            {showCore && (
+              <button
+                type="button"
+                className={`owned-map-core${holding ? ' is-holding' : ''}`}
+                aria-label={t('Hold to close the map')}
+                onPointerDown={startHold}
+                onPointerMove={moveHold}
+                onPointerUp={endHold}
+                onPointerCancel={cancelHold}
+                onClickCapture={mapCore.onClickCapture}
+                onContextMenu={event => event.preventDefault()}
+              >
+                <IntelligenceOrb
+                  linkTesla
+                  svgMark
+                  teslaHomeVisible={false}
+                  teslaSpeedKmh={speedKmh}
+                  teslaUnit={speedUnit}
+                  teslaSpinning={mapCore.spinning}
+                  teslaSettling={mapCore.settling}
+                  teslaSpinMs={mapCore.spinMs}
+                  teslaSpinKey={mapCore.spinKey}
+                  onTeslaSpinEnd={mapCore.onSpinEnd}
+                />
+              </button>
+            )}
         <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); onGo() }}>
           <div className="owned-map-search-row">
           <input
@@ -1404,33 +1454,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             </ul>
           )}
         </form>
+        </div>
         <div className="owned-map-places-bar">
-          {showCore && (
-            <button
-              type="button"
-              className={`owned-map-core${holding ? ' is-holding' : ''}`}
-              aria-label={t('Hold to close the map')}
-              onPointerDown={startHold}
-              onPointerMove={moveHold}
-              onPointerUp={endHold}
-              onPointerCancel={cancelHold}
-              onClickCapture={mapCore.onClickCapture}
-              onContextMenu={event => event.preventDefault()}
-            >
-              <IntelligenceOrb
-                linkTesla
-                svgMark
-                teslaHomeVisible={false}
-                teslaSpeedKmh={speedKmh}
-                teslaUnit={speedUnit}
-                teslaSpinning={mapCore.spinning}
-                teslaSettling={mapCore.settling}
-                teslaSpinMs={mapCore.spinMs}
-                teslaSpinKey={mapCore.spinKey}
-                onTeslaSpinEnd={mapCore.onSpinEnd}
-              />
-            </button>
-          )}
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
             <SlotIcon id="home" />
             <span>{t('HOME')}</span>
@@ -1537,6 +1562,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       {routeBanner}
       <div className="owned-map-rail">
         <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
+        <button type="button" className={`is-basemap${basemap === 'street' ? ' is-on' : ''}`} aria-pressed={basemap === 'street'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>{basemap === 'street' ? t('Map') : t('Satellite')}</button>
         <button type="button" aria-label={t('North up')} onClick={northUp}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M12 4.2 14.1 11 12 9.6 9.9 11 12 4.2z"/><path fill="#c5cad1" d="M12 19.8 9.9 13 12 14.4 14.1 13 12 19.8z"/></svg>
         </button>
