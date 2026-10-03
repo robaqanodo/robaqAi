@@ -5,10 +5,10 @@ const MOVE_CANCEL_PX=14
 const SPIN_MS=1800
 const SETTLE_MS=1100
 
-type Options={enabled:boolean;onLongPress:()=>void}
+type Options={enabled:boolean;onLongPress:()=>void;longPressMs?:number}
 
-/** Connected LinkyourTesla core: one faster startup-style spin per tap (~1.8s); mid-spin taps ignored; 3s long-press opens panel. */
-export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
+/** Connected LinkyourTesla core: one faster startup-style spin per tap (~1.8s); mid-spin taps ignored. Home long-press is 3s. Map passes 1s. */
+export function useTeslaCoreInteraction({enabled,onLongPress,longPressMs=LONG_PRESS_MS}:Options){
   const [spinning,setSpinning]=useState(false)
   const [settling,setSettling]=useState(false)
   const [spinKey,setSpinKey]=useState(0)
@@ -104,8 +104,8 @@ export function useTeslaCoreInteraction({enabled,onLongPress}:Options){
       if(cancelled.current||pointerId.current===null)return
       longFired.current=true
       onLongPressRef.current()
-    },LONG_PRESS_MS)
-  },[enabled,clearLong])
+    },longPressMs)
+  },[enabled,clearLong,longPressMs])
 
   const onPointerMove=useCallback((event:PointerEvent)=>{
     if(!enabled||pointerId.current!==event.pointerId)return

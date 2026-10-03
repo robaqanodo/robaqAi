@@ -21,6 +21,22 @@ type RouteData = RouteFeature | {type: 'FeatureCollection'; features: []}
 type TripId = PlaceId | 'search'
 type Trip = {id: TripId; place: SavedPlace}
 type Arrival = {label: string; left: number}
+type MapMemory = {
+  selected: PlaceId
+  trip: Trip | null
+  query: string
+  route: [number, number][] | null
+  following: boolean
+}
+
+/** Survives map close. Logo-hold keeps this. X confirm clears the trip, not saved places. */
+const mapMemory: MapMemory = {
+  selected: 'home',
+  trip: null,
+  query: '',
+  route: null,
+  following: true,
+}
 
 const DEFAULT_CENTER: [number, number] = [20, 20]
 const DEFAULT_ZOOM = 1.6
@@ -41,23 +57,82 @@ function metersBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
   return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
-function ensureRoute(map: Map) {
-  if (map.getSource('route')) return
-  map.addSource('route', {type: 'geojson', data: EMPTY})
-  map.addLayer({
-    id: 'route-casing',
-    type: 'line',
-    source: 'route',
-    layout: {'line-cap': 'round', 'line-join': 'round'},
-    paint: {'line-color': '#0A3F9E', 'line-width': 10, 'line-opacity': 0.95},
-  })
-  map.addLayer({
-    id: 'route-line',
-    type: 'line',
-    source: 'route',
-    layout: {'line-cap': 'round', 'line-join': 'round'},
-    paint: {'line-color': '#3E9BFF', 'line-width': 6},
-  })
+const ROUTE_BLUE = '#3E9BFF'
+
+function hitsFrom(data: unknown): Hit[] {
+  const rows = Array.isArray(data) ? data : []
+  const next: Hit[] = []
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue
+    const hit = row as {label?: unknown; lat?: unknown; lon?: unknown}
+    const lat = Number(hit.lat)
+    const lon = Number(hit.lon)
+    const label = typeof hit.label === 'string' ? hit.label : ''
+    if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
+    next.push({label, lat, lon})
+  }
+  return next
+}
+
+function lineData(coordinates: [number, number][]): RouteData {
+  return {type: 'Feature', properties: {}, geometry: {type: 'LineString', coordinates}}
+}
+
+/** Keep the blue line attached to the car. Far off the polyline, keep the whole route. */
+function sliceRoute(coords: [number, number][], lat: number, lon: number): [number, number][] {
+  let best = 0
+  let bestD = Infinity
+  for (let i = 0; i < coords.length; i++) {
+    const d = metersBetween(lat, lon, coords[i][1], coords[i][0])
+    if (d < bestD) { bestD = d; best = i }
+  }
+  const here: [number, number] = [lon, lat]
+  const rest = bestD > 800 ? coords : coords.slice(best)
+  const tail = rest[rest.length - 1]
+  if (!tail) return [here, [lon, lat]]
+  const body = rest.filter(point => point[0] !== here[0] || point[1] !== here[1])
+  return [here, ...(body.length ? body : [tail])]
+}
+
+/** Add the GeoJSON source and Tesla-blue line even while raster tiles are still loading. */
+function commitRoute(map: Map, data: RouteData): boolean {
+  try {
+    let created = false
+    if (!map.getSource('route')) {
+      map.addSource('route', {type: 'geojson', data})
+      created = true
+    }
+    if (!map.getLayer('route-casing')) {
+      map.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: 'route',
+        layout: {'line-cap': 'round', 'line-join': 'round'},
+        paint: {'line-color': '#0A3F9E', 'line-width': 10, 'line-opacity': 0.95},
+      })
+      created = true
+    }
+    if (!map.getLayer('route-line')) {
+      map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: {'line-cap': 'round', 'line-join': 'round'},
+        paint: {'line-color': ROUTE_BLUE, 'line-width': 6, 'line-opacity': 1},
+      })
+      created = true
+    }
+    if (created && map.getLayer('route-casing') && map.getLayer('route-line')) {
+      map.moveLayer('route-casing')
+      map.moveLayer('route-line')
+    }
+    const source = map.getSource('route') as GeoJSONSource | undefined
+    if (!source) return false
+    source.setData(data)
+    return true
+  } catch {
+    return false
+  }
 }
 
 
@@ -146,16 +221,20 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const mapRef = useRef<Map | null>(null)
   const markerRef = useRef<Marker | null>(null)
   const destRef = useRef<Marker | null>(null)
-  const followRef = useRef(true)
+  const followRef = useRef(mapMemory.following)
   const framedRef = useRef(false)
   const pointRef = useRef<Fix | null>(null)
   const teslaOnRef = useRef(false)
   const editingRef = useRef(false)
-  const queuedRoute = useRef<RouteData | null>(null)
+  const drawnRef = useRef<RouteData>(mapMemory.trip && mapMemory.route && mapMemory.route.length >= 2 ? lineData(mapMemory.route) : EMPTY)
+  const lastCommitted = useRef<RouteData | null>(null)
+  const routeCoordsRef = useRef<[number, number][] | null>(mapMemory.route)
+  const hitsQueryRef = useRef('')
+  const flushRef = useRef<() => void>(() => {})
   const routeSeq = useRef(0)
   const [fix, setFix] = useState<Fix | null>(null)
   const [places, setPlaces] = useState(loadPlaces)
-  const [selected, setSelected] = useState<PlaceId>('home')
+  const [selected, setSelected] = useState<PlaceId>(mapMemory.selected)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [hits, setHits] = useState<Hit[]>([])
@@ -164,10 +243,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [hint, setHint] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [markerKind, setMarkerKind] = useState<MarkerKind>(loadMarkerKind)
-  const [trip, setTrip] = useState<Trip | null>(null)
+  const [trip, setTrip] = useState<Trip | null>(mapMemory.trip)
   const [arrival, setArrival] = useState<Arrival | null>(null)
-  const [following, setFollowing] = useState(true)
-  const [query, setQuery] = useState('')
+  const [following, setFollowing] = useState(mapMemory.following)
+  const [query, setQuery] = useState(mapMemory.query)
   const [queryHits, setQueryHits] = useState<Hit[]>([])
   const [querySearching, setQuerySearching] = useState(false)
   const [querySearched, setQuerySearched] = useState(false)
@@ -178,6 +257,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const arrivalRef = useRef<Arrival | null>(null)
   const arrivedRef = useRef(false)
   const queryOpenRef = useRef(false)
+  const clearAskRef = useRef(false)
 
   const point: Fix | null = tesla.coordinates
     ? finiteFix(tesla.coordinates.latitude, tesla.coordinates.longitude, tesla.coordinates.heading)
@@ -191,6 +271,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   tripRef.current = trip
   arrivalRef.current = arrival
   queryOpenRef.current = queryOpen
+  flushRef.current = () => {
+    const map = mapRef.current
+    const data = drawnRef.current
+    if (!map) return
+    if (lastCommitted.current === data && map.getSource('route') && map.getLayer('route-line')) return
+    if (commitRoute(map, data)) lastCommitted.current = data
+  }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -199,6 +286,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       if (arrivalRef.current) { dismissArrival(); return }
       if (editingRef.current) { setEditing(false); return }
       if (settingsRef.current) { setSettingsOpen(false); return }
+      if (clearAskRef.current) { setClearAsk(false); return }
       onClose()
     }
     window.addEventListener('keydown', onKey)
@@ -206,12 +294,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }, [onClose])
 
   function paintRoute(data: RouteData) {
+    drawnRef.current = data
     const map = mapRef.current
-    if (!map || !map.isStyleLoaded()) { queuedRoute.current = data; return }
-    ensureRoute(map)
-    const source = map.getSource('route') as GeoJSONSource | undefined
-    source?.setData(data)
-    queuedRoute.current = null
+    if (!map) return
+    if (commitRoute(map, data)) lastCommitted.current = data
   }
 
   function showDestination(place: SavedPlace | null) {
@@ -230,9 +316,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   function showArrival(place: SavedPlace) {
     tripRef.current = null
     setTrip(null)
+    routeCoordsRef.current = null
     followRef.current = false
+    setFollowing(false)
     routeSeq.current += 1
     arrivedRef.current = true
+    paintRoute(EMPTY)
+    showDestination(null)
     const card = {label: place.label, left: 5}
     arrivalRef.current = card
     setArrival(card)
@@ -299,7 +389,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   function cancelRoute() {
     routeSeq.current += 1
     tripRef.current = null
+    mapMemory.trip = null
+    mapMemory.route = null
     setTrip(null)
+    routeCoordsRef.current = null
     followRef.current = false
     setFollowing(false)
     arrivedRef.current = false
@@ -317,11 +410,15 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     arrivalRef.current = null
     setArrival(null)
     const seq = ++routeSeq.current
+    routeCoordsRef.current = null
+    mapMemory.route = null
     paintRoute(EMPTY)
     const nextTrip = {id, place}
+    mapMemory.trip = nextTrip
     tripRef.current = nextTrip
     setTrip(nextTrip)
     followRef.current = true
+    setFollowing(true)
     showDestination(place)
     if (!pointRef.current) setHint('Waiting for location…')
     const origin = await locate()
@@ -335,17 +432,30 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setHint(null)
     try {
       const response = await fetch(`/api/route?from=${origin.lon},${origin.lat}&to=${place.lon},${place.lat}`)
-      const body = await response.json() as {geometry?: {type?: string; coordinates?: [number, number][]}}
+      const body = await response.json() as {geometry?: {type?: string; coordinates?: unknown}}
       if (seq !== routeSeq.current) return
-      const coordinates = body.geometry?.type === 'LineString' ? body.geometry.coordinates : null
-      if (!response.ok || !coordinates || coordinates.length < 2) {
+      const raw = body.geometry?.type === 'LineString' && Array.isArray(body.geometry.coordinates) ? body.geometry.coordinates : []
+      const coordinates: [number, number][] = []
+      for (const pair of raw) {
+        if (!Array.isArray(pair) || pair.length < 2) continue
+        const lon = Number(pair[0])
+        const lat = Number(pair[1])
+        if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue
+        coordinates.push([lon, lat])
+      }
+      if (!response.ok || coordinates.length < 2) {
         setHint('Route unavailable')
         return
       }
-      paintRoute({type: 'Feature', properties: {}, geometry: {type: 'LineString', coordinates}})
+      routeCoordsRef.current = coordinates
+      mapMemory.route = coordinates
+      mapMemory.trip = tripRef.current
+      const here = pointRef.current ?? origin
+      paintRoute(lineData(sliceRoute(coordinates, here.lat, here.lon)))
       const map = mapRef.current
       if (map && followRef.current) {
-        map.easeTo({center: [origin.lon, origin.lat], zoom: Math.max(map.getZoom(), 15), duration: 700})
+        framedRef.current = true
+        map.easeTo({center: [here.lon, here.lat], zoom: Math.max(map.getZoom(), 15), duration: 700})
       }
     } catch {
       if (seq !== routeSeq.current) return
@@ -383,27 +493,26 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     destEl.className = 'owned-map-dest'
     destEl.innerHTML = '<span></span>'
     const dest = new Marker({element: destEl, anchor: 'center'})
+    const flush = () => flushRef.current()
+    map.on('style.load', flush)
+    map.on('idle', flush)
     map.on('dragstart', () => { followRef.current = false; setFollowing(false) })
-    map.on('rotatestart', (event) => {
-      if (event.originalEvent) { followRef.current = false; setFollowing(false) }
-    })
-    map.on('pitchstart', (event) => {
-      if (event.originalEvent) { followRef.current = false; setFollowing(false) }
-    })
-    map.on('load', () => {
-      ensureRoute(map)
-      if (queuedRoute.current) {
-        const source = map.getSource('route') as GeoJSONSource | undefined
-        source?.setData(queuedRoute.current)
-        queuedRoute.current = null
-      }
-    })
     const resize = () => map.resize()
     const observer = new ResizeObserver(resize)
     observer.observe(el)
     mapRef.current = map
     markerRef.current = marker
     destRef.current = dest
+    flush()
+    const active = tripRef.current
+    const coords = routeCoordsRef.current
+    if (active && coords && coords.length >= 2) {
+      showDestination(active.place)
+      const here = pointRef.current
+      paintRoute(lineData(here ? sliceRoute(coords, here.lat, here.lon) : coords))
+    } else if (active) {
+      void navigate(active.id, active.place)
+    }
     return () => {
       observer.disconnect()
       marker.remove()
@@ -428,6 +537,14 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     )
     return () => navigator.geolocation.clearWatch(id)
   }, [tesla.enabled])
+
+  useEffect(() => {
+    mapMemory.selected = selected
+    mapMemory.query = query
+    mapMemory.following = following
+    mapMemory.trip = trip
+    if (!trip) mapMemory.route = null
+  }, [selected, query, following, trip])
 
   useEffect(() => {
     if (!editing) return
@@ -477,6 +594,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       setQueryHits([])
       setQuerySearching(false)
       setQuerySearched(false)
+      hitsQueryRef.current = ''
       return
     }
     const ctrl = new AbortController()
@@ -500,6 +618,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           }
           setQueryHits(next)
           setQuerySearched(true)
+          hitsQueryRef.current = q
         })
         .catch(() => {
           if (ctrl.signal.aborted) return
@@ -528,12 +647,16 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     marker.setLngLat(lngLat).setRotation(headed ? heading : 0)
     marker.getElement().classList.toggle('is-headed', kindRef.current === 'dot' && headed)
     if (!marker.getElement().isConnected) marker.addTo(map)
+    const coords = routeCoordsRef.current
+    if (coords && coords.length >= 2 && tripRef.current && !arrivalRef.current) {
+      paintRoute(lineData(sliceRoute(coords, lat, lon)))
+    }
     if (!followRef.current) return
     if (!framedRef.current) {
       framedRef.current = true
       map.easeTo({center: lngLat, zoom: 15, duration: 700})
     } else {
-      map.easeTo({center: lngLat, duration: 350})
+      map.easeTo({center: lngLat, duration: 400})
     }
   }, [lat, lon, heading])
 
@@ -599,14 +722,46 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setQueryHits([])
     setQueryOpen(false)
     setQuerySearched(false)
+    hitsQueryRef.current = hit.label
     setEditing(false)
     void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label})
+  }
+
+  async function goFromSearch() {
+    const q = query.trim()
+    if (q.length < 2) return
+    let hit = hitsQueryRef.current === q ? queryHits[0] : undefined
+    if (!hit) {
+      setQueryOpen(true)
+      setQuerySearching(true)
+      try {
+        const params = new URLSearchParams({q, lang: locale})
+        const response = await fetch(`/api/geocode?${params}`)
+        const next = hitsFrom(response.ok ? await response.json() as unknown : [])
+        if (query.trim() !== q) return
+        setQueryHits(next)
+        setQuerySearched(true)
+        hitsQueryRef.current = q
+        hit = next[0]
+      } catch {
+        if (query.trim() !== q) return
+        setQueryHits([])
+        setQuerySearched(true)
+        return
+      } finally {
+        setQuerySearching(false)
+      }
+    }
+    if (!hit) return
+    goToQuery(hit)
   }
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
   const workOn = trip ? trip.id === 'work' : editing && selected === 'work'
   const [holding, setHolding] = useState(false)
-  const mapCore = useTeslaCoreInteraction({enabled: showCore, onLongPress: onClose})
+  const [clearAsk, setClearAsk] = useState(false)
+  clearAskRef.current = clearAsk
+  const mapCore = useTeslaCoreInteraction({enabled: showCore, onLongPress: onClose, longPressMs: 1000})
   function startHold(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || event.button !== 0) return
     setHolding(true)
@@ -631,7 +786,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     <section className="owned-map" role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
-        <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); if (queryHits[0]) goToQuery(queryHits[0]) }}>
+        <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); void goFromSearch() }}>
+          <div className="owned-map-search-row">
           <input
             value={query}
             onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
@@ -641,6 +797,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             autoComplete="off"
             spellCheck={false}
           />
+          <button type="submit" className="owned-map-go">{t('GO')}</button>
+          </div>
           {queryOpen && querySearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
           {queryOpen && !querySearching && querySearched && queryHits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
           {queryOpen && queryHits.length > 0 && (
@@ -752,9 +910,30 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       {trip && (
         <button type="button" className="owned-map-cancel" onClick={cancelRoute}>{t('Cancel')}</button>
       )}
-      <button type="button" className="owned-map-close" aria-label={t('Close')} onClick={onClose}>
+      <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
       </button>
+      {clearAsk && (
+        <div className="owned-map-warn" role="alertdialog" aria-modal="true" aria-labelledby="map-clear-title" aria-describedby="map-clear-copy">
+          <h2 id="map-clear-title">{t('Clear the route?')}</h2>
+          <p id="map-clear-copy">{t('This will clear the drawn route. Saved Home and Work stay.')}</p>
+          <div className="owned-map-warn-actions">
+            <button type="button" onClick={() => setClearAsk(false)}>{t('Cancel')}</button>
+            <button type="button" className="is-danger" onClick={() => {
+              setClearAsk(false)
+              setQuery('')
+              setQueryOpen(false)
+              setQueryHits([])
+              setQuerySearched(false)
+              hitsQueryRef.current = ''
+              mapMemory.query = ''
+              setEditing(false)
+              cancelRoute()
+              onClose()
+            }}>{t('Clear route')}</button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
