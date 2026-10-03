@@ -55,8 +55,8 @@ const DEFAULT_CENTER: [number, number] = [20, 20]
 const DEFAULT_ZOOM = 1.6
 /** First GPS fix only. maxZoom stays 19 so a pinch can go closer. Later ticks must not force this. */
 const OPEN_ZOOM = 15
-/** Behind-the-car zoom, applied once on Start. Not on later ticks and not on reopen. */
-const START_ZOOM = 17
+/** Slightly closer than the open view. Applied once when driving starts, not on later GPS ticks. */
+const START_ZOOM = 16
 const EMPTY: RouteData = {type: 'FeatureCollection', features: []}
 const ARRIVAL_M = 50
 const SLOT_PATH = {
@@ -269,7 +269,6 @@ function directLine(from: Fix, place: SavedPlace): [number, number][] {
   return [[from.lon, from.lat], [place.lon, place.lat]]
 }
 
-const DRIVE_PITCH = 50
 const MAP_3D_KEY = 'robaq-map-3d'
 
 function readMap3d() {
@@ -303,16 +302,14 @@ function behindOffset(map: Map): [number, number] {
   return [0, Math.max(120, Math.round(height * 0.28))]
 }
 
-/** zoom is set only when a number is passed. Follow ticks pass false so a pinch is kept. */
+/** Driving follow stays top-down. The first frame sets zoom 16, pitch 0, and north-up.
+ *  Later ticks only move the center, so a manual 3D pitch is not overwritten. */
 function easeBehind(map: Map, next: Fix, zoom: number | false) {
-  const bearing = next.heading != null && Number.isFinite(next.heading) && next.heading >= 0 ? next.heading : undefined
   map.easeTo({
     center: [next.lon, next.lat],
-    pitch: map3dOn ? DRIVE_PITCH : 0,
     offset: behindOffset(map),
     duration: zoom !== false ? 700 : 400,
-    ...(map3dOn ? (bearing !== undefined ? {bearing} : {}) : {bearing: 0}),
-    ...(zoom !== false ? {zoom} : {}),
+    ...(zoom !== false ? {zoom, pitch: 0, bearing: 0} : {}),
   })
 }
 
@@ -764,12 +761,11 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       framedOpenRef.current = true
       framedRef.current = true
       if (drivingRef.current && tripRef.current) {
-        const bearing = opening.heading != null && opening.heading >= 0 ? opening.heading : 0
         map.easeTo({
           center: [opening.lon, opening.lat],
-          zoom: OPEN_ZOOM,
-          pitch: map3dOn ? DRIVE_PITCH : 0,
-          bearing: map3dOn ? bearing : 0,
+          zoom: START_ZOOM,
+          pitch: 0,
+          bearing: 0,
           offset: behindOffset(map),
           duration: 0,
         })
@@ -1022,8 +1018,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       framedOpenRef.current = true
       framedRef.current = true
       if (drivingRef.current && tripRef.current) {
-        const stillDefault = map.getZoom() <= DEFAULT_ZOOM + 0.05
-        easeBehind(map, {lat, lon, heading}, stillDefault ? OPEN_ZOOM : false)
+        easeBehind(map, {lat, lon, heading}, driveZoomedRef.current ? false : START_ZOOM)
+        driveZoomedRef.current = true
         return
       }
       map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 700})
@@ -1187,7 +1183,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     const map = mapRef.current
     if (!map) return
     applyMap3d(map, next, true)
-    if (next && drivingRef.current && pointRef.current) easeBehind(map, pointRef.current, false)
   }
 
   function onPlace(id: PlaceId) {
