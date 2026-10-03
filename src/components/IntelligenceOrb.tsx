@@ -1,5 +1,6 @@
-import {useEffect,useState} from 'react'
+import {useEffect,useRef,useState} from 'react'
 import teslaLogo from '../tesla/assets/tesla-logo.png'
+import {attachLinkTeslaRings} from '../tesla/linkTeslaRings'
 import { providerThemeClass, type ProviderId } from '../providers'
 import './IntelligenceOrb.css'
 
@@ -43,13 +44,21 @@ export function orbStateLabel(state: OrbProps) {
 /** Original living-cell layers and morphing animations from App.css. */
 export function IntelligenceOrb(props: OrbProps) {
   const [teslaIntroPlayed,setTeslaIntroPlayed]=useState(false)
+  const rootRef = useRef<HTMLSpanElement>(null)
+  const spinningRef = useRef(false)
+  spinningRef.current = Boolean(props.teslaSpinning)
   useEffect(()=>{if(!props.linkTesla)setTeslaIntroPlayed(false)},[props.linkTesla])
+  useEffect(()=>{
+    if(!props.linkTesla||!rootRef.current)return
+    return attachLinkTeslaRings(rootRef.current, ()=>spinningRef.current)
+  },[props.linkTesla])
   const state = orbStateLabel(props).toLowerCase()
   const theme = props.hasApiKey ? providerThemeClass(props.provider ?? null) : ''
   const satellites = [...(props.birdColors ?? ['stock', 'stock']), ...(props.movieSyncActive ? ['movie'] : [])]
   const spinMs = Math.max(320, props.teslaSpinMs ?? 3000)
   return (
     <span
+      ref={rootRef}
       className={`living-cell intelligence-orb${props.hasApiKey ? ' has-api-key' : ''}${theme ? ` ${theme}` : ''}${props.speaking ? ' is-speaking' : ''}${props.listening ? ' is-listening' : ''}`}
       data-model-active={props.modelColor?'true':undefined}
       data-state={state}
