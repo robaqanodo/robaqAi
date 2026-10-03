@@ -39,8 +39,11 @@ export function saveMarkerKind(kind: MarkerKind): MarkerKind {
   return next
 }
 
+/** Default puck: rounded heading arrow, nose up, Tesla blue and white. Not a vehicle silhouette. */
+const PUCK = `<svg class="owned-map-puck" viewBox="0 0 40 48" aria-hidden="true"><path fill="#3E6AE1" stroke="#fff" stroke-width="3" stroke-linejoin="round" d="M20 4.2c1.5 0 2.8.8 3.5 2.1L35.2 36.4c1.2 2.4-.6 5.2-3.3 5.2-1 0-1.9-.4-2.6-1.1L20 32.2l-9.3 8.3c-.7.7-1.6 1.1-2.6 1.1-2.7 0-4.5-2.8-3.3-5.2L16.5 6.3c.7-1.3 2-2.1 3.5-2.1z"/></svg>`
+
 export function markerMarkup(kind: MarkerKind): string {
-  if (kind === 'dot') return '<span class="owned-map-heading"></span><span class="owned-map-dot"></span>'
+  if (kind === 'dot') return PUCK
   const shell = SHELLS[kind]
   const cyber = shell.cyber ? ' is-cyber' : ''
   return `<svg class="owned-map-vehicle${cyber}" viewBox="0 0 48 84" aria-hidden="true"><path class="shell" d="${shell.body}"/><path class="glass" d="${shell.glass}"/></svg>`

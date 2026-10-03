@@ -1815,7 +1815,7 @@ function AppContent() {
         </div>
       )}
 
-      {mapOpen && <MapPage onClose={()=>setMapOpen(false)} />}
+      {mapOpen && <MapPage onClose={()=>setMapOpen(false)} showCore={teslaActive} speedKmh={teslaLocation.speedKmh} speedUnit={teslaUnit} />}
       {teslaActive && teslaOpen && <TeslaPanel unit={teslaUnit} onClose={()=>setTeslaOpen(false)} />}
       {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}

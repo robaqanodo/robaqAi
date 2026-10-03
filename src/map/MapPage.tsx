@@ -2,6 +2,7 @@ import {useEffect, useRef, useState} from 'react'
 import {Map, Marker, NavigationControl, type GeoJSONSource} from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
+import {IntelligenceOrb} from '../components/IntelligenceOrb'
 import {useTeslaLocation} from '../tesla/location'
 import {loadPlaces, savePlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, saveMarkerKind, type MarkerKind} from './marker'
@@ -136,7 +137,7 @@ function AddressField({title, saved, onSave}: {title: string; saved: SavedPlace 
   )
 }
 
-export function MapPage({onClose}: {onClose: () => void}) {
+export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore = false}: {onClose: () => void; speedKmh?: number | null; speedUnit?: 'km/h' | 'mph'; showCore?: boolean}) {
   const {t, locale} = useLocale()
   const tesla = useTeslaLocation()
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -163,6 +164,7 @@ export function MapPage({onClose}: {onClose: () => void}) {
   const [markerKind, setMarkerKind] = useState<MarkerKind>(loadMarkerKind)
   const [trip, setTrip] = useState<Trip | null>(null)
   const [arrival, setArrival] = useState<Arrival | null>(null)
+  const [following, setFollowing] = useState(true)
   const settingsRef = useRef(false)
   const kindRef = useRef(markerKind)
   const tripRef = useRef<Trip | null>(null)
@@ -343,7 +345,7 @@ export function MapPage({onClose}: {onClose: () => void}) {
     map.touchZoomRotate.disableRotation()
     const pin = document.createElement('div')
     const initialKind = kindRef.current
-    pin.className = `owned-map-pin${initialKind === 'dot' ? '' : ' is-vehicle'}`
+    pin.className = `owned-map-pin${initialKind === 'dot' ? ' is-puck' : ' is-vehicle'}`
     pin.dataset.kind = initialKind
     pin.innerHTML = markerMarkup(initialKind)
     const marker = new Marker({element: pin, anchor: 'center'})
@@ -352,7 +354,7 @@ export function MapPage({onClose}: {onClose: () => void}) {
     destEl.innerHTML = '<span></span>'
     const dest = new Marker({element: destEl, anchor: 'center'})
     map.dragRotate.disable()
-    map.on('dragstart', () => { followRef.current = false })
+    map.on('dragstart', () => { followRef.current = false; setFollowing(false) })
     map.on('load', () => {
       ensureRoute(map)
       if (queuedRoute.current) {
@@ -464,6 +466,7 @@ export function MapPage({onClose}: {onClose: () => void}) {
     if (!el) return
     const headed = markerKind === 'dot' && heading != null && heading >= 0
     el.classList.toggle('is-vehicle', markerKind !== 'dot')
+    el.classList.toggle('is-puck', markerKind === 'dot')
     el.classList.toggle('is-headed', headed)
     if (el.dataset.kind !== markerKind) {
       el.dataset.kind = markerKind
@@ -488,6 +491,19 @@ export function MapPage({onClose}: {onClose: () => void}) {
     setEditing(true)
   }
 
+  function recenter() {
+    followRef.current = true
+    setFollowing(true)
+    const map = mapRef.current
+    const go = (next: Fix) => {
+      if (!mapRef.current) return
+      mapRef.current.easeTo({center: [next.lon, next.lat], zoom: Math.max(mapRef.current.getZoom(), 15), duration: 600})
+    }
+    if (pointRef.current) { go(pointRef.current); return }
+    if (!map) return
+    void locate().then(next => { if (next) go(next) })
+  }
+
   function onPlace(id: PlaceId) {
     const place = places[id]
     if (!place) { openEditor(id); return }
@@ -507,10 +523,17 @@ export function MapPage({onClose}: {onClose: () => void}) {
   return (
     <section className="owned-map" role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
+      <div className="owned-map-side">
       <div className="owned-map-places">
         <div className="owned-map-places-bar">
-          <button type="button" className={homeOn ? 'is-on' : ''} aria-pressed={homeOn} onClick={() => onPlace('home')}>{t('HOME')}</button>
-          <button type="button" className={workOn ? 'is-on' : ''} aria-pressed={workOn} onClick={() => onPlace('work')}>{t('WORK')}</button>
+          <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.5 10.6 12 4.2l7.5 6.4V20a1 1 0 0 1-1 1h-4.2v-5.2H9.7V21H5.5a1 1 0 0 1-1-1v-9.4z"/></svg>
+            <span>{t('HOME')}</span>
+          </button>
+          <button type="button" className={`owned-map-pill${workOn ? ' is-on' : ''}`} aria-pressed={workOn} onClick={() => onPlace('work')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 4.5h6a1.5 1.5 0 0 1 1.5 1.5V7H19a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5V6A1.5 1.5 0 0 1 9 4.5zM9.5 7h5V6h-5v1z"/></svg>
+            <span>{t('WORK')}</span>
+          </button>
         </div>
         {editing && (
           <form className="owned-map-edit" onSubmit={event => event.preventDefault()}>
@@ -539,6 +562,15 @@ export function MapPage({onClose}: {onClose: () => void}) {
         )}
         {hint && !editing && <p className="owned-map-hint">{t(hint)}</p>}
       </div>
+      {showCore && (
+        <div className="owned-map-core" aria-hidden="true">
+          <IntelligenceOrb linkTesla teslaHomeVisible={false} teslaSpeedKmh={speedKmh} teslaUnit={speedUnit} />
+        </div>
+      )}
+      <button type="button" className={`owned-map-pill owned-map-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('GPS')} onClick={recenter}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 20.2 20.2c.35.78-.48 1.55-1.24 1.16L12 17.7l-6.96 3.66c-.76.39-1.59-.38-1.24-1.16L12 2.6z"/></svg>
+      </button>
+      </div>
       {arrival && (
         <div className="owned-map-arrival" role="status" aria-live="polite">
           <button type="button" className="owned-map-arrival-x" aria-label={t('Close')} onClick={dismissArrival}>×</button>
@@ -547,7 +579,7 @@ export function MapPage({onClose}: {onClose: () => void}) {
           <div className="owned-map-arrival-count" aria-hidden="true">{arrival.left}</div>
         </div>
       )}
-      <button type="button" className="owned-map-settings-btn" aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
+      <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
       {settingsOpen && (
         <div className="owned-map-settings" role="dialog" aria-label={t('Map Settings')}>
           <AddressField title={t('HOME')} saved={places.home} onSave={place => commitPlace('home', place)} />
