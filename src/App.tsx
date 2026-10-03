@@ -2013,8 +2013,8 @@ function AppContent() {
             <h3 className="store-section-title store-section-title-info">{t('AI Skills')}<details className="store-info inline-store-info"><summary aria-label={t('AI Skills information')}>?</summary><p className="modal-help">{t('Install optional tools for secrets, shared videos and private live rooms. Active tools are ready to use; Delete removes them from this device.')} {t('After installation, type live or crossfire in the chat to start a private room.')}</p></details></h3>
             <div className="ai-skills-list">
             <TeslaStore active={teslaActive} onChange={active=>{setTeslaActive(active);if(active)skillPreferences.setItem(TESLA_KEY,'true');else{removeTesla();setTeslaOpen(false)}}} onOpen={()=>{if(labMinimized)return;setLandingPanel(null);setTeslaOpen(true)}} />
-            <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} onOpen={() => { if(labMinimized)return;setLandingPanel(null); setWatchOpen(false); setChatOpen(false); setKasOpen(true) }} />
-            <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} onOpen={() => { if(labMinimized)return;setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} />
+            <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} />
+            <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} />
 
             {(['syberlive','crossfire'] as const).map(kind=><LiveSkillStore key={kind} kind={kind} active={liveSkills[kind]} onChange={active=>{setLiveSkills(old=>({...old,[kind]:active}));if(active)skillPreferences.setItem(`robaq-${kind}-active`,'true');else skillPreferences.removeItem(`robaq-${kind}-active`);if(!active&&liveEntry?.kind===kind)setLiveEntry(null)}} />)}
             </div>
