@@ -81,18 +81,62 @@ function savedMarkerEl(id: keyof typeof SLOT_PATH) {
   return el
 }
 
-function finiteFix(lat: number, lon: number, heading: number | null | undefined): Fix | null {
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
-  const head = typeof heading === 'number' && Number.isFinite(heading) && heading >= 0 ? heading : null
-  return {lat, lon, heading: head}
-}
-
 function metersBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
   const rad = Math.PI / 180
   const dLat = (lat2 - lat1) * rad
   const dLon = (lon2 - lon1) * rad
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2
   return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(a)))
+}
+
+/** Compass bearing from the earlier fix to the later one. 0 is north, clockwise. Not swapped. */
+function travelBearing(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const rad = Math.PI / 180
+  const latA = lat1 * rad
+  const latB = lat2 * rad
+  const dLon = (lon2 - lon1) * rad
+  const y = Math.sin(dLon) * Math.cos(latB)
+  const x = Math.cos(latA) * Math.sin(latB) - Math.sin(latA) * Math.cos(latB) * Math.cos(dLon)
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360
+}
+
+function compassDelta(a: number, b: number) {
+  const d = Math.abs(a - b) % 360
+  return d > 180 ? 360 - d : d
+}
+
+type CourseAnchor = {lat: number; lon: number; heading: number | null}
+
+const COURSE_MOVE_M = 12
+const COURSE_FAST_M = 6
+const COURSE_SPEED_MS = 2
+const HEADING_AGREE_DEG = 45
+
+/**
+ * Direction of travel. Movement wins when the device heading is missing, 0 with no
+ * agreement, or about 180° off. A reported heading is kept only when it agrees.
+ * Stopped fixes keep the last good heading and do not add 180°.
+ */
+function resolveTravelFix(
+  anchor: CourseAnchor | null,
+  lat: number,
+  lon: number,
+  reported: number | null | undefined,
+  speedMs: number | null | undefined,
+): {fix: Fix; anchor: CourseAnchor} {
+  const device = typeof reported === 'number' && Number.isFinite(reported) ? ((reported % 360) + 360) % 360 : null
+  const speed = typeof speedMs === 'number' && Number.isFinite(speedMs) && speedMs >= 0 ? speedMs : null
+  const moved = anchor ? metersBetween(anchor.lat, anchor.lon, lat, lon) : 0
+  const fast = speed != null && speed >= COURSE_SPEED_MS
+  const stuckSpeed = speed != null && speed < 0.4
+  const farEnough = moved >= (fast ? COURSE_FAST_M : COURSE_MOVE_M)
+  if (anchor && farEnough && !(stuckSpeed && moved < COURSE_MOVE_M)) {
+    const course = travelBearing(anchor.lat, anchor.lon, lat, lon)
+    const heading = device != null && compassDelta(device, course) <= HEADING_AGREE_DEG ? device : course
+    return {fix: {lat, lon, heading}, anchor: {lat, lon, heading}}
+  }
+  const heading = anchor?.heading ?? null
+  return {fix: {lat, lon, heading}, anchor: anchor ?? {lat, lon, heading}}
 }
 
 const ROUTE_BLUE = '#3E9BFF'
@@ -377,9 +421,14 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const addQueryRef = useRef('')
   const placeMarkersRef = useRef<Marker[]>([])
 
-  const point: Fix | null = tesla.coordinates
-    ? finiteFix(tesla.coordinates.latitude, tesla.coordinates.longitude, tesla.coordinates.heading)
-    : fix
+  const courseRef = useRef<CourseAnchor | null>(null)
+  const point: Fix | null = (() => {
+    const coords = tesla.coordinates
+    if (!coords) return fix
+    const resolved = resolveTravelFix(courseRef.current, coords.latitude, coords.longitude, coords.heading, coords.speed)
+    courseRef.current = resolved.anchor
+    return resolved.fix
+  })()
 
   pointRef.current = point
   teslaOnRef.current = tesla.enabled
@@ -503,7 +552,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     return new Promise(resolve => {
       navigator.geolocation.getCurrentPosition(
         position => {
-          const next = finiteFix(position.coords.latitude, position.coords.longitude, position.coords.heading)
+          const resolved = resolveTravelFix(courseRef.current, position.coords.latitude, position.coords.longitude, position.coords.heading, position.coords.speed)
+          courseRef.current = resolved.anchor
+          const next = Number.isFinite(resolved.fix.lat) && Number.isFinite(resolved.fix.lon) ? resolved.fix : null
           if (next) {
             pointRef.current = next
             setFix(current => current ?? next)
@@ -525,9 +576,11 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     routeCoordsRef.current = null
     followRef.current = false
     setFollowing(false)
+    const wasDriving = drivingRef.current
     drivingRef.current = false
     mapMemory.driving = false
     setDriving(false)
+    if (wasDriving) mapRef.current?.easeTo({zoom: OPEN_ZOOM, pitch: 0, duration: 450})
     arrivedRef.current = false
     arrivalRef.current = null
     setArrival(null)
@@ -642,7 +695,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     pin.className = `owned-map-pin${initialKind === 'dot' ? ' is-puck' : ' is-vehicle'}`
     pin.dataset.kind = initialKind
     pin.innerHTML = markerMarkup(initialKind)
-    const marker = new Marker({element: pin, anchor: 'center'})
+    // auto matches viewport and rotates by heading on top of the camera bearing, so the nose points backward except near north.
+    const marker = new Marker({element: pin, anchor: 'center', rotationAlignment: 'map', pitchAlignment: 'viewport'})
     const destEl = document.createElement('div')
     destEl.className = 'owned-map-dest'
     destEl.innerHTML = '<span></span>'
@@ -771,8 +825,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     if (!navigator.geolocation) return
     const id = navigator.geolocation.watchPosition(
       position => {
-        const next = finiteFix(position.coords.latitude, position.coords.longitude, position.coords.heading)
-        if (next) setFix(next)
+        const resolved = resolveTravelFix(courseRef.current, position.coords.latitude, position.coords.longitude, position.coords.heading, position.coords.speed)
+        if (!Number.isFinite(resolved.fix.lat) || !Number.isFinite(resolved.fix.lon)) return
+        courseRef.current = resolved.anchor
+        setFix(resolved.fix)
       },
       () => {},
       {enableHighAccuracy: true, maximumAge: 5000, timeout: 12000},
@@ -920,7 +976,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     }
     const lngLat: [number, number] = [lon, lat]
     const headed = heading != null && heading >= 0
-    marker.setLngLat(lngLat).setRotation(headed ? heading : 0)
+    marker.setLngLat(lngLat)
+    if (headed) marker.setRotation(heading)
     marker.getElement().classList.toggle('is-headed', kindRef.current === 'dot' && headed)
     if (!marker.getElement().isConnected) marker.addTo(map)
     const coords = routeCoordsRef.current
@@ -1069,6 +1126,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setDriving(false)
     followRef.current = false
     setFollowing(false)
+    mapRef.current?.easeTo({zoom: OPEN_ZOOM, pitch: 0, duration: 450})
   }
 
   function clearDrawnRoute() {
@@ -1447,14 +1505,12 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         <button type="button" aria-label={t('North up')} onClick={northUp}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M12 4.2 14.1 11 12 9.6 9.9 11 12 4.2z"/><path fill="#c5cad1" d="M12 19.8 9.9 13 12 14.4 14.1 13 12 19.8z"/></svg>
         </button>
-        <span className="owned-map-rail-gap" />
         <button type="button" aria-label={t('Zoom in')} onClick={() => zoomBy(1)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
         </button>
         <button type="button" aria-label={t('Zoom out')} onClick={() => zoomBy(-1)}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
         </button>
-        <span className="owned-map-rail-gap" />
         <button type="button" className={following ? 'is-on' : ''} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M12 3.5v3.2M12 17.3v3.2M3.5 12h3.2M17.3 12h3.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
         </button>
