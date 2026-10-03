@@ -530,7 +530,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   const placeHoldTimer = useRef(0)
   const suppressPlaceClick = useRef(false)
   const placeHoldAt = useRef({x: 0, y: 0, pointerId: -1})
-  const chosenHitRef = useRef<Hit | null>(null)
   const chargersOnRef = useRef(false)
   const chargerPopupRef = useRef<Popup | null>(null)
   const syncChargersRef = useRef<(map: Map) => void>(() => {})
@@ -1147,7 +1146,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       setQuerySearching(false)
       setQuerySearched(false)
       hitsQueryRef.current = ''
-      if (!q) chosenHitRef.current = null
       return
     }
     const ctrl = new AbortController()
@@ -1345,17 +1343,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     void locate().then(next => { if (next) go(next) })
   }
 
-  function startDrive() {
-    drivingRef.current = true
-    mapMemory.driving = true
-    setDriving(true)
-    followRef.current = true
-    setFollowing(true)
-    // The GPS effect applies START_ZOOM once, then leaves pinch zoom alone.
-    driveZoomedRef.current = false
-    if (!pointRef.current) void locate()
-  }
-
   function stopDrive() {
     drivingRef.current = false
     mapMemory.driving = false
@@ -1366,7 +1353,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   }
 
   function clearDrawnRoute() {
-    chosenHitRef.current = null
     setQuery('')
     setQueryOpen(false)
     setQueryHits([])
@@ -1567,8 +1553,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     void navigate(selected, place, true)
   }
 
-  function goToQuery(hit: Hit, andDrive = false) {
-    chosenHitRef.current = hit
+  function goToQuery(hit: Hit) {
     setQuery(hit.name || hit.label)
     setQueryHits([])
     setQueryOpen(false)
@@ -1576,22 +1561,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     hitsQueryRef.current = ''
     setEditing(false)
     setAdding(false)
-    void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label}, andDrive)
-  }
-
-  function onGo() {
-    if (drivingRef.current) {
-      stopDrive()
-      return
-    }
-    const drawn = routeCoordsRef.current
-    if (tripRef.current && drawn && drawn.length >= 2) {
-      startDrive()
-      return
-    }
-    const chosen = chosenHitRef.current
-    if (!chosen) return
-    goToQuery(chosen, true)
+    void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label}, true)
   }
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
@@ -1696,11 +1666,11 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
         <div className="owned-map-search-line">
-        <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); onGo() }}>
+        <form className="owned-map-search" role="search" onSubmit={event => event.preventDefault()}>
           <div className="owned-map-search-row">
           <input
             value={query}
-            onChange={event => { chosenHitRef.current = null; setQuery(event.target.value); setQueryOpen(true) }}
+            onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
             onFocus={() => { if (!driving) setQueryOpen(true) }}
             placeholder={t('Search address')}
             aria-label={t('Search address')}
@@ -1709,7 +1679,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
             readOnly={driving}
             disabled={driving}
           />
-          <button type="submit" className={`owned-map-go${driving ? ' is-stop' : ''}`}>{driving ? t('Stop') : t('GO')}</button>
           </div>
           {queryOpen && querySearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
           {queryOpen && !querySearching && querySearched && queryHits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
@@ -1726,6 +1695,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
             </ul>
           )}
         </form>
+        {driving && <button type="button" className="owned-map-go is-stop" onClick={stopDrive}>{t('Stop')}</button>}
         </div>
         <div className="owned-map-places-bar">
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlaceClick('home')} onPointerDown={event => placePointerDown('home', event)} onPointerMove={placePointerMove} onPointerUp={placePointerUp} onPointerCancel={placePointerUp} onContextMenu={event => event.preventDefault()}>
@@ -1856,8 +1826,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
             <button type="button" onClick={() => setClearAsk(false)}>{t('Cancel')}</button>
             <button type="button" className="is-danger" onClick={() => {
               setClearAsk(false)
-              chosenHitRef.current = null
-              setQuery('')
+                        setQuery('')
               setQueryOpen(false)
               setQueryHits([])
               setQuerySearched(false)
