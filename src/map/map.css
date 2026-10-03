@@ -50,7 +50,6 @@
 .owned-map-places-bar,
 .owned-map-edit,
 .owned-map-hint{pointer-events:auto}
-.owned-map-places-bar,
 .owned-map-edit,
 .owned-map-hint{
   color:#fff;
@@ -61,19 +60,25 @@
   -webkit-backdrop-filter:blur(28px) saturate(1.55);
 }
 .owned-map-places-bar{
-  display:flex;align-items:center;gap:4px;padding:4px;
-  border-radius:999px;
+  display:flex;align-items:center;gap:28px;padding:0;
+  background:none;border:0;box-shadow:none;
 }
 .owned-map-places-bar button{
-  border:0;background:transparent;color:#fff;font:inherit;cursor:pointer;
-  min-height:36px;padding:0 14px;border-radius:999px;
-  font-size:12px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;
+  color:#fff;font:inherit;cursor:pointer;
+  min-height:40px;padding:0 18px;border-radius:999px;
+  font-size:12px;font-weight:650;letter-spacing:.14em;text-transform:uppercase;
+  background:linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 42%, rgba(255,255,255,.08) 100%), rgba(16,16,22,.42);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 50px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.16) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
+  backdrop-filter:blur(28px) saturate(1.55);
+  -webkit-backdrop-filter:blur(28px) saturate(1.55);
 }
-.owned-map-places-bar button.is-on{background:rgba(255,255,255,.2)}
+.owned-map-places-bar button.is-on{
+  background:linear-gradient(155deg, rgba(255,255,255,.34) 0%, rgba(255,255,255,.12) 42%, rgba(255,255,255,.16) 100%), rgba(255,255,255,.22);
+}
 .owned-map-places-bar button:focus-visible,
 .owned-map-suggest button:focus-visible,
 .owned-map-edit input:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.owned-map-edit-btn{letter-spacing:.06em}
 .owned-map-edit{
   width:100%;box-sizing:border-box;padding:12px;border-radius:20px;
   max-height:min(46vh, 360px);display:flex;flex-direction:column;min-height:0;
@@ -150,3 +155,29 @@
 .owned-map-marker-pick span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
 .owned-map-marker-pick select{cursor:pointer}
 .owned-map-marker-pick option{color:#111}
+
+.owned-map-arrival{
+  position:absolute;z-index:6;left:50%;top:46%;transform:translate(-50%,-50%);
+  width:min(560px, calc(100vw - 36px));
+  box-sizing:border-box;padding:36px 28px 28px;border-radius:28px;text-align:center;color:#fff;
+  background:linear-gradient(155deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,.06) 42%, rgba(255,255,255,.1) 100%), rgba(10,12,18,.72);
+  border:1px solid rgba(255,255,255,.24);
+  box-shadow:0 24px 70px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.18) inset;
+  backdrop-filter:blur(28px) saturate(1.55);
+  -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+.owned-map-arrival h2{
+  margin:0;font-size:clamp(26px, 4.6vw, 40px);font-weight:680;letter-spacing:-.02em;line-height:1.15;
+}
+.owned-map-arrival p{
+  margin:18px 0 0;font-size:clamp(22px, 3.6vw, 34px);font-weight:680;line-height:1.25;
+}
+.owned-map-arrival-count{
+  margin-top:18px;font-size:48px;font-weight:720;letter-spacing:.04em;font-variant-numeric:tabular-nums;
+}
+.owned-map-arrival-x{
+  position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.28);background:rgba(0,0,0,.28);color:#fff;
+  font:inherit;font-size:22px;line-height:1;cursor:pointer;
+}
+.owned-map-arrival-x:focus-visible{outline:2px solid #fff;outline-offset:3px}

@@ -167,6 +167,6 @@
 @media (min-width: 761px) and (pointer: fine),
        (min-width: 761px) and (min-height: 501px) {
   .app-shell.has-navigation.tesla-connected:not(.tesla-menu-collapsed) .tesla-menu-toggle {
-    transform: translate(-50%, -34px);
+    transform: translate(-50%, -52px);
   }
 }

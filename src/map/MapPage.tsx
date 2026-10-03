@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react'
-import {LngLatBounds, Map, Marker, NavigationControl, type GeoJSONSource} from 'maplibre-gl'
+import {Map, Marker, NavigationControl, type GeoJSONSource} from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
 import {useTeslaLocation} from '../tesla/location'
@@ -16,15 +16,26 @@ type RouteFeature = {
   geometry: {type: 'LineString'; coordinates: [number, number][]}
 }
 type RouteData = RouteFeature | {type: 'FeatureCollection'; features: []}
+type Trip = {id: PlaceId; place: SavedPlace}
+type Arrival = {label: string; left: number}
 
 const DEFAULT_CENTER: [number, number] = [20, 20]
 const DEFAULT_ZOOM = 1.6
 const EMPTY: RouteData = {type: 'FeatureCollection', features: []}
+const ARRIVAL_M = 50
 
 function finiteFix(lat: number, lon: number, heading: number | null | undefined): Fix | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
   const head = typeof heading === 'number' && Number.isFinite(heading) && heading >= 0 ? heading : null
   return {lat, lon, heading: head}
+}
+
+function metersBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const rad = Math.PI / 180
+  const dLat = (lat2 - lat1) * rad
+  const dLon = (lon2 - lon1) * rad
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2
+  return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(a)))
 }
 
 function ensureRoute(map: Map) {
@@ -150,8 +161,13 @@ export function MapPage({onClose}: {onClose: () => void}) {
   const [hint, setHint] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [markerKind, setMarkerKind] = useState<MarkerKind>(loadMarkerKind)
+  const [trip, setTrip] = useState<Trip | null>(null)
+  const [arrival, setArrival] = useState<Arrival | null>(null)
   const settingsRef = useRef(false)
   const kindRef = useRef(markerKind)
+  const tripRef = useRef<Trip | null>(null)
+  const arrivalRef = useRef<Arrival | null>(null)
+  const arrivedRef = useRef(false)
 
   const point: Fix | null = tesla.coordinates
     ? finiteFix(tesla.coordinates.latitude, tesla.coordinates.longitude, tesla.coordinates.heading)
@@ -162,10 +178,13 @@ export function MapPage({onClose}: {onClose: () => void}) {
   editingRef.current = editing
   settingsRef.current = settingsOpen
   kindRef.current = markerKind
+  tripRef.current = trip
+  arrivalRef.current = arrival
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      if (arrivalRef.current) { dismissArrival(); return }
       if (editingRef.current) { setEditing(false); return }
       if (settingsRef.current) { setSettingsOpen(false); return }
       onClose()
@@ -190,6 +209,47 @@ export function MapPage({onClose}: {onClose: () => void}) {
     if (!place) { marker.remove(); return }
     marker.setLngLat([place.lon, place.lat]).addTo(map)
   }
+
+  function dismissArrival() {
+    arrivalRef.current = null
+    setArrival(null)
+  }
+
+  function showArrival(place: SavedPlace) {
+    tripRef.current = null
+    setTrip(null)
+    followRef.current = false
+    routeSeq.current += 1
+    arrivedRef.current = true
+    const card = {label: place.label, left: 5}
+    arrivalRef.current = card
+    setArrival(card)
+  }
+
+  useEffect(() => {
+    if (arrival) return
+    if (!arrivedRef.current) return
+    arrivedRef.current = false
+    paintRoute(EMPTY)
+    showDestination(null)
+  }, [arrival])
+
+  useEffect(() => {
+    if (!arrival) return
+    const timer = window.setTimeout(() => {
+      setArrival(current => {
+        if (!current) return null
+        if (current.left <= 1) {
+          arrivalRef.current = null
+          return null
+        }
+        const next = {...current, left: current.left - 1}
+        arrivalRef.current = next
+        return next
+      })
+    }, 1000)
+    return () => window.clearTimeout(timer)
+  }, [arrival])
 
   function waitForPoint(ms: number): Promise<Fix | null> {
     if (pointRef.current) return Promise.resolve(pointRef.current)
@@ -224,38 +284,28 @@ export function MapPage({onClose}: {onClose: () => void}) {
     })
   }
 
-  function frame(place: SavedPlace, coordinates: [number, number][]) {
-    const map = mapRef.current
-    if (!map) return
-    map.stop()
-    if (coordinates.length < 2) {
-      map.flyTo({center: [place.lon, place.lat], zoom: 16, duration: 900})
-      return
-    }
-    const bounds = new LngLatBounds(coordinates[0], coordinates[0])
-    for (const coord of coordinates) bounds.extend(coord)
-    map.fitBounds(bounds, {padding: {top: 128, right: 56, bottom: 64, left: 56}, duration: 900, maxZoom: 16})
-  }
-
-  async function navigate(id: PlaceId, place: SavedPlace | null) {
+  async function navigate(id: PlaceId, place: SavedPlace) {
     setSelected(id)
     setEditing(false)
+    arrivedRef.current = false
+    arrivalRef.current = null
+    setArrival(null)
     const seq = ++routeSeq.current
-    if (!place) {
-      setHint('Set an address with Edit')
-      paintRoute(EMPTY)
-      showDestination(null)
-      return
-    }
-    followRef.current = false
+    paintRoute(EMPTY)
+    const nextTrip = {id, place}
+    tripRef.current = nextTrip
+    setTrip(nextTrip)
+    followRef.current = true
     showDestination(place)
-    const map = mapRef.current
-    map?.stop()
-    map?.flyTo({center: [place.lon, place.lat], zoom: Math.max(map.getZoom(), 13), duration: 700})
     if (!pointRef.current) setHint('Waiting for location…')
     const origin = await locate()
     if (seq !== routeSeq.current) return
     if (!origin) { setHint('Waiting for location…'); return }
+    if (metersBetween(origin.lat, origin.lon, place.lat, place.lon) <= ARRIVAL_M) {
+      setHint(null)
+      showArrival(place)
+      return
+    }
     setHint(null)
     try {
       const response = await fetch(`/api/route?from=${origin.lon},${origin.lat}&to=${place.lon},${place.lat}`)
@@ -267,7 +317,10 @@ export function MapPage({onClose}: {onClose: () => void}) {
         return
       }
       paintRoute({type: 'Feature', properties: {}, geometry: {type: 'LineString', coordinates}})
-      frame(place, coordinates)
+      const map = mapRef.current
+      if (map && followRef.current) {
+        map.easeTo({center: [origin.lon, origin.lat], zoom: Math.max(map.getZoom(), 15), duration: 700})
+      }
     } catch {
       if (seq !== routeSeq.current) return
       setHint('Route unavailable')
@@ -388,6 +441,10 @@ export function MapPage({onClose}: {onClose: () => void}) {
     const marker = markerRef.current
     if (!map || !marker || lat == null || lon == null) return
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+    const active = tripRef.current
+    if (active && !arrivalRef.current && metersBetween(lat, lon, active.place.lat, active.place.lon) <= ARRIVAL_M) {
+      showArrival(active.place)
+    }
     const lngLat: [number, number] = [lon, lat]
     const headed = heading != null && heading >= 0
     marker.setLngLat(lngLat).setRotation(headed ? heading : 0)
@@ -417,12 +474,12 @@ export function MapPage({onClose}: {onClose: () => void}) {
   function commitPlace(id: PlaceId, place: SavedPlace) {
     const next = savePlace(id, place)
     setPlaces(next)
-    if (selected === id) void navigate(id, place)
+    if (tripRef.current?.id === id) void navigate(id, place)
   }
 
-  function beginEdit() {
-    if (editing && editingRef.current) { setEditing(false); return }
-    setDraft(places[selected]?.label ?? '')
+  function openEditor(id: PlaceId) {
+    setSelected(id)
+    setDraft('')
     setHits([])
     setSearched(false)
     setSearching(false)
@@ -431,22 +488,29 @@ export function MapPage({onClose}: {onClose: () => void}) {
     setEditing(true)
   }
 
+  function onPlace(id: PlaceId) {
+    const place = places[id]
+    if (!place) { openEditor(id); return }
+    void navigate(id, place)
+  }
+
   function choose(hit: Hit) {
     const place: SavedPlace = {lat: hit.lat, lon: hit.lon, label: hit.label}
     setPlaces(savePlace(selected, place))
     setEditing(false)
     setHits([])
-    void navigate(selected, place)
   }
+
+  const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
+  const workOn = trip ? trip.id === 'work' : editing && selected === 'work'
 
   return (
     <section className="owned-map" role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
         <div className="owned-map-places-bar">
-          <button type="button" className={selected === 'home' ? 'is-on' : ''} aria-pressed={selected === 'home'} onClick={() => void navigate('home', places.home)}>{t('HOME')}</button>
-          <button type="button" className={selected === 'work' ? 'is-on' : ''} aria-pressed={selected === 'work'} onClick={() => void navigate('work', places.work)}>{t('WORK')}</button>
-          <button type="button" className="owned-map-edit-btn" aria-expanded={editing} onClick={beginEdit}>{t('Edit')}</button>
+          <button type="button" className={homeOn ? 'is-on' : ''} aria-pressed={homeOn} onClick={() => onPlace('home')}>{t('HOME')}</button>
+          <button type="button" className={workOn ? 'is-on' : ''} aria-pressed={workOn} onClick={() => onPlace('work')}>{t('WORK')}</button>
         </div>
         {editing && (
           <form className="owned-map-edit" onSubmit={event => event.preventDefault()}>
@@ -475,6 +539,14 @@ export function MapPage({onClose}: {onClose: () => void}) {
         )}
         {hint && !editing && <p className="owned-map-hint">{t(hint)}</p>}
       </div>
+      {arrival && (
+        <div className="owned-map-arrival" role="status" aria-live="polite">
+          <button type="button" className="owned-map-arrival-x" aria-label={t('Close')} onClick={dismissArrival}>×</button>
+          <h2>{t('You are at this place')}</h2>
+          <p>{arrival.label}</p>
+          <div className="owned-map-arrival-count" aria-hidden="true">{arrival.left}</div>
+        </div>
+      )}
       <button type="button" className="owned-map-settings-btn" aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
       {settingsOpen && (
         <div className="owned-map-settings" role="dialog" aria-label={t('Map Settings')}>
