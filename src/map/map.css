@@ -38,3 +38,115 @@
   filter:drop-shadow(0 1px 1px #000a);
 }
 .owned-map-pin.is-headed .owned-map-heading{display:block}
+
+.owned-map-places{
+  position:absolute;z-index:3;
+  top:max(10px, env(safe-area-inset-top));
+  left:max(10px, env(safe-area-inset-left));
+  width:min(420px, calc(100vw - 132px));
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;
+  pointer-events:none;
+}
+.owned-map-places-bar,
+.owned-map-edit,
+.owned-map-hint{pointer-events:auto}
+.owned-map-places-bar,
+.owned-map-edit,
+.owned-map-hint{
+  color:#fff;
+  background:linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 42%, rgba(255,255,255,.08) 100%), rgba(16,16,22,.42);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 50px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.16) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
+  backdrop-filter:blur(28px) saturate(1.55);
+  -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+.owned-map-places-bar{
+  display:flex;align-items:center;gap:4px;padding:4px;
+  border-radius:999px;
+}
+.owned-map-places-bar button{
+  border:0;background:transparent;color:#fff;font:inherit;cursor:pointer;
+  min-height:36px;padding:0 14px;border-radius:999px;
+  font-size:12px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;
+}
+.owned-map-places-bar button.is-on{background:rgba(255,255,255,.2)}
+.owned-map-places-bar button:focus-visible,
+.owned-map-suggest button:focus-visible,
+.owned-map-edit input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.owned-map-edit-btn{letter-spacing:.06em}
+.owned-map-edit{
+  width:100%;box-sizing:border-box;padding:12px;border-radius:20px;
+  max-height:min(46vh, 360px);display:flex;flex-direction:column;min-height:0;
+}
+.owned-map-edit-for{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.owned-map-edit input{
+  width:100%;box-sizing:border-box;min-height:40px;padding:0 12px;border-radius:12px;
+  color:#fff;font:inherit;font-size:15px;
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.22);
+}
+.owned-map-edit input::placeholder{color:rgba(255,255,255,.55)}
+.owned-map-search-status{margin:8px 2px 0;font-size:13px;opacity:.85}
+.owned-map-suggest{
+  list-style:none;margin:8px 0 0;padding:0;overflow:auto;min-height:0;
+}
+.owned-map-suggest button{
+  width:100%;text-align:left;border:0;background:transparent;color:#fff;font:inherit;
+  padding:8px 8px;border-radius:10px;cursor:pointer;font-size:13px;line-height:1.35;
+}
+.owned-map-suggest button:hover,
+.owned-map-suggest button:focus-visible{background:rgba(255,255,255,.12)}
+.owned-map-hint{
+  margin:0;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.35;
+  max-width:100%;
+}
+.owned-map-dest{width:18px;height:18px}
+.owned-map-dest span{
+  display:block;width:18px;height:18px;border-radius:50%;
+  background:#fff;border:3px solid #111;box-shadow:0 0 0 2px rgba(255,255,255,.85), 0 6px 16px #000a;
+}
+
+.owned-map-pin.is-vehicle{width:20px;height:34px}
+.owned-map-vehicle{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px #000) drop-shadow(0 3px 4px #000a)}
+.owned-map-vehicle .shell{fill:#f7f8fb;stroke:#111;stroke-width:3.2;stroke-linejoin:round;paint-order:stroke fill}
+.owned-map-vehicle.is-cyber .shell{stroke-linejoin:miter}
+.owned-map-vehicle .glass{fill:#12161c;stroke:none;opacity:.78}
+
+.owned-map-settings-btn,
+.owned-map-settings{
+  position:absolute;z-index:3;
+  right:max(10px, env(safe-area-inset-right));
+  color:#fff;font:inherit;
+  background:linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 42%, rgba(255,255,255,.08) 100%), rgba(16,16,22,.42);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 50px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.16) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
+  backdrop-filter:blur(28px) saturate(1.55);
+  -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+.owned-map-settings-btn{
+  bottom:max(48px, calc(env(safe-area-inset-bottom) + 40px));
+  min-height:40px;padding:0 14px;border-radius:999px;cursor:pointer;
+  font-size:12px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+}
+.owned-map-settings-btn:focus-visible,
+.owned-map-marker-pick select:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.owned-map-settings{
+  bottom:max(98px, calc(env(safe-area-inset-bottom) + 90px));
+  width:min(320px, calc(100vw - 24px));
+  max-height:min(58vh, 440px);
+  overflow:auto;
+  box-sizing:border-box;
+  padding:12px;
+  border-radius:20px;
+  display:flex;flex-direction:column;gap:12px;
+}
+.owned-map-field input,
+.owned-map-marker-pick select{
+  width:100%;box-sizing:border-box;min-height:40px;padding:0 12px;border-radius:12px;
+  color:#fff;font:inherit;font-size:15px;
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.22);
+}
+.owned-map-field input::placeholder{color:rgba(255,255,255,.55)}
+.owned-map-marker-pick{display:flex;flex-direction:column;gap:8px}
+.owned-map-marker-pick span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.8}
+.owned-map-marker-pick select{cursor:pointer}
+.owned-map-marker-pick option{color:#111}
