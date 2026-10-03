@@ -182,6 +182,7 @@
 .owned-map.is-driving .owned-map-edit,
 .owned-map.is-driving .owned-map-hint,
 .owned-map.is-driving .owned-map-suggest,
+.owned-map.is-driving .owned-map-search,
 .owned-map.is-driving .owned-map-search-status,
 .owned-map.is-driving .owned-map-dock,
 .owned-map.is-driving .owned-map-close{display:none}
@@ -531,11 +532,11 @@
 .owned-map-guide-dest span{color:#6b7280;font-size:13px;line-height:1.3}
 .owned-map-guide-cancel{
   margin-top:12px;width:100%;min-height:46px;border:0;border-radius:12px;cursor:pointer;
-  background:#e7eaee;color:#3a414b;
+  background:#8e1b1b;color:#fff;
   font:inherit;font-size:14px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;
 }
 .owned-map-guide-cancel:hover,
-.owned-map-guide-cancel:focus-visible{background:#dde1e6}
+.owned-map-guide-cancel:focus-visible{background:#8e1b1b;color:#fff}
 .owned-map-guide-cancel:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
 .owned-map-guide-meta{
   display:flex;justify-content:space-between;gap:10px;
@@ -632,9 +633,9 @@
 .app-shell.theme-default .owned-map-search-status{color:rgba(255,255,255,.66)}
 .app-shell.theme-default .owned-map-guide-list{border-top-color:rgba(255,255,255,.12)}
 .app-shell.theme-default .owned-map-guide-list li{border-bottom-color:rgba(255,255,255,.08)}
-.app-shell.theme-default .owned-map-guide-cancel{background:#2c2c2e;color:#f4f7fb}
+.app-shell.theme-default .owned-map-guide-cancel,
 .app-shell.theme-default .owned-map-guide-cancel:hover,
-.app-shell.theme-default .owned-map-guide-cancel:focus-visible{background:#3a3a3e}
+.app-shell.theme-default .owned-map-guide-cancel:focus-visible{background:#8e1b1b;color:#fff}
 .app-shell.theme-default .owned-map-go{background:#111;color:#fff;border:1px solid rgba(255,255,255,.28)}
 .app-shell.theme-default .owned-map-go.is-stop{background:#8e1b1b;border:0;color:#fff}
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on,
