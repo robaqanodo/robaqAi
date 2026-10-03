@@ -311,7 +311,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }
 
   async function navigate(id: TripId, place: SavedPlace) {
-    setSelected(id)
+    if (id !== 'search') setSelected(id)
     setEditing(false)
     arrivedRef.current = false
     arrivalRef.current = null
