@@ -270,6 +270,32 @@ function directLine(from: Fix, place: SavedPlace): [number, number][] {
 }
 
 const DRIVE_PITCH = 50
+const MAP_3D_KEY = 'robaq-map-3d'
+
+function readMap3d() {
+  try { return localStorage.getItem(MAP_3D_KEY) !== '0' } catch { return true }
+}
+
+/** Shared with the follow camera so a 3D-off choice is not overwritten by the next GPS tick. */
+let map3dOn = readMap3d()
+
+function applyMap3d(map: Map, on: boolean, animate: boolean) {
+  map3dOn = on
+  for (const id of ['buildings-walls', 'buildings-roofs']) {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none')
+  }
+  if (on) {
+    map.dragRotate.enable()
+    map.touchPitch.enable()
+    map.touchZoomRotate.enableRotation()
+    return
+  }
+  map.dragRotate.disable()
+  map.touchPitch.disable()
+  map.touchZoomRotate.disableRotation()
+  if (animate) map.easeTo({pitch: 0, bearing: 0, duration: 350})
+  else map.jumpTo({pitch: 0, bearing: 0})
+}
 
 /** Positive Y shifts the target down so the GPS marker sits in the lower part of the screen. */
 function behindOffset(map: Map): [number, number] {
@@ -282,10 +308,10 @@ function easeBehind(map: Map, next: Fix, zoom: number | false) {
   const bearing = next.heading != null && Number.isFinite(next.heading) && next.heading >= 0 ? next.heading : undefined
   map.easeTo({
     center: [next.lon, next.lat],
-    pitch: DRIVE_PITCH,
+    pitch: map3dOn ? DRIVE_PITCH : 0,
     offset: behindOffset(map),
     duration: zoom !== false ? 700 : 400,
-    ...(bearing !== undefined ? {bearing} : {}),
+    ...(map3dOn ? (bearing !== undefined ? {bearing} : {}) : {bearing: 0}),
     ...(zoom !== false ? {zoom} : {}),
   })
 }
@@ -398,6 +424,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [guide, setGuide] = useState<Guide | null>(mapMemory.guide)
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(mapMemory.following)
+  const [buildings3d, setBuildings3d] = useState(map3dOn)
   const [driving, setDriving] = useState(mapMemory.driving)
   const [query, setQuery] = useState(mapMemory.query)
   const [queryHits, setQueryHits] = useState<Hit[]>([])
@@ -690,6 +717,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     map.touchZoomRotate.enableRotation()
     map.dragRotate.enable()
     map.touchPitch.enable()
+    map.on('style.load', () => applyMap3d(map, map3dOn, false))
     const pin = document.createElement('div')
     const initialKind = kindRef.current
     pin.className = `owned-map-pin${initialKind === 'dot' ? ' is-puck' : ' is-vehicle'}`
@@ -740,8 +768,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         map.easeTo({
           center: [opening.lon, opening.lat],
           zoom: OPEN_ZOOM,
-          pitch: DRIVE_PITCH,
-          bearing,
+          pitch: map3dOn ? DRIVE_PITCH : 0,
+          bearing: map3dOn ? bearing : 0,
           offset: behindOffset(map),
           duration: 0,
         })
@@ -1151,6 +1179,17 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     mapRef.current?.easeTo({bearing: 0, duration: 280})
   }
 
+  function toggle3d() {
+    const next = !map3dOn
+    map3dOn = next
+    setBuildings3d(next)
+    try { localStorage.setItem(MAP_3D_KEY, next ? '1' : '0') } catch { /* The choice still applies for this view. */ }
+    const map = mapRef.current
+    if (!map) return
+    applyMap3d(map, next, true)
+    if (next && drivingRef.current && pointRef.current) easeBehind(map, pointRef.current, false)
+  }
+
   function onPlace(id: PlaceId) {
     if (tripRef.current?.id === id) {
       cancelRoute()
@@ -1502,6 +1541,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       {routeCard}
       {routeBanner}
       <div className="owned-map-rail">
+        <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
         <button type="button" aria-label={t('North up')} onClick={northUp}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M12 4.2 14.1 11 12 9.6 9.9 11 12 4.2z"/><path fill="#c5cad1" d="M12 19.8 9.9 13 12 14.4 14.1 13 12 19.8z"/></svg>
         </button>

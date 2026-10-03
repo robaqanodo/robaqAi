@@ -65,7 +65,7 @@
   right:auto;
   bottom:0;
   transform:translateX(-50%);
-  width:calc(200% + 40px);
+  width:min(420px, calc(100vw - 24px));
   max-width:calc(100vw - 24px);
   margin-inline:0;
   box-sizing:border-box;padding:0 8px 0 4px;border-radius:16px;
@@ -207,12 +207,12 @@
 }
 .owned-map-drop-add:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .owned-map-places-bar button{
-  font-size:22px;font-weight:680;letter-spacing:.08em;text-transform:uppercase;
+  font-size:16px;font-weight:680;letter-spacing:.08em;text-transform:uppercase;
   pointer-events:auto;
 }
-.owned-map-places-bar .owned-map-pill svg{width:32px;height:32px}
+.owned-map-places-bar .owned-map-pill svg{width:22px;height:22px}
 .owned-map-places-bar .owned-map-pill{
-  min-height:72px;padding:0 24px;border-radius:32px;gap:12px;
+  min-height:52px;padding:0 16px;border-radius:22px;gap:8px;
   color:#111;
   background:rgba(255,255,255,.9);
   border:0;
@@ -221,8 +221,8 @@
   -webkit-backdrop-filter:none;
 }
 .owned-map-places-bar button.owned-map-add{
-  width:72px;height:72px;min-width:72px;min-height:72px;
-  padding:0;border-radius:32px;font-size:44px;color:#111;
+  width:52px;height:52px;min-width:52px;min-height:52px;
+  padding:0;border-radius:22px;font-size:32px;color:#111;
 }
 .owned-map-pill:focus-visible,
 .owned-map-places-bar button:focus-visible,
@@ -298,13 +298,13 @@
 .owned-map-core{
   position:relative;z-index:4;
   top:auto;left:auto;
-  width:88px;height:88px;flex:none;padding:0;border:0;background:transparent;color:inherit;
+  width:64px;height:64px;flex:none;padding:0;border:0;background:transparent;color:inherit;
   cursor:pointer;pointer-events:auto;
   outline:2px solid transparent;outline-offset:4px;
   -webkit-user-select:none;user-select:none;touch-action:none;
 }
 .owned-map-core{overflow:visible}
-.owned-map-core .living-cell{width:88px;height:88px;overflow:visible}
+.owned-map-core .living-cell{width:64px;height:64px;overflow:visible}
 .owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2;color:#e82127}
 .owned-map-core.is-holding{animation:map-hold 1s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
@@ -314,7 +314,7 @@
 .owned-map-core .tesla-core-speed small{font-size:7px;letter-spacing:.02em}
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-places{width:max-content;max-width:calc(100vw - 96px)}
-  .owned-map-core,.owned-map-core .living-cell{width:88px;height:88px}
+  .owned-map-core,.owned-map-core .living-cell{width:64px;height:64px}
   .owned-map-core .tesla-core-speed strong{font-size:11px}
   .owned-map-core .tesla-core-speed small{font-size:7px}
 }
@@ -583,6 +583,9 @@
 }
 .owned-map-rail button svg{width:22px;height:22px;display:block}
 .owned-map-rail button.is-on{color:#111}
+.owned-map-rail button.is-3d{font-size:13px;font-weight:750;letter-spacing:.04em}
+.owned-map-rail button.is-3d.is-on{background:#111;color:#fff}
+
 .owned-map-rail button:hover,
 .owned-map-rail button:focus-visible{background:rgba(244,245,247,.9)}
 .owned-map-rail button:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
@@ -593,7 +596,7 @@
 }
 
 .owned-map.is-driving .owned-map-places{width:min(280px, calc(100vw - 120px))}
-.owned-map.is-driving .owned-map-search{margin-inline:0;width:min(560px, calc(100vw - 24px))}
+.owned-map.is-driving .owned-map-search{margin-inline:0;width:min(420px, calc(100vw - 24px))}
 
 .owned-map-search .owned-map-suggest,
 .owned-map-search .owned-map-search-status{
@@ -660,6 +663,8 @@
   background:rgba(42,42,46,.9);color:#fff;border-color:rgba(255,255,255,.18);
 }
 .app-shell.theme-default .owned-map-rail button.is-on{color:#fff}
+.app-shell.theme-default .owned-map-rail button.is-3d.is-on{background:#f4f7fb;color:#111}
+
 
 /* Map logo only. Same dark home-logo paint. Tesla mark stays red. Home logo is untouched. */
 .app-shell.theme-default .owned-map-core .intelligence-orb{
@@ -672,18 +677,6 @@
 .app-shell.theme-default .owned-map-core .cell-blob-b{
   background:radial-gradient(circle at 38% 32%, rgba(36,36,40,.95) 0%, rgba(22,22,26,.55) 35%, rgba(10,10,12,.28) 62%, transparent 78%);
   box-shadow:inset 0 0 14px rgba(0,0,0,.4), 0 0 16px rgba(0,0,0,.2);
-}
-.app-shell.theme-default .owned-map-core .cell-boundary{
-  border-color:rgba(0,0,0,.25);
-  border-top-color:rgba(0,0,0,.7);
-  border-bottom-color:rgba(28,28,32,.5);
-  box-shadow:inset 0 0 12px rgba(0,0,0,.22), 0 0 8px rgba(0,0,0,.16);
-}
-.app-shell.theme-default .owned-map-core .link-tesla-core:after{
-  border-color:rgba(0,0,0,.25);
-  border-right-color:rgba(0,0,0,.7);
-  border-left-color:rgba(28,28,32,.5);
-  box-shadow:inset 0 0 12px rgba(0,0,0,.22), 0 0 8px rgba(0,0,0,.16);
 }
 .app-shell.theme-default .owned-map-core .tesla-core-logo,
 .app-shell.theme-default .owned-map-core .link-tesla-core>svg.tesla-core-logo{color:#e82127}
