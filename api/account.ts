@@ -31,7 +31,7 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
     if (['me', 'profile', 'delete', 'key-vault'].includes(action)) {
       if (!authenticated) { setCookie(res, '', 0); respond(res, 401, { error: 'Sign in again.' }); return }
       if (action === 'delete') {
-        await redis('DEL', `robaq:account:${authenticated.id}`, sessionKey)
+        await redis('EVAL', "local old=redis.call('GET',KEYS[1]); if old and cjson.decode(old).generation==ARGV[1] then redis.call('DEL',KEYS[1]) end; redis.call('DEL',KEYS[2]); return 1", 2, `robaq:account:${authenticated.id}`, sessionKey, authenticated.generation)
         setCookie(res, '', 0); respond(res, 200, { ok: true }); return
       }
       if (action === 'profile' || action === 'key-vault') {

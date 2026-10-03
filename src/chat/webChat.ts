@@ -20,6 +20,7 @@ export async function requestWebChat(input: {
   try { data = await response.json() } catch { /* A non-JSON failure is still a short error below. */ }
   if (!response.ok || typeof data.text !== 'string' || !data.text.trim()) {
     const errors: Record<string, string> = {
+      duplicate: 'This question was already sent from this network. Check the previous reply or wait until tomorrow. No new AI request was made.',
       too_long: 'That message is too long.',
       not_configured: 'Chat is not configured on the server. Add the API key and redeploy.',
       key_invalid: 'The server API key is invalid or expired. The site owner needs to replace it.',

@@ -69,17 +69,8 @@ export async function signIn(email: string, password: string, remember = false):
       remoteVault = login.keyVault ?? null
     }
     catch (error) {
-      // Existing local accounts migrate only after their password has decrypted the vault.
-      if (!(error instanceof Error && 'status' in error && error.status === 404)) throw error
-      const legacy = localStorage.getItem(prefix + id)
-      if (!legacy) throw error
-      const record: RecordData = JSON.parse(legacy)
-      const key = await derive(password, decode(record.salt))
-      try { await crypto.subtle.decrypt({name:'AES-GCM', iv:decode(record.iv)}, key, decode(record.data)) }
-      catch { throw new Error('Email or password is incorrect.') }
-      const registered = await accountRequest('register', { email: record.email, password, remember, firstName: record.firstName, lastName: record.lastName })
-      onlineUser = registered.user
-      remoteVault = registered.keyVault ?? null
+      // Never recreate a deleted remote account from an old device copy.
+      throw error
     }
     if (!localStorage.getItem(prefix + id)) {
       const salt = crypto.getRandomValues(new Uint8Array(16)), key = await derive(password, salt)
@@ -129,7 +120,7 @@ export async function updateProfile(session: Session, firstName: string, lastNam
   return updated
 }
 export async function deleteAccount(session: Session): Promise<void> {
-  if (session.online) await accountRequest('delete')
+  if (session.online || usesOnlineAccounts()) await accountRequest('delete')
   await deviceSession(null)
   await queues.get(session.id)?.catch(() => {})
   localStorage.removeItem(prefix + session.id)
