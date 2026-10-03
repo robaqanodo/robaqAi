@@ -56,6 +56,7 @@ const DEFAULT_ZOOM = 1.6
 const OPEN_ZOOM = 15
 /** Slightly closer than the open view. Applied once when driving starts, not on later GPS ticks. */
 const START_ZOOM = 16
+const DRIVE_PITCH = 50
 const EMPTY: RouteData = {type: 'FeatureCollection', features: []}
 const ARRIVAL_M = 50
 const SLOT_PATH = {
@@ -373,14 +374,22 @@ function behindOffset(map: Map): [number, number] {
   return [0, Math.max(120, Math.round(height * 0.28))]
 }
 
-/** Driving follow stays top-down. The first frame sets zoom 16, pitch 0, and north-up.
- *  Later ticks only move the center, so a manual 3D pitch is not overwritten. */
-function easeBehind(map: Map, next: Fix, zoom: number | false) {
+function cameraBearing(next: Fix): number | undefined {
+  return next.heading != null && next.heading >= 0 ? next.heading : undefined
+}
+
+/** Behind-the-car follow. The marker stays in the lower third.
+ *  The first frame sets zoom 16 and pitch 50. Later ticks update center and bearing only.
+ *  Recenter restores the pitch without forcing zoom again. */
+function easeBehind(map: Map, next: Fix, zoom: number | false, restorePitch = false) {
+  const bearing = cameraBearing(next)
   map.easeTo({
     center: [next.lon, next.lat],
     offset: behindOffset(map),
-    duration: zoom !== false ? 700 : 400,
-    ...(zoom !== false ? {zoom, pitch: 0, bearing: 0} : {}),
+    duration: zoom !== false || restorePitch ? 700 : 400,
+    ...(bearing != null ? {bearing} : {}),
+    ...(zoom !== false || restorePitch ? {pitch: DRIVE_PITCH} : {}),
+    ...(zoom !== false ? {zoom} : {}),
   })
 }
 
@@ -929,8 +938,8 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
         map.easeTo({
           center: [opening.lon, opening.lat],
           zoom: START_ZOOM,
-          pitch: 0,
-          bearing: 0,
+          pitch: DRIVE_PITCH,
+          bearing: cameraBearing(opening) ?? 0,
           offset: behindOffset(map),
           duration: 0,
         })
@@ -1326,7 +1335,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       const current = mapRef.current
       if (!current) return
       if (drivingRef.current) {
-        easeBehind(current, next, false)
+        easeBehind(current, next, false, true)
         return
       }
       current.easeTo({center: [next.lon, next.lat], zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 600})
@@ -1683,7 +1692,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   ) : null
 
   return (
-    <section className={`owned-map${driving ? ' is-driving' : ''}`} role="dialog" aria-modal="true" aria-label={t('Map')}>
+    <section className={`owned-map${driving ? ' is-driving' : ''}${trip?.id === 'search' && showRoute ? ' is-search-route' : ''}`} role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
         <div className="owned-map-search-line">

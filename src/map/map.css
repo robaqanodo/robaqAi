@@ -209,6 +209,9 @@
 .owned-map.is-driving .owned-map-rail,
 .owned-map.is-driving .owned-map-banner,
 .owned-map.is-driving .owned-map-close{display:none}
+.owned-map.is-search-route .owned-map-search,
+.owned-map.is-search-route .owned-map-search-status,
+.owned-map.is-search-route .owned-map-suggest{display:none}
 .owned-map-drop{position:relative;width:18px;height:18px;pointer-events:none}
 .owned-map-drop-pin{
   width:18px;height:18px;border-radius:50%;

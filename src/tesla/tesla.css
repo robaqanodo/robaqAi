@@ -222,3 +222,21 @@
 @media(prefers-reduced-motion:reduce){
   .app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-nucleus:after{animation:none!important}
 }
+
+/* Dark theme, LinkYourTesla connected: an occasional light across the home mark only. */
+.tesla-logo-sweep{display:none}
+.app-shell.theme-default.tesla-connected .landing-entry .link-tesla-core>svg.tesla-core-logo .tesla-logo-sweep{
+  display:inline;
+  opacity:0;
+  pointer-events:none;
+  animation:tesla-logo-sweep 10s ease-in-out infinite;
+}
+@keyframes tesla-logo-sweep{
+  0%,64%{x:-900;opacity:0}
+  70%{opacity:1}
+  90%{x:2700;opacity:1}
+  96%,100%{x:2700;opacity:0}
+}
+@media(prefers-reduced-motion:reduce){
+  .app-shell.theme-default.tesla-connected .landing-entry .link-tesla-core>svg.tesla-core-logo .tesla-logo-sweep{animation:none;opacity:0}
+}
