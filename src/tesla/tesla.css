@@ -198,3 +198,45 @@
 .app-shell.theme-default .landing-entry .link-tesla-core>svg.tesla-core-logo image{
   filter:url(#tesla-core-logo-depth) brightness(0);
 }
+
+/* Dark theme, Tesla not connected: same home logo paint, no T mark. */
+.app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb{
+  filter:drop-shadow(0 0 36px rgba(0,0,0,.45));
+}
+.app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-blob{
+  background:radial-gradient(circle at 32% 28%, #2a2a2e 0%, #222226 22%, #18181c 48%, #101012 76%, #070708 100%);
+  box-shadow:inset 0 0 18px rgba(0,0,0,.35), inset -6px -8px 16px rgba(0,0,0,.28), 0 0 22px rgba(0,0,0,.35);
+}
+.app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-blob-b{
+  background:radial-gradient(circle at 38% 32%, rgba(36,36,40,.95) 0%, rgba(22,22,26,.55) 35%, rgba(10,10,12,.28) 62%, transparent 78%);
+  box-shadow:inset 0 0 14px rgba(0,0,0,.4), 0 0 16px rgba(0,0,0,.2);
+}
+.app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-boundary{
+  border-color:rgba(0,0,0,.25);
+  border-top-color:rgba(0,0,0,.7);
+  border-bottom-color:rgba(28,28,32,.5);
+  box-shadow:inset 0 0 12px rgba(0,0,0,.22), 0 0 8px rgba(0,0,0,.16);
+}
+.app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-nucleus{
+  width:48%;
+  height:48%;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  animation:none;
+  z-index:7;
+}
+.app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-nucleus:after{
+  content:'';
+  position:absolute;
+  inset:-12%;
+  border:2px solid rgba(0,0,0,.25);
+  border-right-color:rgba(0,0,0,.7);
+  border-left-color:rgba(28,28,32,.5);
+  border-radius:50%;
+  box-shadow:inset 0 0 12px rgba(0,0,0,.22), 0 0 8px rgba(0,0,0,.16);
+  animation:link-tesla-ring 12s linear infinite;
+}
+@media(prefers-reduced-motion:reduce){
+  .app-shell.theme-default:not(.tesla-connected) .landing-entry .intelligence-orb .cell-nucleus:after{animation:none!important}
+}
