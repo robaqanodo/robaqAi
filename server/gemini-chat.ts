@@ -1,7 +1,7 @@
 /** Server-only Gemini call. The API key stays in the request header and is never logged. */
 
-export const PRIMARY_MODEL = 'gemini-3.8-flash'
-export const FALLBACK_MODEL = 'gemini-2.5-flash'
+export const PRIMARY_MODEL = 'gemini-2.5-flash'
+export const FALLBACK_MODEL = 'gemini-2.5-flash-lite'
 export const MAX_MESSAGE = 4000
 
 export class ChatFailure extends Error {
@@ -26,7 +26,7 @@ type FetchLike = typeof fetch
 
 export function systemInstruction(locale: string): string {
   const language = locale === 'ka' ? 'KA' : locale === 'ru' ? 'RU' : 'EN'
-  return `You are the robaqAI assistant. Education and lawful use only. Search for current facts. Do not invent news. Reply in the user's language (KA, EN, or RU). The user's language is ${language}.`
+  return `You are the robaqAI assistant. Education and lawful use only. You do not have live web search in this chat. Do not claim to have searched or verified current facts. Explain when up-to-date information cannot be verified. Do not invent news. Reply in the user's language (KA, EN, or RU). The user's language is ${language}.`
 }
 
 export function sanitizeHistory(value: unknown): ChatTurn[] {
@@ -117,11 +117,10 @@ export async function generateGroundedReply(options: {
   const body = {
     systemInstruction: { parts: [{ text: systemInstruction(options.locale) }] },
     contents: contents(options.history ?? [], options.message),
-    tools: [{ google_search: {} }],
   }
   const signal = AbortSignal.timeout(24000)
   let result = await callModel(PRIMARY_MODEL, body, options.apiKey, fetchImpl, signal)
-  if (result.status === 404) result = await callModel(FALLBACK_MODEL, body, options.apiKey, fetchImpl, signal)
+  if (result.status === 404 || result.status === 429) result = await callModel(FALLBACK_MODEL, body, options.apiKey, fetchImpl, signal)
   if (result.status !== 200) throw providerFailure(result.status, result.payload)
   const text = replyText(result.payload)
   if (!text) throw new Error('unavailable')
