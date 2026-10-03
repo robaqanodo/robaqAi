@@ -8,7 +8,7 @@ import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
 import {EXTRA_IDS, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, type MarkerKind} from './marker'
-import {LIBERTY_STYLE_URL, satelliteStyle} from './style'
+import {DARK_STYLE_URL, satelliteStyle} from './style'
 import './map.css'
 
 // Vite bundles maplibre-gl.mjs into the app chunk, so the default worker URL
@@ -284,7 +284,7 @@ function readBasemap(): BasemapMode {
 }
 
 function basemapStyle(mode: BasemapMode) {
-  return mode === 'street' ? LIBERTY_STYLE_URL : satelliteStyle
+  return mode === 'street' ? DARK_STYLE_URL : satelliteStyle
 }
 
 /** Shared with the follow camera so a 3D-off choice is not overwritten by the next GPS tick. */
@@ -292,7 +292,7 @@ let map3dOn = readMap3d()
 
 function applyMap3d(map: Map, on: boolean, animate: boolean) {
   map3dOn = on
-  // Satellite uses our extrusions. Liberty already has building-3d; do not add a second set.
+  // Satellite uses our extrusions. The dark street style has its own buildings; do not add a second set.
   for (const id of ['buildings-walls', 'buildings-roofs', 'building-3d']) {
     if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none')
   }
@@ -1207,7 +1207,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     try { localStorage.setItem(MAP_BASEMAP_KEY, next) } catch { /* The choice still applies for this view. */ }
     const map = mapRef.current
     if (!map) return
-    // Full swap so the Esri raster is gone in street mode and Liberty layers are not stacked on it.
+    // Full swap so the Esri raster is gone in street mode and the dark style is not stacked on it.
     // style.load re-applies 3D visibility and puts the route line back.
     map.setStyle(basemapStyle(next), {diff: false})
   }
@@ -1593,7 +1593,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       {routeBanner}
       <div className="owned-map-rail">
         <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
-        <button type="button" className={`is-basemap${basemap === 'street' ? ' is-on' : ''}`} aria-pressed={basemap === 'street'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>{basemap === 'street' ? t('Map') : t('Satellite')}</button>
+        <button type="button" className={`is-basemap${basemap === 'street' ? ' is-on' : ''}`} aria-pressed={basemap === 'street'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>
+          {basemap === 'street' ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><ellipse cx="12" cy="12" rx="3.3" ry="7.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M5.1 12h13.8M6.4 8.6h11.2M6.4 15.4h11.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 4.6 3.8 6.2v12.6l4.4-1.6 6.4 1.6 4.4-1.6V4.6l-4.4 1.6-6.4-1.6z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8.2 4.6v12.6M14.6 6.2v12.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+          )}
+        </button>
         <button type="button" aria-label={t('North up')} onClick={northUp}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M12 4.2 14.1 11 12 9.6 9.9 11 12 4.2z"/><path fill="#c5cad1" d="M12 19.8 9.9 13 12 14.4 14.1 13 12 19.8z"/></svg>
         </button>

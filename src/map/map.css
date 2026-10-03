@@ -604,10 +604,6 @@
 .owned-map-rail button.is-on{color:#111}
 .owned-map-rail button.is-3d{font-size:13px;font-weight:750;letter-spacing:.04em}
 .owned-map-rail button.is-3d.is-on{background:#111;color:#fff}
-.owned-map-rail button.is-basemap{
-  width:auto;min-width:48px;padding:0 8px;
-  font-size:11px;font-weight:750;letter-spacing:0;line-height:1.05;
-}
 .owned-map-rail button.is-basemap.is-on{background:#111;color:#fff}
 
 .owned-map-rail button:hover,
