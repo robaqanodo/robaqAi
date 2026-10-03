@@ -1,4 +1,4 @@
-import { randomBytes, createCipheriv, createDecipheriv, scrypt as derive, createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { randomBytes, randomInt, createCipheriv, createDecipheriv, scrypt as derive, createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { promisify } from 'node:util'
 import { bodyOf, respond, sameOrigin, redis, type ApiRequest } from './redis.ts'
 import type { ServerResponse } from 'node:http'
@@ -63,7 +63,12 @@ export function kasHandler(store: SecretStore = secretStore) {
     const salt=randomBytes(16),iv=randomBytes(12),key=await scrypt(JSON.stringify(answers),salt,32) as Buffer
     const cipher=createCipheriv('aes-256-gcm',key,iv)
     const ciphertext=Buffer.concat([cipher.update(body.text,'utf8'),cipher.final()]);key.fill(0)
-    const code='KAS-'+randomBytes(24).toString('hex').toUpperCase()
+    let code=''
+    for(let attempt=0;attempt<12;attempt++){
+     const candidate='KAS'+String(randomInt(0,100000)).padStart(5,'0')
+     if(!await store.get(candidate)){code=candidate;break}
+    }
+    if(!code)throw Error('Could not allocate a KAS code.')
     const answerHashes:string[]=[]
     for(let i=0;i<answers.length-1;i++)answerHashes.push((await scrypt(answers[i],Buffer.concat([salt,Buffer.from(i===0?'first':`answer:${i}`)]),32) as Buffer).toString('hex'))
     const firstHash=answerHashes[0]??''
@@ -71,7 +76,7 @@ export function kasHandler(store: SecretStore = secretStore) {
     respond(res,200,{code});return
    }
    const code=String(body.code??'').trim().toUpperCase()
-   if(!/^KAS-[A-F0-9]{48}$/.test(code))throw Error('Invalid KAS code.')
+   if(!/^KAS\d{5}$/.test(code))throw Error('Invalid KAS code.')
    const record=await store.get(code)
    if(!record||record.expiresAt<=Date.now()){respond(res,404,{error:'This secret has expired or does not exist.'});return}
    if(body.action==='questions'){

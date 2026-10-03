@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 import type { ServerResponse } from 'node:http'
 import { bodyOf, limit, redis, respond, sameOrigin, type ApiRequest } from '../server/redis.ts'
 const derive = promisify(scrypt)
-type Account = { id: string; email: string; firstName: string; lastName: string; salt: string; hash: string; generation: string }
+type Account = { id: string; email: string; firstName: string; lastName: string; salt: string; hash: string; generation: string; keyVault?: { iv: string; data: string } }
 type Login = { id: string; generation: string }
 const hash = (s: string) => createHash('sha256').update(s).digest('hex')
 const cookieName = 'robaq_session'
@@ -28,20 +28,29 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
       if (sessionKey) await redis('DEL', sessionKey)
       setCookie(res, '', 0); respond(res, 200, { ok: true }); return
     }
-    if (['me', 'profile', 'delete'].includes(action)) {
+    if (['me', 'profile', 'delete', 'key-vault'].includes(action)) {
       if (!authenticated) { setCookie(res, '', 0); respond(res, 401, { error: 'Sign in again.' }); return }
       if (action === 'delete') {
         await redis('DEL', `robaq:account:${authenticated.id}`, sessionKey)
         setCookie(res, '', 0); respond(res, 200, { ok: true }); return
       }
-      if (action === 'profile') {
-        authenticated.firstName = String(body.firstName ?? '').trim().slice(0, 80)
-        authenticated.lastName = String(body.lastName ?? '').trim().slice(0, 80)
+      if (action === 'profile' || action === 'key-vault') {
+        if (action === 'profile') {
+          authenticated.firstName = String(body.firstName ?? '').trim().slice(0, 80)
+          authenticated.lastName = String(body.lastName ?? '').trim().slice(0, 80)
+        } else {
+          if ('apiKey' in body || 'provider' in body) { respond(res, 400, { error: 'Invalid account request.' }); return }
+          const iv = String(body.iv ?? '')
+          const data = String(body.data ?? '')
+          if (!/^[A-Za-z0-9+/]{16,88}={0,2}$/.test(iv) || !/^[A-Za-z0-9+/]{24,2500}={0,2}$/.test(data)) { respond(res, 400, { error: 'Invalid account request.' }); return }
+          authenticated.keyVault = { iv, data }
+        }
         // Update only the existing generation; deletion cannot be undone by a concurrent save.
         const saved = await redis<number>('EVAL', "local old=redis.call('GET',KEYS[1]); if not old or cjson.decode(old).generation~=ARGV[1] then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1", 1, `robaq:account:${authenticated.id}`, authenticated.generation, JSON.stringify(authenticated))
         if (!saved) { respond(res, 401, { error: 'Sign in again.' }); return }
+        if (action === 'key-vault') { respond(res, 200, { ok: true }); return }
       }
-      respond(res, 200, { user: publicUser(authenticated) }); return
+      respond(res, 200, { user: publicUser(authenticated), keyVault: authenticated.keyVault ?? null }); return
     }
     if (!['register', 'login'].includes(action)) { respond(res, 400, { error: 'Invalid account request.' }); return }
     if (!await limit(req, 'login', 12, 60)) { respond(res, 429, { error: 'Too many attempts. Wait a minute.' }); return }
@@ -66,6 +75,6 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
     await redis('SET', `robaq:login:${hash(token)}`, JSON.stringify({ id, generation: account.generation }), 'EX', seconds)
     if (sessionKey) await redis('DEL', sessionKey)
     setCookie(res, token, body.remember === true ? seconds : undefined)
-    respond(res, 200, { user: publicUser(account) })
+    respond(res, 200, { user: publicUser(account), keyVault: account.keyVault ?? null })
   } catch { respond(res, 503, { error: 'Account service is unavailable. Please try again.' }) }
 }

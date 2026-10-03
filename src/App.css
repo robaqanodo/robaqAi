@@ -3647,3 +3647,75 @@
 .orb-install-progress{animation:installation-arrive .35s ease-out both}@keyframes installation-arrive{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}@media(prefers-reduced-motion:reduce){.orb-install-progress{animation:none}}
 
 .modal-card.idea-form-panel{width:min(1000px,100%);padding:32px}.idea-form-panel header{display:flex;justify-content:space-between;align-items:center;gap:20px}.idea-form-panel form{display:grid;gap:18px}.idea-fields{display:grid;grid-template-columns:1fr 1fr;gap:18px}.idea-form-panel label{display:grid;gap:8px;font-size:14px}.idea-form-panel input,.idea-form-panel select,.idea-form-panel textarea{box-sizing:border-box;width:100%;min-width:0;padding:13px;border:1px solid #8885;border-radius:12px;background:#ffffff08;color:inherit;font:inherit}.idea-form-panel textarea{resize:vertical;min-height:240px}.idea-form-panel select option{background:#202127;color:#fff}.idea-form-panel button{min-height:44px}.theme-white .idea-form-panel select option{background:#fff;color:#222}@media(max-width:600px){.idea-fields{grid-template-columns:1fr}.modal-card.idea-form-panel{padding:20px}}
+
+/* Phone API-key handoff. Liquid glass, only inside LinkYourTesla settings. */
+.key-bridge {
+  margin: 4px 0 14px;
+  padding: 14px 14px 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 12px 30px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+}
+.key-bridge h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2f2f6;
+  margin-bottom: 6px;
+}
+.key-bridge .modal-help { margin-bottom: 8px; }
+.key-bridge-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(232, 232, 236, 0.72);
+  margin-bottom: 8px;
+}
+.key-bridge-qr {
+  width: 188px;
+  margin: 10px auto 8px;
+  padding: 8px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+.qr-mark { display: block; width: 100%; height: auto; }
+.key-bridge-status {
+  font-size: 13px;
+  text-align: center;
+  color: #f4f4f8;
+  margin: 6px 0 4px;
+}
+.pair-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(900px 420px at 50% -10%, rgba(255, 255, 255, 0.14), transparent 55%),
+    #09090c;
+}
+.pair-card { width: min(420px, 100%); }
+.pair-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(232, 232, 236, 0.45);
+}
+.pair-card h1 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #f4f4f8;
+  margin-bottom: 8px;
+}
+
+.key-bridge-open {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 4px;
+  font-size: 12px;
+  color: rgba(244, 244, 248, 0.72);
+  text-decoration: none;
+}
+.key-bridge-open:hover { color: #fff; }

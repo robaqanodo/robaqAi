@@ -24,7 +24,11 @@ import { offlineReply, cancelOfflineReply, unloadOfflineModel } from './offline/
 import { useLocale, LocaleProvider } from './i18n/Locale'
 import { AccountDialog } from './accounts/AccountDialog'
 import { History } from './accounts/History'
-import { restoreSession, signOut, saveChats, type Session, type Conversation } from './accounts/vault'
+import { restoreSession, signOut, saveChats, syncAccountKey, writeAccountKey, type Session, type Conversation, type AccountKey } from './accounts/vault'
+import { openJson } from './accounts/keyCrypto'
+import { accountRequest } from './accounts/remote'
+import { ApiKeyBridge } from './tesla/ApiKeyBridge'
+import { PairKeyPage } from './tesla/PairKeyPage'
 import { Navigation } from './navigation/Navigation'
 import { packInstalled } from './translation/package'
 import { translateOffline, stopTranslationWorker } from './translation/client'
@@ -45,6 +49,7 @@ import {
   PROVIDER_OPTIONS,
   providerThemeClass,
   saveCredentials,
+  LS_API_UPDATED,
   type PendingFile,
   type ProviderId,
 } from './providers'
@@ -295,11 +300,18 @@ function AppContent() {
   const { t, locale, setLocale } = useLocale()
 
   const [session, setSession] = useState<Session | null>(null)
+  const sessionRef = useRef<Session | null>(session)
+  sessionRef.current = session
+  const adoptAccountKeyRef = useRef<(key: AccountKey) => void>(() => {})
+  const teslaActiveRef = useRef(false)
+  const apiKeyRef = useRef('')
+  const providerRef = useRef<ProviderId | null>(null)
   const [liveEntry, setLiveEntry] = useState<{kind:LiveKind;room?:string}|null>(()=>roomInvite())
   const liveSubmit = useRef<((text:string)=>void)|null>(null)
   const [liveSkills,setLiveSkills] = useState(()=>({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'}))
   useEffect(()=>{setLiveSkills({syberlive:skillPreferences.getItem('robaq-syberlive-active')==='true',crossfire:skillPreferences.getItem('robaq-crossfire-active')==='true'})},[session])
   const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
+  teslaActiveRef.current = teslaActive
   const [teslaOpen,setTeslaOpen]=useState(false)
   const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
   const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
@@ -319,6 +331,21 @@ function AppContent() {
     return ()=>stopTeslaLocation()
   },[teslaActive,session])
   useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
+  useEffect(() => {
+    if (!teslaActive || !session?.online || !session.syncKey) return
+    let cancelled = false
+    const pull = async () => {
+      try {
+        const me = await accountRequest('me')
+        if (cancelled || !me.keyVault?.iv || !me.keyVault.data || !session.syncKey) return
+        const remote = await openJson(session.syncKey, me.keyVault.iv, me.keyVault.data)
+        if (!cancelled) adoptAccountKeyRef.current(remote)
+      } catch { /* Keep the key already on this device. */ }
+    }
+    void pull()
+    const timer = window.setInterval(() => void pull(), 8000)
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [teslaActive, session])
   const [kasOpen, setKasOpen] = useState(false)
   const [kasCode, setKasCode] = useState('')
   const kasSubmit = useRef<((text:string)=>void)|null>(null)
@@ -395,7 +422,13 @@ function AppContent() {
       if (!cancelled && result) {
         try { await retainGuestSkills() } catch { /* Guest downloads are optional; account session still opens. */ }
         if (cancelled) return
-        setSession(result.session); setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null)
+        setSession(result.session); sessionRef.current = result.session; setChats(result.chats); setActiveChatId(crypto.randomUUID()); setLandingPanel(null)
+        if (result.accountKey) adoptAccountKeyRef.current(result.accountKey)
+        else if (apiKeyRef.current.trim() && result.session.syncKey) {
+          const updated = Date.now()
+          try { localStorage.setItem(LS_API_UPDATED, String(updated)) } catch { /* The key still stays on this device. */ }
+          void syncAccountKey(result.session, { apiKey: apiKeyRef.current.trim(), provider: providerRef.current, updated }).catch(() => {})
+        }
       }
     }).catch(() => {})
     return () => { cancelled = true }
@@ -461,8 +494,6 @@ function AppContent() {
   const sendGen = useRef(0)
   const messagesRef = useRef<ChatMessage[]>([])
   const pendingFilesRef = useRef<PendingFile[]>([])
-  const apiKeyRef = useRef(apiKey)
-  const providerRef = useRef(provider)
   const voiceModeRef = useRef(false)
   const voiceListenWantedRef = useRef(false)
   const micStreamRef = useRef<MediaStream | null>(null)
@@ -838,7 +869,7 @@ function AppContent() {
       const trimmed = text.trim()
       if(liveSubmit.current){liveSubmit.current(text);setInput('');return}
       if(kasSubmit.current){kasSubmit.current(text);setInput('');return}
-      if (/^KAS-/i.test(trimmed)) { setKasCode(trimmed.toUpperCase()); setInput(''); return }
+      if (/^KAS\d{5}$/i.test(trimmed)) { setKasCode(trimmed.toUpperCase()); setInput(''); return }
       const command=trimmed.toLowerCase();const liveKind=command==='live'||command==='syberlive'?'syberlive':command==='crossfire'?'crossfire':null
       if(liveKind){if(thinking||voiceModeRef.current)return;setInput('');if(liveSkills[liveKind]){setKasCode('');setLandingPanel(null);setChatOpen(true);setLiveEntry({kind:liveKind})}else setMessages(old=>[...old,{id:crypto.randomUUID(),role:'assistant',text:t('Install this skill in AI Lab first.')}]);return}
       const files = pendingFilesRef.current
@@ -1145,18 +1176,32 @@ function AppContent() {
     setLandingPanel('updates')
   }
 
+  const stampKey = (updated: number) => {
+    try { localStorage.setItem(LS_API_UPDATED, String(updated)) } catch { /* The key still stays on this device. */ }
+  }
+  const rememberedKeyTime = () => {
+    try { return Number(localStorage.getItem(LS_API_UPDATED) || 0) } catch { return 0 }
+  }
+  const commitApiKey = (trimmed: string, finalProvider: ProviderId, updated = Date.now()) => {
+    stopVoiceMode()
+    apiKeyRef.current = trimmed
+    setApiKey(trimmed)
+    setProvider(finalProvider)
+    setApiDraft(trimmed)
+    setApiProviderPick(finalProvider)
+    saveCredentials(trimmed, finalProvider)
+    stampKey(updated)
+    setApiError(null)
+    setApiOpen(false)
+    const current = sessionRef.current
+    if (current) void syncAccountKey(current, { apiKey: trimmed, provider: finalProvider, updated }).catch(() => {})
+    if (teslaActiveRef.current) void requestApiFeaturePermissions().then(() => { enableTeslaLocation() })
+  }
   const saveApiKey = () => {
     const trimmed = normalizeApiKey(apiDraft)
     setApiDraft(trimmed)
     if (!trimmed) {
-      // Empty = clear
-      stopVoiceMode()
-      apiKeyRef.current = ''
-      setApiKey('')
-      setProvider(null)
-      clearCredentials()
-      setApiError(null)
-      setApiOpen(false)
+      clearApiKey()
       return
     }
     if (!apiProviderPick || !isValidPick(apiProviderPick)) {
@@ -1170,21 +1215,18 @@ function AppContent() {
       setApiError(`Detected a ${name} API key. Select ${name} below to add this key.`)
       return
     }
-    const finalProvider: ProviderId = apiProviderPick
-    stopVoiceMode()
-    apiKeyRef.current = trimmed
-    setApiKey(trimmed)
-    setProvider(finalProvider)
-    saveCredentials(trimmed, finalProvider)
-    setApiError(null)
-    setApiOpen(false)
-    // While LinkyourTesla is connected, activating API prompts for mic, camera, location, etc.
-    if (teslaActive) {
-      void requestApiFeaturePermissions().then(() => { enableTeslaLocation() })
-    }
+    commitApiKey(trimmed, apiProviderPick)
+  }
+  const acceptDeliveredKey = (raw: string, picked: ProviderId) => {
+    const trimmed = normalizeApiKey(raw)
+    const detected = detectProvider(trimmed)
+    const finalProvider = detected ?? picked
+    if (!trimmed || !isValidPick(finalProvider)) return
+    commitApiKey(trimmed, finalProvider)
   }
 
   const clearApiKey = () => {
+    const updated = Date.now()
     stopVoiceMode()
     apiKeyRef.current = ''
     closeSettingsMenu()
@@ -1195,7 +1237,43 @@ function AppContent() {
     setApiProviderPick(null)
     setApiError(null)
     clearCredentials()
+    stampKey(updated)
     setApiOpen(false)
+    const current = sessionRef.current
+    if (current) void syncAccountKey(current, { apiKey: '', provider: null, updated }).catch(() => {})
+  }
+
+  adoptAccountKeyRef.current = (key) => {
+    if (key.updated <= rememberedKeyTime()) return
+    const current = sessionRef.current
+    if (!key.apiKey) {
+      stopVoiceMode()
+      apiKeyRef.current = ''
+      setApiDraft('')
+      setApiKey('')
+      setProvider(null)
+      setApiProviderPick(null)
+      clearCredentials()
+      stampKey(key.updated)
+      if (current) void writeAccountKey(current, key).catch(() => {})
+      return
+    }
+    const trimmed = normalizeApiKey(key.apiKey)
+    const detected = detectProvider(trimmed)
+    const picked = key.provider && isValidPick(key.provider) ? key.provider : null
+    const finalProvider = detected ?? picked
+    if (!trimmed || !finalProvider) return
+    stopVoiceMode()
+    apiKeyRef.current = trimmed
+    setApiKey(trimmed)
+    setProvider(finalProvider)
+    setApiDraft(trimmed)
+    setApiProviderPick(finalProvider)
+    saveCredentials(trimmed, finalProvider)
+    stampKey(key.updated)
+    setApiError(null)
+    if (current) void writeAccountKey(current, { apiKey: trimmed, provider: finalProvider, updated: key.updated }).catch(() => {})
+    if (teslaActiveRef.current) void requestApiFeaturePermissions().then(() => { enableTeslaLocation() })
   }
 
   const openLandingPanel = (kind: Exclude<LandingPanel, null>) => {
@@ -1649,6 +1727,7 @@ function AppContent() {
               </button>
 
             </div>
+            {teslaActive && <ApiKeyBridge signedIn={Boolean(session)} email={session?.email} syncReady={Boolean(session?.syncKey)} onDelivered={acceptDeliveredKey} />}
             <div className="modal-actions">
               <button
                 type="button"
@@ -1776,12 +1855,19 @@ function AppContent() {
       {landingPanel === 'account' && <AccountDialog teslaConnected={teslaActive} session={session} onProfileUpdate={setSession} onDeleted={() => {
         stopTranslationWorker(); void unloadOfflineModel(); setPersistentSkills(false)
         clearChat(); messagesRef.current = []; apiKeyRef.current = ''; setApiKey(''); setProvider(null); setSession(null); setChats([]); setActiveChatId(null); setChatOpen(false);  setM2mReady(false); setDesktopTranslator(''); setChatColor('system'); setLocale('en'); setHistoryOpen(false); setSaveError(''); setMovieSyncStage('new'); setLandingPanel('account')
-      }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={async (account, history) => {
+      }} onGuest={() => { setLandingPanel(null); setWatchOpen(false); collapseChat() }} onClose={() => setLandingPanel(null)} onSignedIn={async (account, history, accountKey) => {
         clearChat()
         messagesRef.current = []
         stopTranslationWorker(); await unloadOfflineModel()
         try { await retainGuestSkills() } catch { setSaveError(t('Some guest downloads could not be saved. Please download them again.')) }
+        sessionRef.current = account
         setSession(account)
+        if (accountKey) adoptAccountKeyRef.current(accountKey)
+        else if (apiKeyRef.current.trim() && account.syncKey) {
+          const updated = Date.now()
+          try { localStorage.setItem(LS_API_UPDATED, String(updated)) } catch { /* The key still stays on this device. */ }
+          void syncAccountKey(account, { apiKey: apiKeyRef.current.trim(), provider: providerRef.current, updated }).catch(() => {})
+        }
         setWatchOpen(false)
         setChats(history)
         setActiveChatId(crypto.randomUUID())
@@ -1850,4 +1936,7 @@ function AppContent() {
   )
 }
 
-export default function App() { return <LocaleProvider><AppContent /></LocaleProvider> }
+export default function App() {
+  const pair = new URLSearchParams(window.location.search).get('pair')
+  return <LocaleProvider>{pair ? <PairKeyPage code={pair} /> : <AppContent />}</LocaleProvider>
+}

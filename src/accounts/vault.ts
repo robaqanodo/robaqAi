@@ -1,8 +1,10 @@
-import { accountRequest, usesOnlineAccounts } from './remote'
+import { accountRequest, usesOnlineAccounts, type AccountResponse } from './remote'
 import { deviceSession } from './remember'
+import { deriveSyncKey, openJson, sealJson, type AccountKey } from './keyCrypto'
+export type { AccountKey }
 export type Message = { id: string; role: 'user' | 'assistant'; text: string }
 export type Conversation = { id: string; title: string; messages: Message[]; updated: number; pinned?: boolean; archived?: boolean; deleted?: boolean }
-export type Session = { id: string; email: string; key: CryptoKey; firstName?: string; lastName?: string; online?: boolean }
+export type Session = { id: string; email: string; key: CryptoKey; syncKey?: CryptoKey; firstName?: string; lastName?: string; online?: boolean }
 type RecordData = { firstName?: string; lastName?: string; version: 1; email: string; salt: string; iv: string; data: string }
 const prefix = 'rai-account-v1:'
 const encode = (bytes: Uint8Array) => btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(''))
@@ -33,9 +35,11 @@ export async function register(email: string, password: string, firstName = '', 
   // Recheck after derivation so concurrent registration cannot replace an account.
   if (localStorage.getItem(prefix + id)) throw new Error('This account already exists.')
   localStorage.setItem(prefix + id, JSON.stringify({ version: 1, email, firstName: firstName.trim().slice(0,80), lastName: lastName.trim().slice(0,80), salt: encode(salt), ...encrypted }))
-  return { id, email, key, online: usesOnlineAccounts(), firstName: firstName.trim().slice(0,80), lastName: lastName.trim().slice(0,80) }
+  let syncKey: CryptoKey | undefined
+  if (usesOnlineAccounts()) { try { syncKey = await deriveSyncKey(password, email) } catch { /* Cross-device key sync waits until the next sign-in. */ } }
+  return { id, email, key, syncKey, online: usesOnlineAccounts(), firstName: firstName.trim().slice(0,80), lastName: lastName.trim().slice(0,80) }
 }
-export async function signIn(email: string, password: string, remember = false): Promise<{ session: Session; chats: Conversation[] }> {
+export async function signIn(email: string, password: string, remember = false): Promise<{ session: Session; chats: Conversation[]; accountKey: AccountKey | null }> {
   email = normalize(email)
   if (!email.includes('@') && email !== 'admin') {
     const matches = Object.keys(localStorage).filter(key => key.startsWith(prefix)).flatMap(key => {
@@ -57,8 +61,13 @@ export async function signIn(email: string, password: string, remember = false):
     if (!localStorage.getItem(prefix + id)) localStorage.setItem(prefix + id, JSON.stringify({ version: 1, email: 'admin', salt: encode(salt), ...encrypted }))
   }
   let onlineUser: { email: string; firstName: string; lastName: string } | undefined
+  let remoteVault: AccountResponse['keyVault'] = null
   if (usesOnlineAccounts() && navigator.onLine && email !== 'admin') {
-    try { onlineUser = (await accountRequest('login', { email, password, remember })).user }
+    try {
+      const login = await accountRequest('login', { email, password, remember })
+      onlineUser = login.user
+      remoteVault = login.keyVault ?? null
+    }
     catch (error) {
       // Existing local accounts migrate only after their password has decrypted the vault.
       if (!(error instanceof Error && 'status' in error && error.status === 404)) throw error
@@ -68,7 +77,9 @@ export async function signIn(email: string, password: string, remember = false):
       const key = await derive(password, decode(record.salt))
       try { await crypto.subtle.decrypt({name:'AES-GCM', iv:decode(record.iv)}, key, decode(record.data)) }
       catch { throw new Error('Email or password is incorrect.') }
-      onlineUser = (await accountRequest('register', { email: record.email, password, remember, firstName: record.firstName, lastName: record.lastName })).user
+      const registered = await accountRequest('register', { email: record.email, password, remember, firstName: record.firstName, lastName: record.lastName })
+      onlineUser = registered.user
+      remoteVault = registered.keyVault ?? null
     }
     if (!localStorage.getItem(prefix + id)) {
       const salt = crypto.getRandomValues(new Uint8Array(16)), key = await derive(password, salt)
@@ -79,12 +90,16 @@ export async function signIn(email: string, password: string, remember = false):
   if (!stored) throw new Error('No account was found here. Enter your full email, or open the same browser and site address used when registering.')
   const record: RecordData = JSON.parse(stored)
   const key = await derive(password, decode(record.salt))
+  let chats: Conversation[]
   try {
     const bytes = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(record.iv) }, key, decode(record.data))
-    const chats: Conversation[] = JSON.parse(new TextDecoder().decode(bytes))
+    chats = JSON.parse(new TextDecoder().decode(bytes))
     if (!Array.isArray(chats)) throw new Error('Invalid history')
-    return { session: { id, email: record.email, key, online: Boolean(onlineUser), firstName: onlineUser?.firstName ?? record.firstName ?? '', lastName: onlineUser?.lastName ?? record.lastName ?? '' }, chats }
   } catch { throw new Error('Email or password is incorrect, or the local account data is damaged.') }
+  const session: Session = { id, email: record.email, key, online: Boolean(onlineUser), firstName: onlineUser?.firstName ?? record.firstName ?? '', lastName: onlineUser?.lastName ?? record.lastName ?? '' }
+  if (onlineUser) { try { session.syncKey = await deriveSyncKey(password, email) } catch { /* Cross-device key sync waits until the next sign-in. */ } }
+  const accountKey = await mergeAccountKey(session, remoteVault ?? null)
+  return { session, chats, accountKey }
 }
 const queues = new Map<string, Promise<void>>()
 export function saveChats(session: Session, chats: Conversation[]) {
@@ -121,14 +136,67 @@ export async function deleteAccount(session: Session): Promise<void> {
   queues.delete(session.id)
 }
 
+
+export async function readAccountKey(session: Session): Promise<AccountKey | null> {
+  await queues.get(session.id)?.catch(() => {})
+  const stored = localStorage.getItem(prefix + session.id)
+  if (!stored) return null
+  try {
+    const record = JSON.parse(stored) as { credIv?: string; credData?: string }
+    if (!record.credIv || !record.credData) return null
+    return await openJson(session.key, record.credIv, record.credData)
+  } catch { return null }
+}
+export async function writeAccountKey(session: Session, plain: AccountKey) {
+  const next = (queues.get(session.id) ?? Promise.resolve()).catch(() => {}).then(async () => {
+    const stored = localStorage.getItem(prefix + session.id)
+    if (!stored) return
+    const record = JSON.parse(stored)
+    const sealed = await sealJson(session.key, plain)
+    localStorage.setItem(prefix + session.id, JSON.stringify({ ...record, credIv: sealed.iv, credData: sealed.data }))
+  })
+  queues.set(session.id, next)
+  return next
+}
+async function pushSealed(session: Session, plain: AccountKey) {
+  if (!session.syncKey) return
+  const sealed = await sealJson(session.syncKey, plain)
+  await accountRequest('key-vault', sealed)
+}
+export async function syncAccountKey(session: Session, plain: AccountKey) {
+  await writeAccountKey(session, plain)
+  if (session.online && session.syncKey && navigator.onLine) await pushSealed(session, plain)
+}
+async function mergeAccountKey(session: Session, remoteVault: { iv: string; data: string } | null): Promise<AccountKey | null> {
+  const local = await readAccountKey(session)
+  let remote: AccountKey | null = null
+  if (remoteVault?.iv && remoteVault.data && session.syncKey) {
+    try { remote = await openJson(session.syncKey, remoteVault.iv, remoteVault.data) } catch { remote = null }
+  }
+  if (remote && (!local || remote.updated > local.updated)) {
+    await writeAccountKey(session, remote)
+    return remote
+  }
+  if (local && session.online && session.syncKey && (!remote || local.updated > remote.updated)) {
+    try { await pushSealed(session, local) } catch { /* The local vault copy remains. */ }
+  }
+  return local
+}
+
 export async function rememberSession(session: Session, remember: boolean) {
   await deviceSession(remember ? session : null)
 }
-export async function restoreSession(): Promise<{session: Session; chats: Conversation[]} | null> {
+export async function restoreSession(): Promise<{session: Session; chats: Conversation[]; accountKey: AccountKey | null} | null> {
   const session = await deviceSession()
   if (!session) return null
+  let remoteVault: AccountResponse['keyVault'] = null
   if (session.online && navigator.onLine) {
-    try { const result = await accountRequest('me'); if (result.user.email !== session.email) { await deviceSession(null); return null }; Object.assign(session, {firstName:result.user.firstName,lastName:result.user.lastName}) }
+    try {
+      const result = await accountRequest('me')
+      if (result.user.email !== session.email) { await deviceSession(null); return null }
+      Object.assign(session, {firstName:result.user.firstName,lastName:result.user.lastName})
+      remoteVault = result.keyVault ?? null
+    }
     catch (error) { if (error instanceof Error && 'status' in error && error.status === 401) await deviceSession(null); return null }
   }
   const stored = localStorage.getItem(prefix + session.id)
@@ -136,7 +204,8 @@ export async function restoreSession(): Promise<{session: Session; chats: Conver
   try {
     const record: RecordData = JSON.parse(stored)
     const bytes = await crypto.subtle.decrypt({ name:'AES-GCM', iv:decode(record.iv) }, session.key, decode(record.data))
-    return {session, chats:JSON.parse(new TextDecoder().decode(bytes))}
+    const accountKey = await mergeAccountKey(session, remoteVault)
+    return {session, chats:JSON.parse(new TextDecoder().decode(bytes)), accountKey}
   } catch { await deviceSession(null); return null }
 }
 export async function signOut() {

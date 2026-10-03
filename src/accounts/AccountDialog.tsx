@@ -1,8 +1,8 @@
 import { Profile } from './Profile'
 import { useLocale } from '../i18n/Locale'
 import { useState } from 'react'
-import { register, signIn, rememberSession, type Session, type Conversation } from './vault'
-export function AccountDialog({ teslaConnected=false, session, onSignedIn, onSignOut, onClose, onGuest, onProfileUpdate, onDeleted }: { teslaConnected?:boolean; session: Session | null; onSignedIn: (session: Session, chats: Conversation[]) => void; onSignOut: () => void; onClose: () => void; onGuest: () => void; onProfileUpdate: (session: Session) => void; onDeleted: () => void }) {
+import { register, signIn, rememberSession, type Session, type Conversation, type AccountKey } from './vault'
+export function AccountDialog({ teslaConnected=false, session, onSignedIn, onSignOut, onClose, onGuest, onProfileUpdate, onDeleted }: { teslaConnected?:boolean; session: Session | null; onSignedIn: (session: Session, chats: Conversation[], accountKey: AccountKey | null) => void; onSignOut: () => void; onClose: () => void; onGuest: () => void; onProfileUpdate: (session: Session) => void; onDeleted: () => void }) {
   const { t, locale, setLocale } = useLocale()
 
   const [remember, setRemember] = useState(false)
@@ -28,9 +28,9 @@ export function AccountDialog({ teslaConnected=false, session, onSignedIn, onSig
       if (mode === 'register' && password !== confirmation) { setError('Passwords do not match.'); return }
       setBusy(true)
       try {
-        const result = mode === 'register' ? { session: await register(email, password, firstName, lastName, remember), chats: [] } : await signIn(email, password, remember)
+        const result = mode === 'register' ? { session: await register(email, password, firstName, lastName, remember), chats: [] as Conversation[], accountKey: null } : await signIn(email, password, remember)
         await rememberSession(result.session, remember)
-        onSignedIn(result.session, result.chats)
+        onSignedIn(result.session, result.chats, result.accountKey)
         setPassword(''); setConfirmation('')
       } catch (err) { setError(err instanceof Error ? err.message : 'Unable to open your account.') }
       finally { setBusy(false) }

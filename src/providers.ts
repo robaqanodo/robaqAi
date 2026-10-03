@@ -20,6 +20,7 @@ export type PendingFile = {
 
 export const LS_API_KEY = 'grok-chat-api-key'
 export const LS_PROVIDER = 'grok-chat-api-provider'
+export const LS_API_UPDATED = 'grok-chat-api-key-updated'
 
 const SYSTEM_PROMPT =
   'You are a helpful assistant in a chat UI. Always reply in the same language the user is using (including Georgian). Do not force English or translate unless asked. Keep answers concise unless asked for detail.'
