@@ -3719,3 +3719,9 @@
   text-decoration: none;
 }
 .key-bridge-open:hover { color: #fff; }
+
+.msg-sources { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 12px; }
+.msg-sources a { color: inherit; }
+.engine-fallback-btn { margin-top: 8px; }
+.engine-options { flex-wrap: wrap; }
+.engine-options .color-choice { display: flex; align-items: center; gap: 8px; }

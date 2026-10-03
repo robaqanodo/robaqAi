@@ -1,15 +1,14 @@
 import { createHash } from 'node:crypto'
 import type { ServerResponse } from 'node:http'
+import { generateGroundedReply, MAX_MESSAGE, sanitizeHistory } from '../server/gemini-chat.ts'
 import { bodyOf, limit, redis, respond, sameOrigin, type ApiRequest } from '../server/redis.ts'
-export default async function handler(req: ApiRequest, res: ServerResponse) {
-  if (!sameOrigin(req)) { respond(res,403,{error:'Same-origin requests only.'}); return }
+
+async function saveTemporary(req: ApiRequest, res: ServerResponse, body: Record<string, unknown>) {
   const token = req.headers.authorization?.replace(/^Bearer /,'') ?? ''
   if (!/^[a-f0-9]{64}$/.test(token)) { respond(res,401,{error:'Invalid chat session.'}); return }
   try {
-    const body = await bodyOf(req, 1000000)
     const key = `robaq:chat:${createHash('sha256').update(token).digest('hex')}`
     if (body.action === 'close') {
-      // The short marker contains no messages and prevents in-flight writes resurrecting a closed chat.
       await redis('EVAL', "redis.call('DEL',KEYS[1]); redis.call('SET',KEYS[2],'1','EX',120); return 1", 2, key, key + ':closed')
     } else if (body.action === 'save' && typeof body.encrypted === 'string' && body.encrypted.length <= 900000) {
       if (!await limit(req, 'temporary-chat', 120, 60)) { respond(res,429,{error:'Too many requests.'}); return }
@@ -17,4 +16,30 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
     } else { respond(res,400,{error:'Invalid chat request.'}); return }
     respond(res,200,{ok:true})
   } catch { respond(res,503,{error:'Temporary chat storage is unavailable.'}) }
+}
+
+async function answer(res: ServerResponse, body: Record<string, unknown>) {
+  const message = typeof body.message === 'string' ? body.message.trim() : ''
+  if (!message) { respond(res, 400, { error: 'invalid' }); return }
+  if (message.length > MAX_MESSAGE) { respond(res, 400, { error: 'too_long' }); return }
+  const apiKey = process.env.GEMINI_API_KEY?.trim() ?? ''
+  if (!apiKey) { respond(res, 503, { error: 'unavailable' }); return }
+  const locale = body.locale === 'ka' || body.locale === 'ru' ? body.locale : 'en'
+  try {
+    const result = await generateGroundedReply({ apiKey, message, locale, history: sanitizeHistory(body.history) })
+    respond(res, 200, { text: result.text, sources: result.sources })
+  } catch {
+    respond(res, 503, { error: 'unavailable' })
+  }
+}
+
+export default async function handler(req: ApiRequest, res: ServerResponse) {
+  if (req.method !== 'POST') { respond(res, 405, { error: 'POST only.' }); return }
+  if (!sameOrigin(req)) { respond(res, 403, { error: 'Same-origin requests only.' }); return }
+  let body: Record<string, unknown>
+  try { body = await bodyOf(req, 1000000) }
+  catch { respond(res, 400, { error: 'Invalid chat request.' }); return }
+  if (body.action === 'close' || body.action === 'save') { await saveTemporary(req, res, body); return }
+  if ('message' in body) { await answer(res, body); return }
+  respond(res, 400, { error: 'Invalid chat request.' })
 }

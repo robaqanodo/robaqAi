@@ -15,6 +15,7 @@ import { KasStore } from './kas/KasStore'
 import { retainGuestSkills } from './retainGuestSkills'
 import { skillPreferences, setPersistentSkills, persistentSkills } from './skillSession'
 import { useTemporaryChat } from './chat/useTemporaryChat'
+import { requestWebChat, type WebSource } from './chat/webChat'
 import { useGuestPresence } from './presence/useGuestPresence'
 import { MovieSyncStore, type MovieSyncStage } from './watch/MovieSyncStore'
 import { desktopInference, cancelDesktopReply } from './offline/desktop'
@@ -42,7 +43,6 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useSta
 import {
   clearCredentials,
   detectProvider,
-  formatApiError,
   generateReply,
   loadStoredCredentials,
   normalizeApiKey,
@@ -282,6 +282,8 @@ interface ChatMessage {
   id: string
   role: Role
   text: string
+  sources?: WebSource[]
+  offerWeb?: boolean
 }
 
 const NativeRecognition = nativeRecognitionClass(SpeechRecognition)
@@ -441,6 +443,14 @@ function AppContent() {
   const [translationStatus, setTranslationStatus] = useState('Offline')
   const [translationMode, setTranslationMode] = useState(() => { try { return !skillPreferences.getItem('rai-local-model') } catch { return true } })
   const [themeChoice, setChatColor] = useState<string>(() => { try { return localStorage.getItem('robaq-theme-choice') || 'system' } catch { return 'system' } })
+  const [chatEngine, setChatEngineState] = useState<'web' | 'offline'>(() => { try { return localStorage.getItem('robaq-chat-engine') === 'offline' ? 'offline' : 'web' } catch { return 'web' } })
+  const chatEngineRef = useRef(chatEngine)
+  const webAbort = useRef<AbortController | null>(null)
+  const setChatEngine = (next: 'web' | 'offline') => {
+    chatEngineRef.current = next
+    setChatEngineState(next)
+    try { localStorage.setItem('robaq-chat-engine', next) } catch { /* This session still uses the choice. */ }
+  }
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   useEffect(() => { const media=window.matchMedia('(prefers-color-scheme: dark)');const update=()=>setSystemDark(media.matches);media.addEventListener('change',update);return()=>media.removeEventListener('change',update) }, [])
   const chatColor = themeChoice === 'system' ? (systemDark ? 'default' : 'white') : themeChoice
@@ -505,6 +515,13 @@ function AppContent() {
   useEffect(()=>{setLabMinimized(false)},[session])
 
   const localModels=modelFlow.installed,localModel=modelFlow.active
+  const localModelRef = useRef(localModel)
+  const localModelsRef = useRef(localModels)
+  const localeRef = useRef(locale)
+  localModelRef.current = localModel
+  localModelsRef.current = localModels
+  localeRef.current = locale
+  chatEngineRef.current = chatEngine
   const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const birdPalette = (translatorReady || localModels.length > 0) ? 'mixed' : 'default'
   const birdColors = ['stock', 'black', ...(kasActive ? ['kas'] : []), ...(localModels.includes(localModel) ? ['model','model','model-buddy'] : [])]
@@ -589,7 +606,7 @@ function AppContent() {
   }, [])
 
   const startTyping = useCallback(
-    (fullText: string) => {
+    (fullText: string, extra?: { sources?: WebSource[]; offerWeb?: boolean }) => {
       cancelTyping()
 
       const id = uid()
@@ -597,14 +614,14 @@ function AppContent() {
       const chars = Array.from(fullText)
 
       if (prefersReducedMotion() || chars.length === 0) {
-        setMessages((m) => [...m, { id, role: 'assistant', text: fullText }])
+        setMessages((m) => [...m, { id, role: 'assistant', text: fullText, ...extra }])
         setThinking(false)
         return
       }
 
       // Replace thinking dots with an empty streaming bubble
       setThinking(false)
-      setMessages((m) => [...m, { id, role: 'assistant', text: '' }])
+      setMessages((m) => [...m, { id, role: 'assistant', text: '', ...extra }])
       setStreamingId(id)
 
       const gen = streamGen.current
@@ -922,17 +939,13 @@ function AppContent() {
       const usingApi = Boolean(key)
 
       if (thinking || modelFlow.busy || voiceModeRef.current) return
-      if (!trimmed && !(usingApi && files.length > 0)) return
+      if (!trimmed) return
 
       // New send interrupts any in-progress stream
       cancelTyping()
       const thisSend = ++sendGen.current
 
-      const userLabel =
-        trimmed ||
-        (files.length === 1
-          ? `[Attached: ${files[0].name}]`
-          : `[Attached ${files.length} files]`)
+      const userLabel = files.length ? `${trimmed}\n${files.map(file => `[Attached: ${file.name}]`).join(' ')}` : trimmed
 
       const priorHistory = messagesRef.current.map((m) => ({
         role: m.role,
@@ -983,7 +996,7 @@ function AppContent() {
         })()
         return
       }
-      if (!usingApi) {
+      if (chatEngineRef.current === 'offline') {
         if (localModels.includes(localModel)) {
           void offlineReply(localModel, priorHistory, trimmed).then(reply => {
             if (thisSend === sendGen.current) startTyping(reply)
@@ -992,25 +1005,31 @@ function AppContent() {
           })
           return
         }
-        startTyping(t('Download the active model in AI Lab to chat offline. You can choose another model in Settings.'))
+        startTyping(t('Offline AI is not available on this device.'), { offerWeb: true })
         return
       }
 
-      // Real API request — 100% API-dependent when key is active
+      if (trimmed.length > 4000) {
+        startTyping(t('That message is too long.'))
+        return
+      }
+
+      const controller = new AbortController()
+      webAbort.current?.abort()
+      webAbort.current = controller
       void (async () => {
-        const prov = providerRef.current ?? detectProvider(key)
         try {
-          if (!prov) throw new Error('Could not detect provider from API key')
-          const reply = await generateReply(prov, key, priorHistory, trimmed, files)
+          const reply = await requestWebChat({ message: trimmed, locale, history: priorHistory, signal: controller.signal })
           if (thisSend !== sendGen.current) return
-          startTyping(reply)
+          startTyping(reply.text, reply.sources.length ? { sources: reply.sources } : undefined)
         } catch (err) {
           if (thisSend !== sendGen.current) return
-          startTyping(formatApiError(err, prov))
+          if (err instanceof DOMException && err.name === 'AbortError') { setThinking(false); return }
+          startTyping(t(err instanceof Error ? err.message : 'Chat is unavailable right now.'))
         }
       })()
     },
-    [liveSkills, modelFlow.busy, thinking, cancelTyping, startTyping, translatorReady, translationMode, desktopTranslator, localModel, localModels, t],
+    [liveSkills, modelFlow.busy, thinking, cancelTyping, startTyping, translatorReady, translationMode, desktopTranslator, localModel, localModels, t, locale],
   )
 
   const startVoiceListening = useCallback(() => {
@@ -1095,26 +1114,39 @@ function AppContent() {
         role: m.role,
         text: m.text,
       }))
-      const files = pendingFilesRef.current
       setPendingFiles([])
       pendingFilesRef.current = []
       setVoiceCaption('')
       setMessages((m) => [...m, { id: uid(), role: 'user', text: uttered }])
       setThinking(true)
 
-      const prov = providerRef.current ?? detectProvider(key)
       let reply = ''
+      let sources: WebSource[] | undefined
+      let offerWeb = false
       try {
-        if (!prov) throw new Error('Could not detect provider from API key')
-        reply = await generateReply(prov, key, priorHistory, uttered, files)
+        if (chatEngineRef.current === 'offline') {
+          if (!localModelsRef.current.includes(localModelRef.current)) {
+            reply = t('Offline AI is not available on this device.')
+            offerWeb = true
+          } else {
+            reply = await offlineReply(localModelRef.current, priorHistory, uttered)
+          }
+        } else if (uttered.length > 4000) {
+          reply = t('That message is too long.')
+        } else {
+          const result = await requestWebChat({ message: uttered, locale: localeRef.current, history: priorHistory })
+          reply = result.text
+          sources = result.sources.length ? result.sources : undefined
+        }
       } catch (err) {
-        reply = formatApiError(err, prov)
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        reply = t(err instanceof Error ? err.message : 'Chat is unavailable right now.')
       }
 
       if (!voiceModeRef.current || session !== voiceSessionRef.current || key !== apiKeyRef.current.trim()) return
 
       setThinking(false)
-      setMessages((m) => [...m, { id: uid(), role: 'assistant', text: reply }])
+      setMessages((m) => [...m, { id: uid(), role: 'assistant', text: reply, sources, offerWeb }])
       speechLangRef.current = preferredRecognitionLang(reply)
 
       speakText(reply, () => {
@@ -1123,7 +1155,7 @@ function AppContent() {
         startVoiceListeningRef.current()
       })
     },
-    [stopVoiceRecognition, speakText],
+    [stopVoiceRecognition, speakText, t],
   )
 
   useEffect(() => {
@@ -1188,6 +1220,7 @@ function AppContent() {
     if (thinkTimer.current) window.clearTimeout(thinkTimer.current)
     thinkTimer.current = null
     cancelOfflineReply()
+    webAbort.current?.abort()
     sendGen.current += 1
     cancelTyping()
     cancelIntroTyping()
@@ -1364,7 +1397,7 @@ function AppContent() {
 
   const isBusy = thinking || attachBusy || voiceMode
   const canSend = !modelFlow.busy &&
-    !isBusy && (Boolean(input.trim()) || (hasApiKey && pendingFiles.length > 0))
+    !isBusy && Boolean(input.trim())
 
   const collapseChat = useCallback(() => {
     setApiOpen(false)
@@ -1589,6 +1622,8 @@ function AppContent() {
               >
                 {m.role === 'assistant' ? m.text.replace(/R\.A\.?I|Birdoff|Smartass|Ostra|robaq AI/gi, 'robaqAI') : m.text}
                 {streaming && <span className="stream-caret" aria-hidden />}
+                {m.role === 'assistant' && m.sources && m.sources.length > 0 && <ul className="msg-sources">{m.sources.map(source => <li key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a></li>)}</ul>}
+                {m.offerWeb && <button type="button" className="modal-btn engine-fallback-btn" onClick={() => setChatEngine('web')}>{t('Use Default (web)')}</button>}
               </div>
             )
           })}
@@ -1695,7 +1730,7 @@ function AppContent() {
               <button type="button" className={`offline-model-trigger${modelMenuOpen ? ' is-open' : ''}`} aria-label={t('Offline AI')} aria-expanded={modelMenuOpen} onClick={() => setModelMenuOpen(open => !open)} disabled={thinking || Boolean(streamingId)}>AI</button>
               {modelMenuOpen && <div className="offline-model-popover"><span>{MODELS.find(m=>m.id===localModel)?.name}</span><button className="modal-btn" onClick={()=>{setModelMenuOpen(false);openLandingPanel('settings');setTimeout(()=>document.getElementById('offline-ai-settings')?.scrollIntoView(),100)}}>{t('Settings')}</button></div>}
             </div>}
-            {(thinking || Boolean(streamingId)) ? <button type="button" className="send-btn generation-stop-btn" aria-label={t('Stop generating')} title={t('Stop generating')} onClick={() => { cancelTyping(); sendGen.current += 1; stopTranslationWorker(); cancelDesktopReply(); cancelOfflineReply(); streamGen.current += 1; setThinking(false); setStreamingId(null) }}><IconStop /></button> : <button type="submit" className="send-btn" disabled={!canSend} aria-label={t("Send")}><IconSendUp /></button>}
+            {(thinking || Boolean(streamingId)) ? <button type="button" className="send-btn generation-stop-btn" aria-label={t('Stop generating')} title={t('Stop generating')} onClick={() => { cancelTyping(); webAbort.current?.abort(); sendGen.current += 1; stopTranslationWorker(); cancelDesktopReply(); cancelOfflineReply(); streamGen.current += 1; setThinking(false); setStreamingId(null) }}><IconStop /></button> : <button type="submit" className="send-btn" disabled={!canSend} aria-label={t("Send")}><IconSendUp /></button>}
           </div>
         </form>
       </div>
@@ -1772,6 +1807,8 @@ function AppContent() {
           >
             <h2 id="settings-title">{t("Settings")}</h2>
             <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option>{!teslaActive&&<option value="ka">ქართული</option>}<option value="ru">Русский</option></select></label>
+            <fieldset className="chat-color-options engine-options"><legend>{t('Chat engine')}</legend><label className="color-choice"><input type="radio" name="chat-engine" value="web" checked={chatEngine === 'web'} onChange={() => setChatEngine('web')} />{t('Default (web)')}</label><label className="color-choice"><input type="radio" name="chat-engine" value="offline" checked={chatEngine === 'offline'} onChange={() => setChatEngine('offline')} />{t('Offline AI')}</label></fieldset>
+            <p className="modal-help">{t('Default (web) is used until you choose Offline AI. Downloading a model does not switch the engine.')}</p>
             <p className="modal-help">{t("API credentials and updates.")}</p>
             <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'System theme' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
             {teslaActive?<TeslaSettings unit={teslaUnit} onUnit={unit=>{setTeslaUnit(unit);skillPreferences.setItem(TESLA_UNIT_KEY,unit)}}/>:<OfflineModelSelect disabled={thinking || Boolean(streamingId)} />}
