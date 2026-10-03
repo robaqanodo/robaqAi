@@ -179,12 +179,15 @@
   border-color:transparent;
 }
 .owned-map.is-driving .owned-map-places-bar,
+.owned-map.is-driving .owned-map-core,
 .owned-map.is-driving .owned-map-edit,
 .owned-map.is-driving .owned-map-hint,
 .owned-map.is-driving .owned-map-suggest,
 .owned-map.is-driving .owned-map-search,
 .owned-map.is-driving .owned-map-search-status,
 .owned-map.is-driving .owned-map-dock,
+.owned-map.is-driving .owned-map-rail,
+.owned-map.is-driving .owned-map-banner,
 .owned-map.is-driving .owned-map-close{display:none}
 .owned-map-drop{position:relative;width:18px;height:18px;pointer-events:none}
 .owned-map-drop-pin{
@@ -556,7 +559,11 @@
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
   pointer-events:none;
-  bottom:calc(max(12px, env(safe-area-inset-bottom)) + 64px);
+  top:max(10px, env(safe-area-inset-top));
+  bottom:auto;
+}
+.owned-map:has(.owned-map-banner) .owned-map-places{
+  top:calc(max(10px, env(safe-area-inset-top)) + 52px);
 }
 .owned-map-rail{
   position:absolute;z-index:6;
@@ -652,3 +659,30 @@
   background:rgba(42,42,46,.9);color:#fff;border-color:rgba(255,255,255,.18);
 }
 .app-shell.theme-default .owned-map-rail button.is-on{color:#fff}
+
+/* Map logo only. Same dark home-logo paint. Tesla mark stays red. Home logo is untouched. */
+.app-shell.theme-default .owned-map-core .intelligence-orb{
+  filter:drop-shadow(0 0 10px rgba(0,0,0,.45));
+}
+.app-shell.theme-default .owned-map-core .cell-blob{
+  background:radial-gradient(circle at 32% 28%, #2a2a2e 0%, #222226 22%, #18181c 48%, #101012 76%, #070708 100%);
+  box-shadow:inset 0 0 18px rgba(0,0,0,.35), inset -6px -8px 16px rgba(0,0,0,.28), 0 0 22px rgba(0,0,0,.35);
+}
+.app-shell.theme-default .owned-map-core .cell-blob-b{
+  background:radial-gradient(circle at 38% 32%, rgba(36,36,40,.95) 0%, rgba(22,22,26,.55) 35%, rgba(10,10,12,.28) 62%, transparent 78%);
+  box-shadow:inset 0 0 14px rgba(0,0,0,.4), 0 0 16px rgba(0,0,0,.2);
+}
+.app-shell.theme-default .owned-map-core .cell-boundary{
+  border-color:rgba(0,0,0,.25);
+  border-top-color:rgba(0,0,0,.7);
+  border-bottom-color:rgba(28,28,32,.5);
+  box-shadow:inset 0 0 12px rgba(0,0,0,.22), 0 0 8px rgba(0,0,0,.16);
+}
+.app-shell.theme-default .owned-map-core .link-tesla-core:after{
+  border-color:rgba(0,0,0,.25);
+  border-right-color:rgba(0,0,0,.7);
+  border-left-color:rgba(28,28,32,.5);
+  box-shadow:inset 0 0 12px rgba(0,0,0,.22), 0 0 8px rgba(0,0,0,.16);
+}
+.app-shell.theme-default .owned-map-core .tesla-core-logo,
+.app-shell.theme-default .owned-map-core .link-tesla-core>svg.tesla-core-logo{color:#e82127}
