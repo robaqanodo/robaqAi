@@ -30,6 +30,7 @@ import { accountRequest } from './accounts/remote'
 import { ApiKeyBridge } from './tesla/ApiKeyBridge'
 import { PairKeyPage } from './tesla/PairKeyPage'
 import { Navigation } from './navigation/Navigation'
+import { MapPage } from './map/MapPage'
 import { packInstalled } from './translation/package'
 import { translateOffline, stopTranslationWorker } from './translation/client'
 import { automaticTranslation } from './translation/automatic'
@@ -313,6 +314,7 @@ function AppContent() {
   const [teslaActive,setTeslaActive]=useState(()=>skillPreferences.getItem(TESLA_KEY)==='true')
   teslaActiveRef.current = teslaActive
   const [teslaOpen,setTeslaOpen]=useState(false)
+  const [mapOpen,setMapOpen]=useState(false)
   const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
   const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
   useEffect(()=>{setTeslaMenuCollapsed(false);if(teslaActive)setHistoryOpen(false)},[teslaActive,session])
@@ -322,7 +324,7 @@ function AppContent() {
   const teslaLocation=useTeslaLocation()
   const teslaCore=useTeslaCoreInteraction({
     enabled:teslaActive,
-    onLongPress:()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)},
+    onLongPress:()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)},
   })
   // Default connected mode keeps browser geolocation on, including after refresh/session restore.
   useEffect(()=>{
@@ -1279,6 +1281,7 @@ function AppContent() {
   const openLandingPanel = (kind: Exclude<LandingPanel, null>) => {
     setApiOpen(false)
     closeSettingsMenu()
+    setMapOpen(false)
     setLandingPanel(kind)
   }
 
@@ -1322,6 +1325,7 @@ function AppContent() {
 
   const collapseChat = useCallback(() => {
     setApiOpen(false)
+    setMapOpen(false)
     setLandingPanel(null)
     setSettingsMenuOpen(false)
     // If welcome was mid-type, finish it so reopen (without X clear) won't re-type
@@ -1343,6 +1347,7 @@ function AppContent() {
 
   const openChat = useCallback(() => {
     setWatchOpen(false)
+    setMapOpen(false)
     if (chatOpen) return
 
     // Opening chat always leaves voice mode + landing menus
@@ -1397,7 +1402,7 @@ function AppContent() {
 
   return (
     <div
-      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
+      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''}${mapOpen ? ' is-map-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
         hasApiKey && provider ? ` ${providerThemeClass(provider)}` : ''
       }`}
     >
@@ -1430,7 +1435,7 @@ function AppContent() {
             {labMinimized&&labInstalling&&<span className="orb-install-progress"><strong>{Math.min(99,Math.max(0,Math.floor(labProgress*100)))}%</strong><small>{t(modelFlow.busy?modelFlow.phase:"Installing…")}</small></span>}
             <LivingCell
               linkTesla={teslaActive}
-              teslaHomeVisible={!chatOpen&&!landingPanel&&!teslaOpen&&!watchOpen}
+              teslaHomeVisible={!chatOpen&&!landingPanel&&!teslaOpen&&!watchOpen&&!mapOpen}
               teslaSpinning={teslaCore.spinning}
               teslaSettling={teslaCore.settling}
               teslaSpinMs={teslaCore.spinMs}
@@ -1457,8 +1462,8 @@ function AppContent() {
       </div>
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
-      {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>}
-      <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)}} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
+      {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false);setMapOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>}
+      <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)}} onMap={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(false);setHistoryOpen(false);setMapOpen(true)}} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setMapOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setMapOpen(false); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); setMapOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && !teslaActive && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
@@ -1810,6 +1815,7 @@ function AppContent() {
         </div>
       )}
 
+      {mapOpen && <MapPage onClose={()=>setMapOpen(false)} />}
       {teslaActive && teslaOpen && <TeslaPanel unit={teslaUnit} onClose={()=>setTeslaOpen(false)} />}
       {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}
