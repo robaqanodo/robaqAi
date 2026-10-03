@@ -13,7 +13,7 @@ function position(speed:number|null,extra:Partial<GeolocationCoordinates>&{times
  const {timestamp=Date.now(),...coords}=extra
  return {timestamp,coords:{speed,latitude:0,longitude:0,accuracy:5,altitude:null,altitudeAccuracy:null,heading:null,...coords}} as GeolocationPosition
 }
-it('replaces the logo with GPS speed, restores it at rest, and clears stale readings',()=>{const {container}=render(<Core/>);const logo=container.querySelector<SVGElement>('.tesla-core-logo')!;act(()=>enableTeslaLocation());act(()=>success(position(10)));expect(screen.getByText('36')).toBeTruthy();expect(logo.style.visibility).toBe('hidden');act(()=>success(position(0)));expect(container.querySelector('.tesla-core-speed')).toBeNull();expect(logo.style.visibility).toBe('visible');act(()=>success(position(20)));expect(screen.getByText('72')).toBeTruthy();act(()=>vi.advanceTimersByTime(15001));expect(container.querySelector('.tesla-core-speed')).toBeNull();expect(logo.style.visibility).toBe('visible')})
+it('replaces the logo with GPS speed, restores it at rest, and clears stale readings',()=>{const {container}=render(<Core/>);const logo=container.querySelector<SVGElement>('.tesla-core-logo')!;act(()=>enableTeslaLocation());act(()=>success(position(10)));expect(screen.getByText('36')).toBeTruthy();expect(logo.style.visibility).toBe('hidden');act(()=>success(position(0)));expect(container.querySelector('.tesla-core-speed')).toBeNull();expect(logo.style.visibility).toBe('visible');act(()=>success(position(20)));expect(screen.getByText('72')).toBeTruthy();act(()=>vi.advanceTimersByTime(30001));expect(container.querySelector('.tesla-core-speed')).toBeNull();expect(logo.style.visibility).toBe('visible')})
 it('never substitutes a fabricated speed and stops watching when disabled',()=>{const {container}=render(<Core/>);act(()=>enableTeslaLocation());act(()=>success(position(null)));expect(container.querySelector('.tesla-core-speed')).toBeNull();act(()=>stopTeslaLocation());expect(clearWatch).toHaveBeenCalledWith(1);act(()=>success(position(50)));expect(container.querySelector('.tesla-core-speed')).toBeNull()})
 it('converts km/h to mph without changing the source reading',()=>{render(<IntelligenceOrb linkTesla teslaSpeedKmh={100} teslaUnit="mph"/>);expect(screen.getByText('62')).toBeTruthy();expect(screen.getByText('GPS · mph')).toBeTruthy()})
 
@@ -54,18 +54,31 @@ it('resolveSpeedKmh prefers native speed and falls back to haversine delta',()=>
  expect(walkB.speedKmh).toBeLessThan(6)
 })
 
-it('polls getCurrentPosition so a quiet Tesla watch can still derive walking speed',()=>{
+it('primes once like TeslaNav and derives walking speed when the browser only moves the fix',()=>{
  const getCurrentPosition=vi.fn()
  navigator.geolocation.getCurrentPosition=getCurrentPosition
  const {container}=render(<Core/>)
  act(()=>enableTeslaLocation())
- act(()=>vi.advanceTimersByTime(1200))
- expect(getCurrentPosition).toHaveBeenCalled()
+ const options=expect.objectContaining({enableHighAccuracy:true,maximumAge:0,timeout:10000})
+ expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+ expect(getCurrentPosition).toHaveBeenCalledWith(expect.any(Function),expect.any(Function),options)
+ expect(navigator.geolocation.watchPosition).toHaveBeenCalledWith(expect.any(Function),expect.any(Function),options)
+ act(()=>vi.advanceTimersByTime(5000))
+ expect(getCurrentPosition).toHaveBeenCalledTimes(1)
  const deliver=getCurrentPosition.mock.calls[0][0] as PositionCallback
  const t0=Date.now()
  act(()=>deliver(position(null,{latitude:41.7,longitude:44.8,accuracy:100,timestamp:t0-60000})))
  expect(container.querySelector('.tesla-core-speed')).toBeNull()
  act(()=>vi.advanceTimersByTime(2000))
+ // ~0.00004° ≈ 4.4m in 2s ≈ 8 km/h. Speed is null and the timestamp is stale — still a walk.
  act(()=>deliver(position(null,{latitude:41.70004,longitude:44.8,accuracy:100,timestamp:Date.now()-60000})))
  expect(screen.getByText('8')).toBeTruthy()
+})
+
+it('uses position deltas when Tesla reports speed 0 while the fix is moving',()=>{
+ const stopped=resolveSpeedKmh(0,41.7,44.8,10_000,30,null,null)
+ expect(stopped.speedKmh).toBe(0)
+ const walking=resolveSpeedKmh(0,41.70002,44.8,12_000,30,stopped.prev,stopped.smoothed)
+ expect(walking.speedKmh).toBeGreaterThan(3)
+ expect(walking.speedKmh).toBeLessThan(6)
 })
