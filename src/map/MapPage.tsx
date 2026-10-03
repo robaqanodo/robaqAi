@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react'
-import {Map, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
+import {Map, Marker, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
@@ -27,11 +27,15 @@ type RouteData = RouteFeature | {type: 'FeatureCollection'; features: []}
 type TripId = PlaceId | ExtraId | 'search'
 type Trip = {id: TripId; place: SavedPlace}
 type Arrival = {label: string; left: number}
+type Maneuver = 'straight' | 'slight-left' | 'left' | 'slight-right' | 'right' | 'uturn' | 'arrive'
+type GuideStep = {maneuver: Maneuver; name: string; distance: number}
+type Guide = {distance: number; duration: number; steps: GuideStep[]}
 type MapMemory = {
   selected: PlaceId
   trip: Trip | null
   query: string
   route: [number, number][] | null
+  guide: Guide | null
   following: boolean
   driving: boolean
 }
@@ -42,6 +46,7 @@ const mapMemory: MapMemory = {
   trip: null,
   query: '',
   route: null,
+  guide: null,
   following: true,
   driving: false,
 }
@@ -109,6 +114,95 @@ function hitsFrom(data: unknown): Hit[] {
 
 function lineData(coordinates: [number, number][]): RouteData {
   return {type: 'Feature', properties: {}, geometry: {type: 'LineString', coordinates}}
+}
+
+function pathMeters(coords: [number, number][]) {
+  let meters = 0
+  for (let i = 1; i < coords.length; i++) {
+    meters += metersBetween(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0])
+  }
+  return meters
+}
+
+function maneuverOf(type: string, modifier: string): Maneuver {
+  if (type === 'arrive') return 'arrive'
+  if (modifier === 'uturn' || type === 'uturn') return 'uturn'
+  if (modifier === 'slight left') return 'slight-left'
+  if (modifier === 'slight right') return 'slight-right'
+  if (modifier === 'left' || modifier === 'sharp left') return 'left'
+  if (modifier === 'right' || modifier === 'sharp right') return 'right'
+  return 'straight'
+}
+
+function guideFrom(body: {distance?: unknown; duration?: unknown; steps?: unknown}, coordinates: [number, number][]): Guide {
+  const steps: GuideStep[] = []
+  if (Array.isArray(body.steps)) {
+    for (const row of body.steps) {
+      if (!row || typeof row !== 'object') continue
+      const step = row as {maneuver?: unknown; modifier?: unknown; name?: unknown; distance?: unknown}
+      const distance = Number(step.distance)
+      if (!Number.isFinite(distance) || distance < 0) continue
+      steps.push({
+        maneuver: maneuverOf(typeof step.maneuver === 'string' ? step.maneuver : '', typeof step.modifier === 'string' ? step.modifier : ''),
+        name: typeof step.name === 'string' ? step.name : '',
+        distance,
+      })
+    }
+  }
+  const distance = Number(body.distance)
+  const duration = Number(body.duration)
+  return {
+    distance: Number.isFinite(distance) && distance > 0 ? distance : pathMeters(coordinates),
+    duration: Number.isFinite(duration) && duration > 0 ? duration : 0,
+    steps,
+  }
+}
+
+function stepCursor(steps: GuideStep[], traveled: number) {
+  let start = 0
+  for (let i = 0; i < steps.length; i++) {
+    const span = Math.max(0, steps[i].distance)
+    const end = start + span
+    if (traveled < end - 8 || i === steps.length - 1) {
+      const into = Math.max(0, Math.min(span, traveled - start))
+      return {index: i, remain: Math.max(0, span - into)}
+    }
+    start = end
+  }
+  return {index: 0, remain: steps[0]?.distance ?? 0}
+}
+
+function splitLabel(label: string) {
+  const parts = label.split(',')
+  const title = (parts[0] || label).trim()
+  const rest = parts.slice(1).join(',').trim()
+  return {title, rest}
+}
+
+function TurnArrow({kind}: {kind: Maneuver}) {
+  if (kind === 'arrive') {
+    return (
+      <svg className="owned-map-turn" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="currentColor" d="M12 2.4a6.2 6.2 0 0 0-6.2 6.2c0 4.7 6.2 12.6 6.2 12.6s6.2-7.9 6.2-12.6A6.2 6.2 0 0 0 12 2.4zm0 8.4a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4z"/>
+      </svg>
+    )
+  }
+  const d = kind === 'left'
+    ? 'M16.5 20 V12.2 Q16.5 6.5 10.8 6.5 H5.2 M5.2 6.5 9.4 2.6 M5.2 6.5 9.4 10.4'
+    : kind === 'right'
+      ? 'M7.5 20 V12.2 Q7.5 6.5 13.2 6.5 H18.8 M18.8 6.5 14.6 2.6 M18.8 6.5 14.6 10.4'
+      : kind === 'slight-left'
+        ? 'M16 20.5 C15 14 12 10 5.2 6.2 M5.2 6.2 9.6 5.2 M5.2 6.2 6.8 10.4'
+        : kind === 'slight-right'
+          ? 'M8 20.5 C9 14 12 10 18.8 6.2 M18.8 6.2 14.4 5.2 M18.8 6.2 17.2 10.4'
+          : kind === 'uturn'
+            ? 'M8 20 V11.5 Q8 4.5 15 4.5 Q21 4.5 21 11 V16.2 M21 16.2 16.8 12.6 M21 16.2 21 16.2 M21 16.2 24.6 12.8'
+            : 'M12 20.5 V5.2 M12 5.2 7.2 10 M12 5.2 16.8 10'
+  return (
+    <svg className="owned-map-turn" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={d} fill="none" stroke="currentColor" strokeWidth="2.15" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
 }
 
 /** Keep the blue line attached to the car. Far off the polyline, keep the whole route. */
@@ -257,6 +351,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [hint, setHint] = useState<string | null>(null)
   const [markerKind, setMarkerKind] = useState<MarkerKind>(loadMarkerKind)
   const [trip, setTrip] = useState<Trip | null>(mapMemory.trip)
+  const [guide, setGuide] = useState<Guide | null>(mapMemory.guide)
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(mapMemory.following)
   const [driving, setDriving] = useState(mapMemory.driving)
@@ -356,6 +451,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     arrivedRef.current = true
     paintRoute(EMPTY)
     showDestination(null)
+    mapMemory.guide = null
+    setGuide(null)
     const card = {label: place.label, left: 5}
     arrivalRef.current = card
     setArrival(card)
@@ -437,6 +534,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setHint(null)
     paintRoute(EMPTY)
     showDestination(null)
+    mapMemory.guide = null
+    setGuide(null)
+  }
+
+  function rememberGuide(next: Guide | null) {
+    mapMemory.guide = next
+    setGuide(next)
   }
 
   async function navigate(id: TripId, place: SavedPlace, andDrive = false) {
@@ -465,6 +569,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       routeCoordsRef.current = straight
       mapMemory.route = straight
       paintRoute(lineData(straight))
+      rememberGuide({distance: pathMeters(straight), duration: 0, steps: []})
     } else {
       routeCoordsRef.current = null
       mapMemory.route = null
@@ -484,9 +589,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     routeCoordsRef.current = straight
     mapMemory.route = straight
     paintRoute(lineData(straight))
+    rememberGuide({distance: pathMeters(straight), duration: 0, steps: []})
     try {
       const response = await fetch(`/api/route?from=${origin.lon},${origin.lat}&to=${place.lon},${place.lat}`)
-      const body = await response.json() as {geometry?: {type?: string; coordinates?: unknown}}
+      const body = await response.json() as {geometry?: {type?: string; coordinates?: unknown}; distance?: unknown; duration?: unknown; steps?: unknown}
       if (seq !== routeSeq.current) return
       const raw = body.geometry?.type === 'LineString' && Array.isArray(body.geometry.coordinates) ? body.geometry.coordinates : []
       const coordinates: [number, number][] = []
@@ -502,6 +608,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       routeCoordsRef.current = coordinates
       mapMemory.route = coordinates
       mapMemory.trip = tripRef.current
+      rememberGuide(guideFrom(body, coordinates))
       const here = pointRef.current ?? origin
       paintRoute(lineData(sliceRoute(coordinates, here.lat, here.lon)))
       const view = mapRef.current
@@ -527,7 +634,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       touchPitch: true,
       pitchWithRotate: true,
     })
-    map.addControl(new NavigationControl({showCompass: false, visualizePitch: false}), 'bottom-left')
     map.touchZoomRotate.enableRotation()
     map.dragRotate.enable()
     map.touchPitch.enable()
@@ -596,6 +702,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       showDestination(active.place)
       const here = pointRef.current
       paintRoute(lineData(here ? sliceRoute(coords, here.lat, here.lon) : coords))
+      if (!mapMemory.guide) rememberGuide({distance: pathMeters(coords), duration: 0, steps: []})
     } else if (active) {
       void navigate(active.id, active.place, drivingRef.current)
     }
@@ -964,6 +1071,28 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setFollowing(false)
   }
 
+  function clearDrawnRoute() {
+    setQuery('')
+    setQueryOpen(false)
+    setQueryHits([])
+    setQuerySearched(false)
+    hitsQueryRef.current = ''
+    mapMemory.query = ''
+    setEditing(false)
+    setAdding(false)
+    cancelRoute()
+  }
+
+  function zoomBy(delta: number) {
+    const map = mapRef.current
+    if (!map) return
+    map.easeTo({zoom: Math.min(19, Math.max(map.getMinZoom(), map.getZoom() + delta)), duration: 180})
+  }
+
+  function northUp() {
+    mapRef.current?.easeTo({bearing: 0, duration: 280})
+  }
+
   function onPlace(id: PlaceId) {
     if (tripRef.current?.id === id) {
       cancelRoute()
@@ -1061,6 +1190,96 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setHolding(false)
     mapCore.onPointerCancel(event)
   }
+
+  const routeLine = routeCoordsRef.current
+  const remainMeters = guide && trip && routeLine && routeLine.length >= 2
+    ? pathMeters(!point ? routeLine : routeLine.length <= 2 ? directLine(point, trip.place) : sliceRoute(routeLine, point.lat, point.lon))
+    : guide?.distance ?? 0
+  const showRoute = !!(trip && guide && routeLine && routeLine.length >= 2 && !arrival)
+  const traveled = guide ? Math.max(0, guide.distance - remainMeters) : 0
+  const cursor = guide && guide.steps.length ? stepCursor(guide.steps, traveled) : null
+  const currentStep = cursor && guide ? guide.steps[cursor.index] : null
+  const upcoming = guide && cursor
+    ? guide.steps.slice(cursor.index + 1).filter(step => step.maneuver !== 'arrive' && step.name.trim()).slice(0, 4)
+    : []
+  const placeLabel = trip ? splitLabel(trip.place.label) : {title: '', rest: ''}
+  const primaryName = currentStep && currentStep.maneuver !== 'arrive' && currentStep.name.trim()
+    ? currentStep.name.trim()
+    : placeLabel.title
+  const primaryMeters = currentStep && currentStep.maneuver !== 'arrive' ? cursor!.remain : remainMeters
+  const etaSeconds = guide && guide.duration > 0 && guide.distance > 0
+    ? guide.duration * Math.min(1, Math.max(0, remainMeters / guide.distance))
+    : 0
+
+  function formatDistance(meters: number) {
+    if (!Number.isFinite(meters) || meters < 0) meters = 0
+    if (speedUnit === 'mph') {
+      const miles = meters / 1609.344
+      if (miles < 0.1) {
+        const feet = Math.max(50, Math.round((meters * 3.28084) / 50) * 50)
+        return t(`${feet} ft`)
+      }
+      const text = miles < 10 ? miles.toFixed(1) : String(Math.round(miles))
+      return t(`${text} mi`)
+    }
+    if (meters < 950) {
+      const rounded = Math.max(50, Math.round(meters / 50) * 50)
+      return t(`${rounded} m`)
+    }
+    const km = meters / 1000
+    const text = km < 10 ? km.toFixed(1) : String(Math.round(km))
+    return t(`${text} km`)
+  }
+
+  function formatDuration(seconds: number) {
+    const mins = Math.max(1, Math.round(seconds / 60))
+    if (mins < 60) return t(`${mins} min`)
+    const hours = Math.floor(mins / 60)
+    const rest = mins % 60
+    if (rest === 0) return t(`${hours} hr`)
+    return t(`${hours} hr ${rest} min`)
+  }
+
+  function formatEta(seconds: number) {
+    return new Date(Date.now() + seconds * 1000).toLocaleTimeString(locale === 'ka' ? 'ka-GE' : locale === 'ru' ? 'ru-RU' : undefined, {hour: 'numeric', minute: '2-digit'})
+  }
+
+  const routeCard = showRoute && guide && trip ? (
+    <aside className="owned-map-guide" aria-label={primaryName}>
+      <div className="owned-map-guide-next">
+        <TurnArrow kind={currentStep && currentStep.maneuver !== 'arrive' ? currentStep.maneuver : 'straight'} />
+        <div>
+          <div className="owned-map-guide-dist">{formatDistance(primaryMeters)}</div>
+          <div className="owned-map-guide-road">{primaryName}</div>
+        </div>
+      </div>
+      <ul className="owned-map-guide-list">
+        {upcoming.map((step, index) => (
+          <li key={`${step.name}-${index}-${step.distance}`}>
+            <TurnArrow kind={step.maneuver} />
+            <span className="owned-map-guide-step-dist">{formatDistance(step.distance)}</span>
+            <span className="owned-map-guide-step-name">{step.name}</span>
+          </li>
+        ))}
+        <li className="is-dest">
+          <TurnArrow kind="arrive" />
+          <span className="owned-map-guide-dest">
+            <strong>{placeLabel.title}</strong>
+            {placeLabel.rest && <span>{placeLabel.rest}</span>}
+          </span>
+        </li>
+      </ul>
+      <button type="button" className="owned-map-guide-cancel" onClick={clearDrawnRoute}>{t('Cancel')}</button>
+      <div className="owned-map-guide-meta">
+        <span>{formatDistance(guide.distance)}</span>
+        {guide.duration > 0 && <span>{formatDuration(guide.duration)}</span>}
+        {etaSeconds > 0 && <span>{formatEta(etaSeconds)}</span>}
+      </div>
+    </aside>
+  ) : null
+  const routeBanner = showRoute && trip ? (
+    <div className="owned-map-banner">{placeLabel.rest ? `${placeLabel.title}  ${placeLabel.rest}` : placeLabel.title}</div>
+  ) : null
 
   return (
     <section className={`owned-map${driving ? ' is-driving' : ''}`} role="dialog" aria-modal="true" aria-label={t('Map')}>
@@ -1221,10 +1440,23 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           <div className="owned-map-arrival-count" aria-hidden="true">{arrival.left}</div>
         </div>
       )}
-      <div className="owned-map-dock">
-      <button type="button" className={`owned-map-pill owned-map-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('GPS')} onClick={recenter}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 20.2 20.2c.35.78-.48 1.55-1.24 1.16L12 17.7l-6.96 3.66c-.76.39-1.59-.38-1.24-1.16L12 2.6z"/></svg>
-      </button>
+      {routeCard}
+      {routeBanner}
+      <div className="owned-map-rail">
+        <button type="button" aria-label={t('North up')} onClick={northUp}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M12 4.2 14.1 11 12 9.6 9.9 11 12 4.2z"/><path fill="#c5cad1" d="M12 19.8 9.9 13 12 14.4 14.1 13 12 19.8z"/></svg>
+        </button>
+        <span className="owned-map-rail-gap" />
+        <button type="button" aria-label={t('Zoom in')} onClick={() => zoomBy(1)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+        </button>
+        <button type="button" aria-label={t('Zoom out')} onClick={() => zoomBy(-1)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+        </button>
+        <span className="owned-map-rail-gap" />
+        <button type="button" className={following ? 'is-on' : ''} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M12 3.5v3.2M12 17.3v3.2M3.5 12h3.2M17.3 12h3.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+        </button>
       </div>
       <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>

@@ -77,36 +77,77 @@ export async function handleGeocode(req: ApiRequest, res: ServerResponse) {
   }
 }
 
-type RouteBody = { code?: string; routes?: { geometry?: { type?: string; coordinates?: [number, number][] } }[] }
+type OsrmStep = { distance?: number; name?: string; maneuver?: { type?: string; modifier?: string } }
+type RouteBody = {
+  code?: string
+  routes?: {
+    distance?: number
+    duration?: number
+    geometry?: { type?: string; coordinates?: [number, number][] }
+    legs?: { steps?: OsrmStep[] }[]
+  }[]
+}
+type StepOut = { maneuver: string; modifier: string; name: string; distance: number }
+type DrivingLine = {
+  coordinates: [number, number][]
+  distance?: number
+  duration?: number
+  steps?: StepOut[]
+}
+
+function stepsFrom(route: NonNullable<RouteBody['routes']>[number]): StepOut[] {
+  const out: StepOut[] = []
+  for (const leg of route.legs ?? []) {
+    for (const step of leg.steps ?? []) {
+      const distance = Number(step.distance)
+      if (!Number.isFinite(distance) || distance < 0) continue
+      out.push({
+        maneuver: typeof step.maneuver?.type === 'string' ? step.maneuver.type : 'continue',
+        modifier: typeof step.maneuver?.modifier === 'string' ? step.maneuver.modifier : '',
+        name: typeof step.name === 'string' ? step.name : '',
+        distance,
+      })
+      if (out.length >= 64) return out
+    }
+  }
+  return out
+}
 
 /** Project OSRM first. If it fails or has no LineString, the public OSM.de car router. */
-async function drivingLine(from: [number, number], to: [number, number]): Promise<{ coordinates: [number, number][] } | { error: 404 | 502 }> {
+async function drivingLine(from: [number, number], to: [number, number]): Promise<DrivingLine | null> {
   const path = `${from[0]},${from[1]};${to[0]},${to[1]}`
+  const query = 'overview=full&geometries=geojson&steps=true'
   const targets = [
-    `https://router.project-osrm.org/route/v1/driving/${path}?overview=full&geometries=geojson`,
-    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${path}?overview=full&geometries=geojson`,
+    `https://router.project-osrm.org/route/v1/driving/${path}?${query}`,
+    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${path}?${query}`,
   ]
-  let sawBody = false
-  let sawFailure = false
   for (const target of targets) {
     try {
       const upstream = await fetch(target, {
         headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
         signal: AbortSignal.timeout(12000),
       })
-      if (!upstream.ok) { sawFailure = true; continue }
+      if (!upstream.ok) continue
       const body = await upstream.json() as RouteBody
-      const geometry = body.routes?.[0]?.geometry
+      const route = body.routes?.[0]
+      const geometry = route?.geometry
       const coordinates = geometry?.coordinates
       if (body.code === 'Ok' && geometry?.type === 'LineString' && Array.isArray(coordinates) && coordinates.length >= 2) {
-        return { coordinates }
+        const distance = Number(route?.distance)
+        const duration = Number(route?.duration)
+        const steps = route ? stepsFrom(route) : []
+        return {
+          coordinates,
+          ...(Number.isFinite(distance) && distance > 0 ? { distance } : {}),
+          ...(Number.isFinite(duration) && duration > 0 ? { duration } : {}),
+          ...(steps.length ? { steps } : {}),
+        }
       }
-      sawBody = true
     } catch {
-      sawFailure = true
+      /* try the next router */
     }
   }
-  return { error: sawBody && !sawFailure ? 404 : 502 }
+  return null
 }
 
 export async function handleRoute(req: ApiRequest, res: ServerResponse) {
@@ -116,8 +157,16 @@ export async function handleRoute(req: ApiRequest, res: ServerResponse) {
   const to = pair(url.searchParams.get('to'))
   if (!from || !to) { respond(res, 400, { error: 'from and to must be lon,lat' }); return }
   const line = await drivingLine(from, to)
-  if ('error' in line) { respond(res, line.error, { error: 'Route unavailable' }); return }
-  respond(res, 200, { geometry: { type: 'LineString', coordinates: line.coordinates } })
+  if (!line) {
+    respond(res, 200, { geometry: { type: 'LineString', coordinates: [from, to] } })
+    return
+  }
+  respond(res, 200, {
+    geometry: { type: 'LineString', coordinates: line.coordinates },
+    ...(line.distance != null ? { distance: line.distance } : {}),
+    ...(line.duration != null ? { duration: line.duration } : {}),
+    ...(line.steps ? { steps: line.steps } : {}),
+  })
 }
 
 export function mapProxyMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {
