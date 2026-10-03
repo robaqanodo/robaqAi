@@ -5,10 +5,10 @@ const MOVE_CANCEL_PX=14
 const SPIN_MS=1800
 const SETTLE_MS=1100
 
-type Options={enabled:boolean;onLongPress:()=>void;longPressMs?:number}
+type Options={enabled:boolean;onLongPress?:()=>void;onTap?:()=>void;longPressMs?:number}
 
-/** Connected LinkyourTesla core: one faster startup-style spin per tap (~1.8s); mid-spin taps ignored. Home long-press is 3s. Map passes 1s. */
-export function useTeslaCoreInteraction({enabled,onLongPress,longPressMs=LONG_PRESS_MS}:Options){
+/** Connected LinkyourTesla core: one faster startup-style spin per tap (~1.8s); mid-spin taps ignored. Home long-press is 3s. Map passes onTap so a short tap closes. */
+export function useTeslaCoreInteraction({enabled,onLongPress,onTap,longPressMs=LONG_PRESS_MS}:Options){
   const [spinning,setSpinning]=useState(false)
   const [settling,setSettling]=useState(false)
   const [spinKey,setSpinKey]=useState(0)
@@ -24,8 +24,10 @@ export function useTeslaCoreInteraction({enabled,onLongPress,longPressMs=LONG_PR
   const startY=useRef(0)
   const cancelled=useRef(false)
   const onLongPressRef=useRef(onLongPress)
+  const onTapRef=useRef(onTap)
   const finishRef=useRef<()=>void>(()=>{})
   onLongPressRef.current=onLongPress
+  onTapRef.current=onTap
 
   const clearLong=useCallback(()=>{
     if(longTimer.current){window.clearTimeout(longTimer.current);longTimer.current=0}
@@ -99,11 +101,12 @@ export function useTeslaCoreInteraction({enabled,onLongPress,longPressMs=LONG_PR
     cancelled.current=false
     longFired.current=false
     clearLong()
+    if(!onLongPressRef.current)return
     longTimer.current=window.setTimeout(()=>{
       longTimer.current=0
       if(cancelled.current||pointerId.current===null)return
       longFired.current=true
-      onLongPressRef.current()
+      onLongPressRef.current?.()
     },longPressMs)
   },[enabled,clearLong,longPressMs])
 
@@ -120,6 +123,7 @@ export function useTeslaCoreInteraction({enabled,onLongPress,longPressMs=LONG_PR
     pointerId.current=null
     clearLong()
     if(!commitTap||longFired.current||cancelled.current)return
+    if(onTapRef.current){onTapRef.current();return}
     startSpin()
   },[enabled,clearLong,startSpin])
 

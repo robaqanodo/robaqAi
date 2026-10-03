@@ -17,7 +17,7 @@ import './map.css'
 setWorkerUrl(maplibreWorkerUrl)
 
 type Fix = {lat: number; lon: number; heading: number | null}
-type Hit = {label: string; lat: number; lon: number}
+type Hit = {label: string; name: string; address: string; lat: number; lon: number}
 type RouteFeature = {
   type: 'Feature'
   properties: Record<string, never>
@@ -40,7 +40,7 @@ type MapMemory = {
   driving: boolean
 }
 
-/** Survives map close. Logo-hold keeps this. X confirm clears the trip, not saved places. */
+/** Survives map close. Logo tap keeps this. X confirm clears the trip, not saved places. */
 const mapMemory: MapMemory = {
   selected: 'home',
   trip: null,
@@ -146,12 +146,14 @@ function hitsFrom(data: unknown): Hit[] {
   const next: Hit[] = []
   for (const row of rows) {
     if (!row || typeof row !== 'object') continue
-    const hit = row as {label?: unknown; lat?: unknown; lon?: unknown}
+    const hit = row as {label?: unknown; name?: unknown; address?: unknown; lat?: unknown; lon?: unknown}
     const lat = Number(hit.lat)
     const lon = Number(hit.lon)
-    const label = typeof hit.label === 'string' ? hit.label : ''
-    if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
-    next.push({label, lat, lon})
+    const label = typeof hit.label === 'string' ? hit.label.trim() : ''
+    const name = typeof hit.name === 'string' && hit.name.trim() ? hit.name.trim() : (label.split(',')[0]?.trim() || label)
+    const address = typeof hit.address === 'string' ? hit.address.trim() : ''
+    if (!label || !name || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
+    next.push({label, name, address, lat, lon})
   }
   return next
 }
@@ -422,6 +424,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [places, setPlaces] = useState(loadPlaces)
   const [selected, setSelected] = useState<PlaceId>(mapMemory.selected)
   const [editing, setEditing] = useState(false)
+  const [editExtra, setEditExtra] = useState<ExtraId | null>(null)
   const [draft, setDraft] = useState('')
   const [hits, setHits] = useState<Hit[]>([])
   const [searching, setSearching] = useState(false)
@@ -456,6 +459,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const addingRef = useRef(false)
   const addQueryRef = useRef('')
   const placeMarkersRef = useRef<Marker[]>([])
+  const placeHoldTimer = useRef(0)
+  const suppressPlaceClick = useRef(false)
+  const placeHoldAt = useRef({x: 0, y: 0, pointerId: -1})
+  const chosenHitRef = useRef<Hit | null>(null)
+  useEffect(() => () => {
+    if (placeHoldTimer.current) window.clearTimeout(placeHoldTimer.current)
+  }, [])
 
   const courseRef = useRef<CourseAnchor | null>(null)
   const point: Fix | null = (() => {
@@ -898,18 +908,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         .then(response => response.ok ? response.json() as Promise<unknown> : [])
         .then(data => {
           if (ctrl.signal.aborted) return
-          const rows = Array.isArray(data) ? data : []
-          const next: Hit[] = []
-          for (const row of rows) {
-            if (!row || typeof row !== 'object') continue
-            const hit = row as {label?: unknown; lat?: unknown; lon?: unknown}
-            const lat = Number(hit.lat)
-            const lon = Number(hit.lon)
-            const label = typeof hit.label === 'string' ? hit.label : ''
-            if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
-            next.push({label, lat, lon})
-          }
-          setHits(next)
+          setHits(hitsFrom(data))
           setSearched(true)
         })
         .catch(() => {
@@ -963,6 +962,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       setQuerySearching(false)
       setQuerySearched(false)
       hitsQueryRef.current = ''
+      if (!q) chosenHitRef.current = null
       return
     }
     const ctrl = new AbortController()
@@ -973,17 +973,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         .then(response => response.ok ? response.json() as Promise<unknown> : [])
         .then(data => {
           if (ctrl.signal.aborted) return
-          const rows = Array.isArray(data) ? data : []
-          const next: Hit[] = []
-          for (const row of rows) {
-            if (!row || typeof row !== 'object') continue
-            const hit = row as {label?: unknown; lat?: unknown; lon?: unknown}
-            const lat = Number(hit.lat)
-            const lon = Number(hit.lon)
-            const label = typeof hit.label === 'string' ? hit.label : ''
-            if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
-            next.push({label, lat, lon})
-          }
+          const next = hitsFrom(data)
           setQueryHits(next)
           setQuerySearched(true)
           hitsQueryRef.current = q
@@ -1065,7 +1055,20 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }, [markerKind, heading])
 
   function openEditor(id: PlaceId) {
+    setEditExtra(null)
     setSelected(id)
+    setDraft('')
+    setHits([])
+    setSearched(false)
+    setSearching(false)
+    setHint(null)
+    setAdding(false)
+    setEditing(true)
+  }
+
+  function openExtraEditor(id: ExtraId) {
+    if (!places[id]) return
+    setEditExtra(id)
     setDraft('')
     setHits([])
     setSearched(false)
@@ -1166,6 +1169,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }
 
   function clearDrawnRoute() {
+    chosenHitRef.current = null
     setQuery('')
     setQueryOpen(false)
     setQueryHits([])
@@ -1218,8 +1222,64 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     void navigate(id, place, true)
   }
 
+  function onPlaceClick(id: PlaceId | ExtraId) {
+    if (suppressPlaceClick.current) {
+      suppressPlaceClick.current = false
+      return
+    }
+    if (id === 'home' || id === 'work') { onPlace(id); return }
+    const saved = places[id]
+    if (!saved) return
+    if (tripRef.current?.id === id) { cancelRoute(); return }
+    void navigate(id, saved, true)
+  }
+
+  function placePointerDown(id: PlaceId | ExtraId, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!event.isPrimary || event.button !== 0) return
+    if (placeHoldTimer.current) window.clearTimeout(placeHoldTimer.current)
+    placeHoldTimer.current = 0
+    suppressPlaceClick.current = false
+    if (!places[id]) return
+    placeHoldAt.current = {x: event.clientX, y: event.clientY, pointerId: event.pointerId}
+    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* already released */ }
+    placeHoldTimer.current = window.setTimeout(() => {
+      placeHoldTimer.current = 0
+      suppressPlaceClick.current = true
+      if (id === 'home' || id === 'work') openEditor(id)
+      else openExtraEditor(id)
+    }, 1000)
+  }
+
+  function placePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (!placeHoldTimer.current || placeHoldAt.current.pointerId !== event.pointerId) return
+    if (Math.hypot(event.clientX - placeHoldAt.current.x, event.clientY - placeHoldAt.current.y) <= 14) return
+    window.clearTimeout(placeHoldTimer.current)
+    placeHoldTimer.current = 0
+  }
+
+  function placePointerUp(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    if (placeHoldAt.current.pointerId !== event.pointerId) return
+    if (!placeHoldTimer.current) return
+    window.clearTimeout(placeHoldTimer.current)
+    placeHoldTimer.current = 0
+  }
+
   function choose(hit: Hit) {
     const place: SavedPlace = {lat: hit.lat, lon: hit.lon, label: hit.label}
+    if (editExtra) {
+      const current = places[editExtra]
+      if (!current) return
+      const saved: ExtraPlace = {lat: place.lat, lon: place.lon, label: place.label, name: current.name}
+      const id = editExtra
+      setPlaces(saveExtra(id, saved))
+      setEditExtra(null)
+      setEditing(false)
+      setAdding(false)
+      setHits([])
+      void navigate(id, saved, true)
+      return
+    }
     setPlaces(savePlace(selected, place))
     setEditing(false)
     setAdding(false)
@@ -1228,43 +1288,15 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }
 
   function goToQuery(hit: Hit, andDrive = false) {
-    setQuery(hit.label)
+    chosenHitRef.current = hit
+    setQuery(hit.name || hit.label)
     setQueryHits([])
     setQueryOpen(false)
     setQuerySearched(false)
-    hitsQueryRef.current = hit.label
+    hitsQueryRef.current = ''
     setEditing(false)
     setAdding(false)
     void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label}, andDrive)
-  }
-
-  async function goFromSearch(andDrive = false) {
-    const q = query.trim()
-    if (q.length < 2) return
-    let hit = hitsQueryRef.current === q ? queryHits[0] : undefined
-    if (!hit) {
-      setQueryOpen(true)
-      setQuerySearching(true)
-      try {
-        const params = new URLSearchParams({q, lang: locale})
-        const response = await fetch(`/api/geocode?${params}`)
-        const next = hitsFrom(response.ok ? await response.json() as unknown : [])
-        if (query.trim() !== q) return
-        setQueryHits(next)
-        setQuerySearched(true)
-        hitsQueryRef.current = q
-        hit = next[0]
-      } catch {
-        if (query.trim() !== q) return
-        setQueryHits([])
-        setQuerySearched(true)
-        return
-      } finally {
-        setQuerySearching(false)
-      }
-    }
-    if (!hit) return
-    goToQuery(hit, andDrive)
   }
 
   function onGo() {
@@ -1277,7 +1309,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       startDrive()
       return
     }
-    void goFromSearch(true)
+    const chosen = chosenHitRef.current
+    if (!chosen) return
+    goToQuery(chosen, true)
   }
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
@@ -1285,7 +1319,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [holding, setHolding] = useState(false)
   const [clearAsk, setClearAsk] = useState(false)
   clearAskRef.current = clearAsk
-  const mapCore = useTeslaCoreInteraction({enabled: showCore, onLongPress: onClose, longPressMs: 1000})
+  const mapCore = useTeslaCoreInteraction({enabled: showCore, onTap: onClose})
   function startHold(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || event.button !== 0) return
     setHolding(true)
@@ -1431,7 +1465,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           <div className="owned-map-search-row">
           <input
             value={query}
-            onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
+            onChange={event => { chosenHitRef.current = null; setQuery(event.target.value); setQueryOpen(true) }}
             onFocus={() => { if (!driving) setQueryOpen(true) }}
             placeholder={t('Search address')}
             aria-label={t('Search address')}
@@ -1448,7 +1482,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             <ul className="owned-map-suggest">
               {queryHits.map(hit => (
                 <li key={`${hit.lat},${hit.lon},${hit.label}`}>
-                  <button type="button" onClick={() => goToQuery(hit)}>{hit.label}</button>
+                  <button type="button" onClick={() => goToQuery(hit)}>
+                    <span className="owned-map-suggest-name">{hit.name || hit.label}</span>
+                    {hit.address && hit.address !== (hit.name || hit.label) && <span className="owned-map-suggest-address">{hit.address}</span>}
+                  </button>
                 </li>
               ))}
             </ul>
@@ -1456,11 +1493,11 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         </form>
         </div>
         <div className="owned-map-places-bar">
-          <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
+          <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlaceClick('home')} onPointerDown={event => placePointerDown('home', event)} onPointerMove={placePointerMove} onPointerUp={placePointerUp} onPointerCancel={placePointerUp} onContextMenu={event => event.preventDefault()}>
             <SlotIcon id="home" />
             <span>{t('HOME')}</span>
           </button>
-          <button type="button" className={`owned-map-pill${workOn ? ' is-on' : ''}`} aria-pressed={workOn} onClick={() => onPlace('work')}>
+          <button type="button" className={`owned-map-pill${workOn ? ' is-on' : ''}`} aria-pressed={workOn} onClick={() => onPlaceClick('work')} onPointerDown={event => placePointerDown('work', event)} onPointerMove={placePointerMove} onPointerUp={placePointerUp} onPointerCancel={placePointerUp} onContextMenu={event => event.preventDefault()}>
             <SlotIcon id="work" />
             <span>{t('WORK')}</span>
           </button>
@@ -1469,13 +1506,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             if (!saved) return null
             const on = trip?.id === id
             return (
-              <button key={id} type="button" className={`owned-map-pill${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => {
-                if (tripRef.current?.id === id) {
-                  cancelRoute()
-                  return
-                }
-                void navigate(id, saved, true)
-              }}>
+              <button key={id} type="button" className={`owned-map-pill${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => onPlaceClick(id)} onPointerDown={event => placePointerDown(id, event)} onPointerMove={placePointerMove} onPointerUp={placePointerUp} onPointerCancel={placePointerUp} onContextMenu={event => event.preventDefault()}>
                 <SlotIcon id={id} />
                 <span>{saved.name}</span>
               </button>
@@ -1487,7 +1518,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         </div>
         {editing && (
           <form className="owned-map-edit" onSubmit={event => event.preventDefault()}>
-            <p className="owned-map-edit-for">{t(selected === 'home' ? 'HOME' : 'WORK')}</p>
+            <p className="owned-map-edit-for">{editExtra ? (places[editExtra]?.name ?? '') : t(selected === 'home' ? 'HOME' : 'WORK')}</p>
             <input
               value={draft}
               onChange={event => setDraft(event.target.value)}
@@ -1587,6 +1618,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             <button type="button" onClick={() => setClearAsk(false)}>{t('Cancel')}</button>
             <button type="button" className="is-danger" onClick={() => {
               setClearAsk(false)
+              chosenHitRef.current = null
               setQuery('')
               setQueryOpen(false)
               setQueryHits([])

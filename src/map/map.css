@@ -263,6 +263,9 @@
   width:100%;text-align:left;border:0;background:transparent;color:#111;font:inherit;
   padding:8px 8px;border-radius:10px;cursor:pointer;font-size:13px;line-height:1.35;
 }
+.owned-map-search .owned-map-suggest button{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.owned-map-suggest-name{font-weight:650}
+.owned-map-suggest-address{font-size:12px;font-weight:450;color:#6b7280;line-height:1.3}
 .owned-map-suggest button:hover,
 .owned-map-suggest button:focus-visible{background:#f3f4f6}
 .owned-map-hint{
@@ -649,6 +652,7 @@
   background:rgba(17,17,17,.9);color:#f4f7fb;border-color:rgba(255,255,255,.12);
 }
 .app-shell.theme-default .owned-map-suggest button{color:#f4f7fb}
+.app-shell.theme-default .owned-map-suggest-address{color:rgba(255,255,255,.62)}
 .app-shell.theme-default .owned-map-suggest button:hover,
 .app-shell.theme-default .owned-map-suggest button:focus-visible{background:rgba(255,255,255,.08)}
 .app-shell.theme-default .owned-map-guide-dist,

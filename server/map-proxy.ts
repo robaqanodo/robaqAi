@@ -53,7 +53,7 @@ export async function handleGeocode(req: ApiRequest, res: ServerResponse) {
   target.searchParams.set('q', q.slice(0, 200))
   target.searchParams.set('format', 'jsonv2')
   target.searchParams.set('limit', '6')
-  target.searchParams.set('addressdetails', '0')
+  target.searchParams.set('addressdetails', '1')
   target.searchParams.set('accept-language', accept)
   try {
     const upstream = await fetch(target, {
@@ -61,15 +61,34 @@ export async function handleGeocode(req: ApiRequest, res: ServerResponse) {
       signal: AbortSignal.timeout(8000),
     })
     if (!upstream.ok) { respond(res, 502, { error: 'Address search is unavailable.' }); return }
-    const rows = await upstream.json() as { display_name?: string; lat?: string; lon?: string }[]
+    const rows = await upstream.json() as {
+      name?: string
+      display_name?: string
+      lat?: string
+      lon?: string
+      address?: Record<string, string>
+    }[]
     if (!Array.isArray(rows)) { respond(res, 200, []); return }
     const hits = []
     for (const row of rows) {
       const lat = Number(row.lat)
       const lon = Number(row.lon)
-      const label = typeof row.display_name === 'string' ? row.display_name.trim() : ''
+      const display = typeof row.display_name === 'string' ? row.display_name.trim() : ''
+      const named = typeof row.name === 'string' ? row.name.trim() : ''
+      const name = named || display.split(',')[0]?.trim() || ''
+      let address = ''
+      if (name && display.toLowerCase().startsWith(name.toLowerCase())) address = display.slice(name.length).replace(/^[\s,]+/, '')
+      else if (row.address && typeof row.address === 'object') {
+        const place = row.address
+        const locality = place.city || place.town || place.village || place.hamlet || place.municipality || ''
+        const road = place.house_number && place.road ? `${place.house_number} ${place.road}` : (place.road || '')
+        address = [road, place.suburb, locality, place.state, place.country].filter(part => typeof part === 'string' && part.trim()).join(', ')
+      }
+      if (!address) address = display
+      if (name && address.toLowerCase().startsWith(name.toLowerCase())) address = address.slice(name.length).replace(/^[\s,]+/, '')
+      const label = display || [name, address].filter(Boolean).join(', ')
       if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
-      hits.push({ label, lat, lon })
+      hits.push({ name: name || label, address, label, lat, lon })
     }
     respond(res, 200, hits)
   } catch {
