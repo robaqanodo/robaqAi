@@ -217,8 +217,13 @@
   box-shadow:0 4px 12px #000a;
   pointer-events:none;
 }
-.owned-map-drop-add{
+.owned-map-drop-actions{
   position:absolute;left:26px;top:50%;transform:translateY(-50%);
+  display:flex;align-items:center;gap:6px;pointer-events:auto;
+}
+.owned-map-drop-go,
+.owned-map-drop-add{
+  position:static;left:auto;top:auto;transform:none;
   pointer-events:auto;cursor:pointer;white-space:nowrap;
   min-height:36px;padding:0 12px;border-radius:18px;
   color:#fff;font:inherit;font-size:13px;font-weight:680;
@@ -226,6 +231,7 @@
   border:1px solid rgba(255,255,255,.22);
   box-shadow:0 10px 28px rgba(0,0,0,.4);
 }
+.owned-map-drop-go{background:#111;border:0;font-weight:750;letter-spacing:.06em}
 .owned-map-drop-add:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .owned-map-places-bar button{
   font-size:13px;font-weight:680;letter-spacing:.08em;text-transform:uppercase;
@@ -254,6 +260,12 @@
   max-height:min(46vh, 360px);display:flex;flex-direction:column;min-height:0;
 }
 .owned-map-edit-for{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6b7280}
+.owned-map-edit-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.owned-map-edit-head .owned-map-edit-for{margin:0}
+.owned-map-edit-del{
+  flex:none;min-height:32px;padding:0 12px;border:0;border-radius:10px;cursor:pointer;
+  background:#8e1b1b;color:#fff;font:inherit;font-size:12px;font-weight:750;letter-spacing:.06em;
+}
 .owned-map-edit input{
   width:100%;box-sizing:border-box;min-height:40px;padding:0 12px;border-radius:12px;
   color:#111;font:inherit;font-size:15px;
@@ -600,20 +612,23 @@
 .owned-map-rail-gap{height:0;flex:none}
 .owned-map-rail button{
   width:48px;height:48px;padding:0;border:0;border-radius:14px;cursor:pointer;
-  display:grid;place-items:center;color:#1c1c1e;background:rgba(255,255,255,.9);
-  box-shadow:0 8px 20px rgba(0,0,0,.16);
+  display:grid;place-items:center;color:#f4f7fb;background:rgba(22,24,28,.92);
+  box-shadow:0 8px 20px rgba(0,0,0,.28);
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
 }
 .owned-map-rail button svg{width:22px;height:22px;display:block}
-.owned-map-rail button.is-on{color:#111}
+.owned-map-rail button.is-on{color:#fff}
 .owned-map-rail button.is-3d{font-size:13px;font-weight:750;letter-spacing:.04em}
-.owned-map-rail button.is-3d.is-on{background:#111;color:#fff}
-.owned-map-rail button.is-basemap.is-on{background:#111;color:#fff}
-.owned-map-rail button.is-chargers.is-on{background:#111;color:#fff}
+.owned-map-rail button.is-3d.is-on,
+.owned-map-rail button.is-basemap.is-on,
+.owned-map-rail button.is-chargers.is-on{
+  background:#07080a;color:#fff;
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.72), 0 8px 20px rgba(0,0,0,.28);
+}
 
 .owned-map-rail button:hover,
-.owned-map-rail button:focus-visible{background:rgba(244,245,247,.9)}
+.owned-map-rail button:focus-visible{background:rgba(42,44,50,.94);color:#fff}
 .owned-map-rail button:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 64px);width:min(340px, calc(100vw - 76px))}
@@ -687,12 +702,16 @@
 .app-shell.theme-default .owned-map-close:focus-visible,
 .app-shell.theme-default .owned-map-rail button:hover,
 .app-shell.theme-default .owned-map-rail button:focus-visible{
-  background:rgba(42,42,46,.9);color:#fff;border-color:rgba(255,255,255,.18);
+  background:rgba(20,20,24,.96);color:#fff;border-color:rgba(255,255,255,.18);
 }
+.app-shell.theme-default .owned-map-rail button{background:rgba(8,8,10,.94)}
 .app-shell.theme-default .owned-map-rail button.is-on{color:#fff}
-.app-shell.theme-default .owned-map-rail button.is-3d.is-on{background:#f4f7fb;color:#111}
-.app-shell.theme-default .owned-map-rail button.is-basemap.is-on{background:#f4f7fb;color:#111}
-.app-shell.theme-default .owned-map-rail button.is-chargers.is-on{background:#f4f7fb;color:#111}
+.app-shell.theme-default .owned-map-rail button.is-3d.is-on,
+.app-shell.theme-default .owned-map-rail button.is-basemap.is-on,
+.app-shell.theme-default .owned-map-rail button.is-chargers.is-on{
+  background:#050506;color:#fff;
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7), 0 8px 20px rgba(0,0,0,.35);
+}
 
 
 /* Map logo only. Same dark home-logo paint. Tesla mark stays red. Home logo is untouched. */

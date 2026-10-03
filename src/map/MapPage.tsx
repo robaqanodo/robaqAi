@@ -6,7 +6,7 @@ import {useLocale} from '../i18n/Locale'
 import {IntelligenceOrb} from '../components/IntelligenceOrb'
 import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
-import {EXTRA_IDS, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
+import {EXTRA_IDS, clearSavedPlace, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, type MarkerKind} from './marker'
 import {loadChargers, type Charger} from './chargers'
 import {DARK_STYLE_URL, satelliteStyle} from './style'
@@ -280,8 +280,20 @@ function readMap3d() {
   try { return localStorage.getItem(MAP_3D_KEY) !== '0' } catch { return true }
 }
 
-function readBasemap(): BasemapMode {
-  try { return localStorage.getItem(MAP_BASEMAP_KEY) === 'street' ? 'street' : 'satellite' } catch { return 'satellite' }
+function shellIsDark() {
+  return document.querySelector('.app-shell')?.classList.contains('theme-default') ?? false
+}
+
+/** Theme picks the basemap. A manual toggle is kept only until the theme changes. */
+function bootBasemap(): BasemapMode {
+  const theme = shellIsDark() ? 'default' : 'white'
+  try {
+    const manual = sessionStorage.getItem('robaq-map-basemap-manual') === '1'
+    const storedTheme = sessionStorage.getItem('robaq-map-basemap-theme')
+    const stored = localStorage.getItem(MAP_BASEMAP_KEY)
+    if (manual && storedTheme === theme && (stored === 'street' || stored === 'satellite')) return stored
+  } catch { /* Use the theme. */ }
+  return shellIsDark() ? 'street' : 'satellite'
 }
 
 function basemapStyle(mode: BasemapMode) {
@@ -484,7 +496,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(mapMemory.following)
   const [buildings3d, setBuildings3d] = useState(map3dOn)
-  const [basemap, setBasemap] = useState<BasemapMode>(readBasemap)
+  const [basemap, setBasemap] = useState<BasemapMode>(bootBasemap)
   const [chargersOn, setChargersOn] = useState(false)
   const [driving, setDriving] = useState(mapMemory.driving)
   const [query, setQuery] = useState(mapMemory.query)
@@ -493,7 +505,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [querySearched, setQuerySearched] = useState(false)
   const [queryOpen, setQueryOpen] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [dropPin, setDropPin] = useState<{lat: number; lon: number} | null>(null)
+  const [dropPin, setDropPin] = useState<{lat: number; lon: number; title?: string} | null>(null)
   const [addName, setAddName] = useState('')
   const [addAddress, setAddAddress] = useState('')
   const [addHits, setAddHits] = useState<Hit[]>([])
@@ -515,6 +527,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const chargersOnRef = useRef(false)
   const chargerPopupRef = useRef<Popup | null>(null)
   const syncChargersRef = useRef<(map: Map) => void>(() => {})
+  const suppressChargerClick = useRef(false)
   useEffect(() => () => {
     if (placeHoldTimer.current) window.clearTimeout(placeHoldTimer.current)
   }, [])
@@ -774,7 +787,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     if (!el) return
     const map = new Map({
       container: el,
-      style: basemapStyle(readBasemap()),
+      style: basemapStyle(basemap),
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       maxZoom: 19,
@@ -811,7 +824,69 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     })
     map.on('moveend', () => syncChargersRef.current(map))
     map.on('style.load', () => syncChargersRef.current(map))
+    const holdPress = {timer: 0, x: 0, y: 0, held: false, lat: 0, lon: 0, title: ''}
+    const chargerUnder = (point: {x: number; y: number}) => {
+      if (!map.getLayer('chargers-bolt')) return null
+      const hit = map.queryRenderedFeatures([point.x, point.y], {layers: ['chargers-bolt']})[0]
+      if (!hit || hit.geometry.type !== 'Point') return null
+      const coords = hit.geometry.coordinates
+      const lon = Number(coords[0])
+      const lat = Number(coords[1])
+      const name = typeof hit.properties?.name === 'string' ? hit.properties.name : ''
+      if (!name || !Number.isFinite(lat) || !Number.isFinite(lon)) return null
+      return {lat, lon, name}
+    }
+    const beginHold = (point: {x: number; y: number}, lngLat: {lat: number; lng: number}, target: EventTarget | null) => {
+      if (holdPress.timer) return
+      if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea, .owned-map-drop')) return
+      const site = chargerUnder(point)
+      holdPress.x = point.x
+      holdPress.y = point.y
+      holdPress.held = false
+      holdPress.lat = site ? site.lat : lngLat.lat
+      holdPress.lon = site ? site.lon : lngLat.lng
+      holdPress.title = site ? site.name : ''
+      if (!Number.isFinite(holdPress.lat) || !Number.isFinite(holdPress.lon)) return
+      holdPress.timer = window.setTimeout(() => {
+        holdPress.timer = 0
+        holdPress.held = true
+      }, 1000)
+    }
+    const moveHold = (point: {x: number; y: number}) => {
+      if (!holdPress.timer) return
+      if (Math.hypot(point.x - holdPress.x, point.y - holdPress.y) <= 12) return
+      window.clearTimeout(holdPress.timer)
+      holdPress.timer = 0
+    }
+    const endHold = () => {
+      if (holdPress.timer) {
+        window.clearTimeout(holdPress.timer)
+        holdPress.timer = 0
+      }
+      if (!holdPress.held) return
+      holdPress.held = false
+      suppressChargerClick.current = true
+      chargerPopupRef.current?.remove()
+      setDropPin(holdPress.title ? {lat: holdPress.lat, lon: holdPress.lon, title: holdPress.title} : {lat: holdPress.lat, lon: holdPress.lon})
+    }
+    const cancelHold = () => {
+      if (holdPress.held) return
+      window.clearTimeout(holdPress.timer)
+      holdPress.timer = 0
+    }
+    map.on('mousedown', event => beginHold(event.point, event.lngLat, event.originalEvent?.target ?? null))
+    map.on('touchstart', event => beginHold(event.point, event.lngLat, event.originalEvent?.target ?? null))
+    map.on('mousemove', event => moveHold(event.point))
+    map.on('touchmove', event => moveHold(event.point))
+    map.on('mouseup', endHold)
+    map.on('touchend', endHold)
+    map.on('touchcancel', cancelHold)
+    map.on('dragstart', cancelHold)
     map.on('click', (event) => {
+      if (suppressChargerClick.current) {
+        suppressChargerClick.current = false
+        return
+      }
       if (map.getLayer('chargers-bolt')) {
         const hit = map.queryRenderedFeatures(event.point, {layers: ['chargers-bolt']})[0]
         const name = hit && typeof hit.properties?.name === 'string' ? hit.properties.name : ''
@@ -834,10 +909,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       setClearAsk(false)
       if (arrivalRef.current) dismissArrival()
       if (panel) return
-      const lat = event.lngLat.lat
-      const lon = event.lngLat.lng
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
-      setDropPin({lat, lon})
     })
     const resize = () => map.resize()
     const observer = new ResizeObserver(resize)
@@ -874,6 +945,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       void navigate(active.id, active.place, drivingRef.current)
     }
     return () => {
+      window.clearTimeout(holdPress.timer)
       observer.disconnect()
       marker.remove()
       dest.remove()
@@ -884,6 +956,25 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       for (const marker of placeMarkersRef.current) marker.remove()
       placeMarkersRef.current = []
     }
+  }, [])
+
+  useEffect(() => {
+    const shell = document.querySelector('.app-shell')
+    if (!shell) return
+    let seen = shell.classList.contains('theme-default') ? 'default' : 'white'
+    const apply = () => {
+      const theme = shell.classList.contains('theme-default') ? 'default' : 'white'
+      if (theme === seen) return
+      seen = theme
+      try {
+        sessionStorage.removeItem('robaq-map-basemap-manual')
+        sessionStorage.setItem('robaq-map-basemap-theme', theme)
+      } catch { /* The map still follows the theme. */ }
+      applyBasemap(theme === 'default' ? 'street' : 'satellite')
+    }
+    const observer = new MutationObserver(apply)
+    observer.observe(shell, {attributes: true, attributeFilter: ['class']})
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -914,20 +1005,33 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     el.className = 'owned-map-drop'
     const pin = document.createElement('div')
     pin.className = 'owned-map-drop-pin'
+    const actions = document.createElement('div')
+    actions.className = 'owned-map-drop-actions'
+    const go = document.createElement('button')
+    go.type = 'button'
+    go.className = 'owned-map-drop-go'
+    go.textContent = tRef.current('GO')
     const btn = document.createElement('button')
     btn.type = 'button'
     btn.className = 'owned-map-drop-add'
     btn.textContent = tRef.current('Add to favorite')
     const here = dropPin
+    const label = here.title?.trim() || `${here.lat.toFixed(5)}, ${here.lon.toFixed(5)}`
+    go.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      setDropPin(null)
+      void navigate('search', {lat: here.lat, lon: here.lon, label}, true)
+    })
     btn.addEventListener('click', (event) => {
       event.preventDefault()
       event.stopPropagation()
-      const label = `${here.lat.toFixed(5)}, ${here.lon.toFixed(5)}`
-      const name = tRef.current('Favorite').trim().slice(0, 40)
+      const name = (here.title?.trim() || tRef.current('Favorite')).slice(0, 40)
       setPlaces(saveExtra('star', {lat: here.lat, lon: here.lon, label, name}))
       setDropPin(null)
     })
-    el.append(pin, btn)
+    actions.append(go, btn)
+    el.append(pin, actions)
     const marker = new Marker({element: el, anchor: 'center'})
     marker.setLngLat([here.lon, here.lat]).addTo(map)
     return () => { marker.remove() }
@@ -1146,6 +1250,17 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setEditing(true)
   }
 
+  function deleteEditedPlace() {
+    const id: PlaceId | ExtraId = editExtra ?? selected
+    setPlaces(clearSavedPlace(id))
+    if (tripRef.current?.id === id) cancelRoute()
+    setEditExtra(null)
+    setEditing(false)
+    setDraft('')
+    setHits([])
+    setSearched(false)
+  }
+
   function openAdd() {
     setEditing(false)
     setQueryOpen(false)
@@ -1342,15 +1457,21 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     syncChargers(map)
   }
 
-  function toggleBasemap() {
-    const next: BasemapMode = basemap === 'satellite' ? 'street' : 'satellite'
+  function applyBasemap(next: BasemapMode) {
     setBasemap(next)
     try { localStorage.setItem(MAP_BASEMAP_KEY, next) } catch { /* The choice still applies for this view. */ }
     const map = mapRef.current
     if (!map) return
-    // Full swap so the Esri raster is gone in street mode and the dark style is not stacked on it.
-    // style.load re-applies 3D visibility and puts the route line back.
     map.setStyle(basemapStyle(next), {diff: false})
+  }
+
+  function toggleBasemap() {
+    const next: BasemapMode = basemap === 'satellite' ? 'street' : 'satellite'
+    try {
+      sessionStorage.setItem('robaq-map-basemap-manual', '1')
+      sessionStorage.setItem('robaq-map-basemap-theme', shellIsDark() ? 'default' : 'white')
+    } catch { /* The toggle still applies for this view. */ }
+    applyBasemap(next)
   }
 
   function onPlace(id: PlaceId) {
@@ -1660,7 +1781,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         </div>
         {editing && (
           <form className="owned-map-edit" onSubmit={event => event.preventDefault()}>
-            <p className="owned-map-edit-for">{editExtra ? (places[editExtra]?.name ?? '') : t(selected === 'home' ? 'HOME' : 'WORK')}</p>
+            <div className="owned-map-edit-head">
+              <p className="owned-map-edit-for">{editExtra ? (places[editExtra]?.name ?? '') : t(selected === 'home' ? 'HOME' : 'WORK')}</p>
+              <button type="button" className="owned-map-edit-del" onClick={deleteEditedPlace}>{t('Delete')}</button>
+            </div>
             <input
               value={draft}
               onChange={event => setDraft(event.target.value)}

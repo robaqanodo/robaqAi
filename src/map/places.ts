@@ -58,4 +58,11 @@ export function saveExtra(id: ExtraId, saved: ExtraPlace | null): Places {
   return next
 }
 
+/** Clears one saved slot. Other places stay. */
+export function clearSavedPlace(id: PlaceId | ExtraId): Places {
+  const next = { ...loadPlaces(), [id]: null }
+  try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* The choice still applies for this view. */ }
+  return next
+}
+
 export const EXTRA_IDS: readonly ExtraId[] = EXTRAS
