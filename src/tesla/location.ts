@@ -4,7 +4,7 @@ type LocationState={coordinates:GeolocationCoordinates|null;status:string;enable
 type Fix={lat:number;lon:number;t:number;accuracy:number}
 
 let state:LocationState={coordinates:null,status:'Location is off',enabled:false,speedKmh:null,permission:'unknown'}
-let watch:number|null=null,expiry:ReturnType<typeof setTimeout>|undefined,retry:ReturnType<typeof setTimeout>|undefined,generation=0
+let watch:number|null=null,expiry:ReturnType<typeof setTimeout>|undefined,generation=0
 let prevFix:Fix|null=null,smoothedKmh:number|null=null
 const listeners=new Set<()=>void>()
 
@@ -22,8 +22,9 @@ const MIN_NATIVE_SPEED_MS=0.4
 const FRESH_MS=30_000
 /**
  * TeslaNav's in-car watch: high accuracy, no cached fix, 10s timeout.
- * It primes with getCurrentPosition and then leaves watchPosition running.
- * An interval of getCurrentPosition fights that watch in Tesla's Chromium and freezes coordinates.
+ * It primes with getCurrentPosition, then leaves watchPosition running.
+ * It never clears that watch on timeout or on an old timestamp.
+ * Restarting the watch (or polling getCurrentPosition) freezes Tesla's browser.
  */
 const WATCH_TIMEOUT_MS=10_000
 const WATCH_MAXIMUM_AGE_MS=0
@@ -89,65 +90,46 @@ export function resolveSpeedKmh(
  return {speedKmh:smoothed,prev:next,smoothed}
 }
 
-export function stopTeslaLocation(){generation++;if(watch!==null)navigator.geolocation?.clearWatch(watch);watch=null;clearTimeout(expiry);clearTimeout(retry);resetSpeedTracking();update({coordinates:null,status:'Location is off',enabled:false,speedKmh:null})}
+export function stopTeslaLocation(){generation++;if(watch!==null)navigator.geolocation?.clearWatch(watch);watch=null;clearTimeout(expiry);resetSpeedTracking();update({coordinates:null,status:'Location is off',enabled:false,speedKmh:null})}
 
 export function enableTeslaLocation(){
  if(state.enabled)return
  if(!navigator.geolocation){update({status:'This browser does not provide location access.'});return}
  if(window.isSecureContext===false){update({status:'Location requires HTTPS. Open https://www.robaq.app.'});return}
  const current=++generation
- let attempts=0,watchVersion=0
  resetSpeedTracking()
  update({enabled:true,status:'Waiting for location…'})
  if(navigator.permissions?.query)void navigator.permissions.query({name:'geolocation'}).then(result=>{if(current===generation)update({permission:result.state})}).catch(()=>{})
- const recover=(status:string)=>{
-  clearTimeout(expiry);clearTimeout(retry)
-  if(watch!==null)navigator.geolocation.clearWatch(watch)
-  watch=null;watchVersion++
-  resetSpeedTracking()
-  update({coordinates:null,speedKmh:null})
-  if(++attempts<=3){update({status});retry=setTimeout(()=>{if(current===generation)start(false)},2000*attempts)}
-  else{stopTeslaLocation();update({status:'No fresh location from the browser. More permissions cannot unlock vehicle GPS. Retry location or check the browser location settings.'})}
+ const hideStaleSpeed=()=>{
+  clearTimeout(expiry)
+  expiry=setTimeout(()=>{if(current===generation)update({speedKmh:null})},FRESH_MS)
  }
-
- const start=(highAccuracy:boolean)=>{
-  const version=++watchVersion
-  if(watch!==null)navigator.geolocation.clearWatch(watch)
-  watch=null
-  const options=watchOptions(highAccuracy)
-  const receive=(position:GeolocationPosition)=>{
-   if(current!==generation||version!==watchVersion)return
-   const age=Date.now()-position.timestamp
-   const stale=!Number.isFinite(age)||age<-5000||age>15000
-   const native=position.coords.speed
-   const nativeUsable=typeof native==='number'&&Number.isFinite(native)&&native>=0
-   const nativeMoving=nativeUsable&&native>MIN_NATIVE_SPEED_MS
-   // A stale sample that already carries a moving speed is ignored (phone path stays honest).
-   // Speed null/0 with an old timestamp is how Tesla's browser reports a live position — keep it.
-   if(stale&&nativeMoving){recover('The browser returned an old location. Requesting a fresh fix…');return}
-   attempts=0
-   const {latitude,longitude,accuracy}=position.coords
-   let timestamp=position.timestamp
-   if(stale||!Number.isFinite(timestamp)||(prevFix!==null&&timestamp<=prevFix.t))timestamp=Date.now()
-   const resolved=resolveSpeedKmh(nativeUsable?native:null,latitude,longitude,timestamp,accuracy,prevFix,smoothedKmh)
-   prevFix=resolved.prev
-   smoothedKmh=resolved.smoothed
-   update({coordinates:position.coords,status:'Location enabled',permission:'granted',speedKmh:resolved.speedKmh})
-   clearTimeout(expiry)
-   expiry=setTimeout(()=>{if(current===generation&&version===watchVersion)recover('Location updates stopped. Requesting a fresh fix…')},stale?FRESH_MS:Math.max(0,FRESH_MS-age))
-  }
-  const fail=(error:GeolocationPositionError)=>{
-   if(current!==generation||version!==watchVersion)return
-   clearTimeout(expiry);resetSpeedTracking();update({coordinates:null,speedKmh:null})
-   if(error.code===1){stopTeslaLocation();update({permission:'denied',status:'Location blocked. Allow location for robaq.app in your browser, then try again.'});return}
-   recover(error.code===3?'Location timed out. Retrying…':'Location signal unavailable. Retrying…')
-  }
-  try{
-   // Prime once, then watch. Do not poll — TeslaNav stays on this pair, and extra
-   // getCurrentPosition calls stop Tesla's browser from emitting new fixes.
-   navigator.geolocation.getCurrentPosition?.(receive,()=>{},options)
-   watch=navigator.geolocation.watchPosition(receive,fail,options)
-  }catch{stopTeslaLocation();update({status:'This browser does not provide location access.'})}
+ const options=watchOptions(true)
+ const receive=(position:GeolocationPosition)=>{
+  if(current!==generation)return
+  const native=position.coords.speed
+  const nativeUsable=typeof native==='number'&&Number.isFinite(native)&&native>=0
+  const {latitude,longitude,accuracy}=position.coords
+  // TeslaNav stores the sample as-is, including a cached timestamp. Tesla's browser
+  // often reports a live speed on a timestamp older than 15s. Rejecting that showed
+  // nothing in the car while the phone (fresh timestamps) still worked.
+  let timestamp=position.timestamp
+  if(!Number.isFinite(timestamp)||(prevFix!==null&&timestamp<=prevFix.t))timestamp=Date.now()
+  const resolved=resolveSpeedKmh(nativeUsable?native:null,latitude,longitude,timestamp,accuracy,prevFix,smoothedKmh)
+  prevFix=resolved.prev
+  smoothedKmh=resolved.smoothed
+  update({coordinates:position.coords,status:'Location enabled',permission:'granted',speedKmh:resolved.speedKmh})
+  hideStaleSpeed()
  }
- start(true)
+ const fail=(error:GeolocationPositionError)=>{
+  if(current!==generation)return
+  if(error.code===1){stopTeslaLocation();update({permission:'denied',status:'Location blocked. Allow location for robaq.app in your browser, then try again.'});return}
+  // TeslaNav's error callback only sets a message. watchPosition keeps running and
+  // later success callbacks still arrive. clearWatch here is what made Tesla go quiet.
+  update({status:error.code===3?'Location timed out. Still watching…':'Location signal unavailable. Still watching…'})
+ }
+ try{
+  navigator.geolocation.getCurrentPosition?.(receive,fail,options)
+  watch=navigator.geolocation.watchPosition(receive,fail,options)
+ }catch{stopTeslaLocation();update({status:'This browser does not provide location access.'})}
 }
