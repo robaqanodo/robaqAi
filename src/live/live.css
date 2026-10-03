@@ -8,3 +8,38 @@
 .crossfire-circle .live-side{top:-17px;right:50%;transform:translateX(50%);font-size:9px;padding:2px 5px;white-space:nowrap}
 .live-tile .modal-btn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#111d;color:#fff;min-width:44px}
 @media(max-width:600px){.crossfire-circle{max-width:280px}.crossfire-circle .live-name{font-size:9px}.crossfire-host{max-width:120px}}
+
+/* SyberLive and Crossfire take over the screen: no rail, dock, or chat chrome. */
+.app-shell.is-live-open{padding:0!important}
+.app-shell.is-live-open .navigation-rail,
+.app-shell.is-live-open.has-navigation .navigation-rail,
+.app-shell.is-live-open.has-navigation.tesla-menu-collapsed .navigation-rail,
+.app-shell.is-live-open .tesla-menu-toggle,
+.app-shell.is-live-open .history-drawer,
+.app-shell.is-live-open .chat-panel,
+.app-shell.is-live-open .landing-stage,
+.app-shell.is-live-open .landing-voice-status,
+.app-shell.is-live-open .history-save-error{display:none!important}
+.live-page{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;box-sizing:border-box;background:#07090d;color:#eef1f6;padding:max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));min-height:100dvh}
+.live-page-close{position:absolute;z-index:2;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #ffffff33;background:#1c2430;color:#fff;font:inherit;cursor:pointer}
+.live-page-body{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:14px;padding-top:52px}
+.live-page-composer{display:flex;gap:8px;flex-shrink:0;padding-top:10px}
+.live-page-composer input{flex:1;min-width:0}
+.live-page-composer .modal-btn{flex-shrink:0}
+.live-page-log{display:flex;flex-direction:column;gap:8px}
+.live-page-syberlive .live-stage{max-width:520px;margin-inline:auto;width:100%}
+.live-page-syberlive .live-video-layout{justify-content:center}
+.live-page-syberlive .live-tile.live-large,.live-page-syberlive .members-1 .live-large{flex:0 1 320px;width:min(100%,320px);max-width:320px;min-width:0;max-height:180px;aspect-ratio:16/9}
+.live-page-syberlive .live-small-row{width:auto;justify-content:center}
+.live-page-syberlive .live-small-row .live-tile{flex:0 1 104px;width:104px;max-width:104px;max-height:64px}
+.live-page-crossfire{background:#05070b}
+.live-page-crossfire .live-page-body{overflow:auto}
+.live-page-crossfire .live-stage{flex:1;min-height:0;width:100%;margin:0;border:0;border-radius:0;background:transparent;display:flex;flex-direction:column}
+.live-page-crossfire .crossfire-host{max-width:min(24vmin,200px)}
+.live-page-crossfire .crossfire-circle{width:min(70vmin,640px);flex:1;max-height:min(70vmin,640px)}
+.live-page-crossfire .live-page-log{max-height:14vh;overflow:auto;flex-shrink:0}
+@media(max-width:600px){
+ .live-page-syberlive .live-tile.live-large,.live-page-syberlive .members-1 .live-large{width:min(100%,280px);max-width:280px;max-height:158px}
+ .live-page-syberlive .live-small-row .live-tile{max-width:96px;width:96px}
+ .live-page-crossfire .crossfire-circle{width:min(86vmin,420px);max-height:min(86vmin,420px)}
+}

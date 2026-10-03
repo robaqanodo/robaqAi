@@ -1319,7 +1319,7 @@ function AppContent() {
 
   return (
     <div
-      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
+      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
         hasApiKey && provider ? ` ${providerThemeClass(provider)}` : ''
       }`}
     >
@@ -1384,11 +1384,12 @@ function AppContent() {
 
       {session && chatOpen && historyOpen && !teslaActive && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
+      {liveEntry && <LiveChat key={liveEntry.kind+(liveEntry.room??'')} kind={liveEntry.kind} invite={liveEntry.room} name={session ? ([session.firstName,session.lastName].filter(Boolean).join(' ')||session.email.split('@')[0]) : 'Guest'} submitRef={liveSubmit} onClose={()=>setLiveEntry(null)} />}
       <div
         className={`chat-panel chat-color-${chatColor}`}
         role="main"
-        aria-hidden={!chatOpen}
-        inert={!chatOpen ? true : undefined}
+        aria-hidden={!chatOpen || Boolean(liveEntry)}
+        inert={!chatOpen || liveEntry ? true : undefined}
       >
         <header className="panel-top">
           <div className="chat-intelligence">
@@ -1426,8 +1427,7 @@ function AppContent() {
           </p>
         )}
 
-        {liveEntry && chatOpen && <LiveChat key={liveEntry.kind+(liveEntry.room??'')} kind={liveEntry.kind} invite={liveEntry.room} name={session ? ([session.firstName,session.lastName].filter(Boolean).join(' ')||session.email.split('@')[0]) : 'Guest'} submitRef={liveSubmit} onClose={()=>{setLiveEntry(null);setChatOpen(false)}} />}
-        {kasCode && !liveEntry && <KasReader key={kasCode} code={kasCode} submitRef={kasSubmit} onClose={() => {setKasCode('');setChatOpen(false)}} />}
+                {kasCode && !liveEntry && <KasReader key={kasCode} code={kasCode} submitRef={kasSubmit} onClose={() => {setKasCode('');setChatOpen(false)}} />}
         <div className="history-lane" style={kasCode || liveEntry ? {display: 'none'} : undefined} ref={historyRef} aria-live="polite">
           {messages.map((m) => {
             const streaming = streamingId === m.id
