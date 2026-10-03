@@ -114,6 +114,22 @@
   -webkit-backdrop-filter:blur(18px) saturate(1.25);
 }
 .owned-map-pill svg{width:16px;height:16px;flex:none;display:block}
+
+.owned-map-places-bar button.owned-map-add{
+  width:52px;height:52px;min-width:52px;min-height:52px;padding:0;
+  font-size:28px;font-weight:500;letter-spacing:0;text-transform:none;line-height:1;
+}
+.owned-map-edit input.owned-map-add-name{margin-bottom:8px}
+.owned-map-saved{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;
+  background:rgba(12,14,18,.78);
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 8px 18px rgba(0,0,0,.45);
+  pointer-events:none;
+}
+.owned-map-saved svg{width:16px;height:16px;display:block;pointer-events:none}
 .owned-map-pill.is-on{
   color:#fff;
   background:rgba(62,106,225,.92);
@@ -211,21 +227,22 @@
 .owned-map-core .cell-blob,
 .owned-map-core .cell-api-glow,
 .owned-map-core .cell-status-light{display:none!important}
-.owned-map-core .intelligence-orb .cell-nucleus.link-tesla-core{width:70%;height:70%}
+.owned-map-core .intelligence-orb .cell-nucleus.link-tesla-core{width:70%;height:70%;overflow:visible}
 .owned-map-core .cell-nucleus.link-tesla-core::before{
   content:'';
-  position:absolute;left:50%;top:50%;width:68%;height:68%;
+  position:absolute;left:50%;top:50%;width:124%;height:124%;
   transform:translate(-50%,-50%);
   border-radius:50%;
   background:rgba(255,255,255,.8);
   box-shadow:0 2px 8px rgba(0,0,0,.35);
   z-index:1;pointer-events:none;
 }
+.owned-map-core .link-tesla-core:after{z-index:3;pointer-events:none}
 .owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2}
 .owned-map-core.is-holding{animation:map-hold 1s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes map-hold{to{outline-color:rgba(255,255,255,.8)}}
-.owned-map-core .tesla-core-speed{gap:2px}
+.owned-map-core .tesla-core-speed{z-index:2;gap:2px}
 .owned-map-core .tesla-core-speed strong{font-size:22px;-webkit-text-stroke:.8px #000}
 .owned-map-core .tesla-core-speed small{font-size:9px;letter-spacing:.04em}
 @media (max-width: 760px), (max-height: 680px){

@@ -77,29 +77,47 @@ export async function handleGeocode(req: ApiRequest, res: ServerResponse) {
   }
 }
 
+type RouteBody = { code?: string; routes?: { geometry?: { type?: string; coordinates?: [number, number][] } }[] }
+
+/** Project OSRM first. If it fails or has no LineString, the public OSM.de car router. */
+async function drivingLine(from: [number, number], to: [number, number]): Promise<{ coordinates: [number, number][] } | { error: 404 | 502 }> {
+  const path = `${from[0]},${from[1]};${to[0]},${to[1]}`
+  const targets = [
+    `https://router.project-osrm.org/route/v1/driving/${path}?overview=full&geometries=geojson`,
+    `https://routing.openstreetmap.de/routed-car/route/v1/driving/${path}?overview=full&geometries=geojson`,
+  ]
+  let sawBody = false
+  let sawFailure = false
+  for (const target of targets) {
+    try {
+      const upstream = await fetch(target, {
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+        signal: AbortSignal.timeout(12000),
+      })
+      if (!upstream.ok) { sawFailure = true; continue }
+      const body = await upstream.json() as RouteBody
+      const geometry = body.routes?.[0]?.geometry
+      const coordinates = geometry?.coordinates
+      if (body.code === 'Ok' && geometry?.type === 'LineString' && Array.isArray(coordinates) && coordinates.length >= 2) {
+        return { coordinates }
+      }
+      sawBody = true
+    } catch {
+      sawFailure = true
+    }
+  }
+  return { error: sawBody && !sawFailure ? 404 : 502 }
+}
+
 export async function handleRoute(req: ApiRequest, res: ServerResponse) {
   if (req.method !== 'GET') { respond(res, 405, { error: 'GET only' }); return }
   const url = requestUrl(req)
   const from = pair(url.searchParams.get('from'))
   const to = pair(url.searchParams.get('to'))
   if (!from || !to) { respond(res, 400, { error: 'from and to must be lon,lat' }); return }
-  const target = `https://router.project-osrm.org/route/v1/driving/${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson`
-  try {
-    const upstream = await fetch(target, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
-      signal: AbortSignal.timeout(12000),
-    })
-    if (!upstream.ok) { respond(res, 502, { error: 'Route unavailable' }); return }
-    const body = await upstream.json() as { code?: string; routes?: { geometry?: { type?: string; coordinates?: [number, number][] } }[] }
-    const geometry = body.routes?.[0]?.geometry
-    if (body.code !== 'Ok' || geometry?.type !== 'LineString' || !Array.isArray(geometry.coordinates) || geometry.coordinates.length < 2) {
-      respond(res, 404, { error: 'Route unavailable' })
-      return
-    }
-    respond(res, 200, { geometry: { type: 'LineString', coordinates: geometry.coordinates } })
-  } catch {
-    respond(res, 502, { error: 'Route unavailable' })
-  }
+  const line = await drivingLine(from, to)
+  if ('error' in line) { respond(res, line.error, { error: 'Route unavailable' }); return }
+  respond(res, 200, { geometry: { type: 'LineString', coordinates: line.coordinates } })
 }
 
 export function mapProxyMiddleware(req: IncomingMessage, res: ServerResponse, next: () => void) {

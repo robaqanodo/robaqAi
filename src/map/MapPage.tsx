@@ -6,7 +6,7 @@ import {useLocale} from '../i18n/Locale'
 import {IntelligenceOrb} from '../components/IntelligenceOrb'
 import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
-import {loadPlaces, savePlace, type PlaceId, type SavedPlace} from './places'
+import {EXTRA_IDS, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, saveMarkerKind, type MarkerKind} from './marker'
 import {satelliteStyle} from './style'
 import './map.css'
@@ -24,7 +24,7 @@ type RouteFeature = {
   geometry: {type: 'LineString'; coordinates: [number, number][]}
 }
 type RouteData = RouteFeature | {type: 'FeatureCollection'; features: []}
-type TripId = PlaceId | 'search'
+type TripId = PlaceId | ExtraId | 'search'
 type Trip = {id: TripId; place: SavedPlace}
 type Arrival = {label: string; left: number}
 type MapMemory = {
@@ -33,6 +33,7 @@ type MapMemory = {
   query: string
   route: [number, number][] | null
   following: boolean
+  driving: boolean
 }
 
 /** Survives map close. Logo-hold keeps this. X confirm clears the trip, not saved places. */
@@ -42,12 +43,34 @@ const mapMemory: MapMemory = {
   query: '',
   route: null,
   following: true,
+  driving: false,
 }
 
 const DEFAULT_CENTER: [number, number] = [20, 20]
 const DEFAULT_ZOOM = 1.6
 const EMPTY: RouteData = {type: 'FeatureCollection', features: []}
 const ARRIVAL_M = 50
+const SLOT_PATH = {
+  home: 'M4.5 10.6 12 4.2l7.5 6.4V20a1 1 0 0 1-1 1h-4.2v-5.2H9.7V21H5.5a1 1 0 0 1-1-1v-9.4z',
+  work: 'M9 4.5h6a1.5 1.5 0 0 1 1.5 1.5V7H19a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5V6A1.5 1.5 0 0 1 9 4.5zM9.5 7h5V6h-5v1z',
+  heart: 'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z',
+  flag: 'M5 3.2h1.7V21H5V3.2zm2.4.9h12.3l-2.7 4.3 2.7 4.3H7.4V4.1z',
+  star: 'M12 2.2 14.7 8.6 21.6 9.3 16.4 14l1.5 6.7L12 17.4 6.1 20.7 7.6 14 2.4 9.3 9.3 8.6 12 2.2z',
+} as const
+
+function SlotIcon({id}: {id: keyof typeof SLOT_PATH}) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d={SLOT_PATH[id]} /></svg>
+  )
+}
+
+function savedMarkerEl(id: keyof typeof SLOT_PATH) {
+  const el = document.createElement('div')
+  el.className = 'owned-map-saved'
+  el.style.pointerEvents = 'none'
+  el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${SLOT_PATH[id]}"/></svg>`
+  return el
+}
 
 function finiteFix(lat: number, lon: number, heading: number | null | undefined): Fix | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null
@@ -102,6 +125,41 @@ function sliceRoute(coords: [number, number][], lat: number, lon: number): [numb
 
 function directLine(from: Fix, place: SavedPlace): [number, number][] {
   return [[from.lon, from.lat], [place.lon, place.lat]]
+}
+
+const DRIVE_PITCH = 55
+
+/** Positive Y shifts the target down so the GPS marker sits in the lower part of the screen. */
+function behindOffset(map: Map): [number, number] {
+  const height = map.getContainer().clientHeight
+  return [0, Math.max(120, Math.round(height * 0.28))]
+}
+
+function easeBehind(map: Map, next: Fix, zoomOnce: boolean) {
+  const bearing = next.heading != null && next.heading >= 0 ? next.heading : undefined
+  map.easeTo({
+    center: [next.lon, next.lat],
+    pitch: DRIVE_PITCH,
+    offset: behindOffset(map),
+    duration: zoomOnce ? 700 : 400,
+    ...(bearing !== undefined ? {bearing} : {}),
+    ...(zoomOnce ? {zoom: Math.max(map.getZoom(), 17)} : {}),
+  })
+}
+
+function fitRoute(map: Map, coordinates: [number, number][]) {
+  if (coordinates.length < 2) return
+  let west = coordinates[0][0]
+  let east = west
+  let south = coordinates[0][1]
+  let north = south
+  for (const [lon, lat] of coordinates) {
+    if (lon < west) west = lon
+    if (lon > east) east = lon
+    if (lat < south) south = lat
+    if (lat > north) north = lat
+  }
+  map.fitBounds([[west, south], [east, north]], {padding: 72, pitch: 0, duration: 800})
 }
 
 /** Add the GeoJSON source and Tesla-blue line even while raster tiles are still loading. */
@@ -232,6 +290,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const markerRef = useRef<Marker | null>(null)
   const destRef = useRef<Marker | null>(null)
   const followRef = useRef(mapMemory.following)
+  const drivingRef = useRef(mapMemory.driving)
+  const driveZoomedRef = useRef(false)
   const framedRef = useRef(false)
   const pointRef = useRef<Fix | null>(null)
   const teslaOnRef = useRef(false)
@@ -256,11 +316,18 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [trip, setTrip] = useState<Trip | null>(mapMemory.trip)
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(mapMemory.following)
+  const [driving, setDriving] = useState(mapMemory.driving)
   const [query, setQuery] = useState(mapMemory.query)
   const [queryHits, setQueryHits] = useState<Hit[]>([])
   const [querySearching, setQuerySearching] = useState(false)
   const [querySearched, setQuerySearched] = useState(false)
   const [queryOpen, setQueryOpen] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [addName, setAddName] = useState('')
+  const [addAddress, setAddAddress] = useState('')
+  const [addHits, setAddHits] = useState<Hit[]>([])
+  const [addSearching, setAddSearching] = useState(false)
+  const [addSearched, setAddSearched] = useState(false)
   const settingsRef = useRef(false)
   const kindRef = useRef(markerKind)
   const tripRef = useRef<Trip | null>(null)
@@ -268,6 +335,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const arrivedRef = useRef(false)
   const queryOpenRef = useRef(false)
   const clearAskRef = useRef(false)
+  const addingRef = useRef(false)
+  const addQueryRef = useRef('')
+  const placeMarkersRef = useRef<Marker[]>([])
 
   const point: Fix | null = tesla.coordinates
     ? finiteFix(tesla.coordinates.latitude, tesla.coordinates.longitude, tesla.coordinates.heading)
@@ -279,8 +349,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   settingsRef.current = settingsOpen
   kindRef.current = markerKind
   tripRef.current = trip
+  drivingRef.current = driving
   arrivalRef.current = arrival
   queryOpenRef.current = queryOpen
+  addingRef.current = adding
   flushRef.current = () => {
     const map = mapRef.current
     const data = drawnRef.current
@@ -295,6 +367,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       if (queryOpenRef.current) { setQueryOpen(false); return }
       if (arrivalRef.current) { dismissArrival(); return }
       if (editingRef.current) { setEditing(false); return }
+      if (addingRef.current) { setAdding(false); return }
       if (settingsRef.current) { setSettingsOpen(false); return }
       if (clearAskRef.current) { setClearAsk(false); return }
       onClose()
@@ -329,6 +402,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     routeCoordsRef.current = null
     followRef.current = false
     setFollowing(false)
+    drivingRef.current = false
+    mapMemory.driving = false
+    setDriving(false)
     routeSeq.current += 1
     arrivedRef.current = true
     paintRoute(EMPTY)
@@ -405,6 +481,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     routeCoordsRef.current = null
     followRef.current = false
     setFollowing(false)
+    drivingRef.current = false
+    mapMemory.driving = false
+    setDriving(false)
     arrivedRef.current = false
     arrivalRef.current = null
     setArrival(null)
@@ -414,7 +493,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }
 
   async function navigate(id: TripId, place: SavedPlace) {
-    if (id !== 'search') setSelected(id)
+    if (id === 'home' || id === 'work') setSelected(id)
     setEditing(false)
     arrivedRef.current = false
     arrivalRef.current = null
@@ -424,9 +503,12 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     mapMemory.trip = nextTrip
     tripRef.current = nextTrip
     setTrip(nextTrip)
-    followRef.current = true
-    setFollowing(true)
-    framedRef.current = false
+    followRef.current = false
+    setFollowing(false)
+    drivingRef.current = false
+    mapMemory.driving = false
+    setDriving(false)
+    driveZoomedRef.current = false
     showDestination(place)
     const known = pointRef.current
     if (known) {
@@ -434,11 +516,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       routeCoordsRef.current = straight
       mapMemory.route = straight
       paintRoute(lineData(straight))
-      const map = mapRef.current
-      if (map) {
-        framedRef.current = true
-        map.easeTo({center: [known.lon, known.lat], zoom: Math.max(map.getZoom(), 15), duration: 700})
-      }
     } else {
       routeCoordsRef.current = null
       mapMemory.route = null
@@ -458,11 +535,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     routeCoordsRef.current = straight
     mapMemory.route = straight
     paintRoute(lineData(straight))
-    const framed = mapRef.current
-    if (framed && followRef.current) {
-      framedRef.current = true
-      framed.easeTo({center: [origin.lon, origin.lat], zoom: Math.max(framed.getZoom(), 15), duration: 700})
-    }
     try {
       const response = await fetch(`/api/route?from=${origin.lon},${origin.lat}&to=${place.lon},${place.lat}`)
       const body = await response.json() as {geometry?: {type?: string; coordinates?: unknown}}
@@ -483,6 +555,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       mapMemory.trip = tripRef.current
       const here = pointRef.current ?? origin
       paintRoute(lineData(sliceRoute(coordinates, here.lat, here.lon)))
+      const view = mapRef.current
+      if (!drivingRef.current && view) fitRoute(view, coordinates)
     } catch {
       if (seq !== routeSeq.current) return
     }
@@ -523,7 +597,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     map.on('idle', flush)
     // Only a real finger/mouse pan stops follow. easeTo also moves the camera and must not.
     map.on('dragstart', (event) => {
-      if (!event.originalEvent) return
+      const original = event.originalEvent
+      if (!original) return
+      if (typeof TouchEvent !== 'undefined' && original instanceof TouchEvent && original.touches.length !== 1) return
       followRef.current = false
       setFollowing(false)
     })
@@ -533,6 +609,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       setSettingsOpen(false)
       setQueryOpen(false)
       setEditing(false)
+      setAdding(false)
       setClearAsk(false)
       if (arrivalRef.current) dismissArrival()
     })
@@ -560,8 +637,31 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       mapRef.current = null
       markerRef.current = null
       destRef.current = null
+      for (const marker of placeMarkersRef.current) marker.remove()
+      placeMarkersRef.current = []
     }
   }, [])
+
+  useEffect(() => {
+    const map = mapRef.current
+    for (const marker of placeMarkersRef.current) marker.remove()
+    placeMarkersRef.current = []
+    if (!map) return
+    const slots = (['home', 'work', ...EXTRA_IDS] as const)
+    const next: Marker[] = []
+    for (const id of slots) {
+      const saved = places[id]
+      if (!saved) continue
+      const marker = new Marker({element: savedMarkerEl(id), anchor: 'center'})
+      marker.setLngLat([saved.lon, saved.lat]).addTo(map)
+      next.push(marker)
+    }
+    placeMarkersRef.current = next
+    return () => {
+      for (const marker of next) marker.remove()
+      if (placeMarkersRef.current === next) placeMarkersRef.current = []
+    }
+  }, [places])
 
   useEffect(() => {
     if (tesla.enabled) return
@@ -581,9 +681,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     mapMemory.selected = selected
     mapMemory.query = query
     mapMemory.following = following
+    mapMemory.driving = driving
     mapMemory.trip = trip
     if (!trip) mapMemory.route = null
-  }, [selected, query, following, trip])
+  }, [selected, query, following, driving, trip])
 
   useEffect(() => {
     if (!editing) return
@@ -625,6 +726,39 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     }, 450)
     return () => { window.clearTimeout(timer); ctrl.abort() }
   }, [draft, editing, locale])
+
+  useEffect(() => {
+    if (!adding) return
+    const q = addAddress.trim()
+    if (q.length < 2) {
+      setAddHits([])
+      setAddSearching(false)
+      setAddSearched(false)
+      addQueryRef.current = ''
+      return
+    }
+    const ctrl = new AbortController()
+    const timer = window.setTimeout(() => {
+      setAddSearching(true)
+      const params = new URLSearchParams({q, lang: locale})
+      fetch(`/api/geocode?${params}`, {signal: ctrl.signal})
+        .then(response => response.ok ? response.json() as Promise<unknown> : [])
+        .then(data => {
+          if (ctrl.signal.aborted) return
+          const next = hitsFrom(data)
+          setAddHits(next)
+          setAddSearched(true)
+          addQueryRef.current = q
+        })
+        .catch(() => {
+          if (ctrl.signal.aborted) return
+          setAddHits([])
+          setAddSearched(true)
+        })
+        .finally(() => { if (!ctrl.signal.aborted) setAddSearching(false) })
+    }, 450)
+    return () => { window.clearTimeout(timer); ctrl.abort() }
+  }, [addAddress, adding, locale])
 
   useEffect(() => {
     if (!queryOpen) return
@@ -697,13 +831,18 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       paintRoute(lineData(next))
     }
     if (!followRef.current) return
+    if (drivingRef.current) {
+      easeBehind(map, {lat, lon, heading}, !driveZoomedRef.current)
+      driveZoomedRef.current = true
+      return
+    }
     if (!framedRef.current) {
       framedRef.current = true
       map.easeTo({center: lngLat, zoom: 15, duration: 700})
     } else {
       map.easeTo({center: lngLat, duration: 400})
     }
-  }, [lat, lon, heading, following])
+  }, [lat, lon, heading, following, driving])
 
   useEffect(() => {
     const el = markerRef.current?.getElement()
@@ -732,7 +871,61 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setSearching(false)
     setHint(null)
     setSettingsOpen(false)
+    setAdding(false)
     setEditing(true)
+  }
+
+  function openAdd() {
+    setEditing(false)
+    setSettingsOpen(false)
+    setQueryOpen(false)
+    setAddName('')
+    setAddAddress('')
+    setAddHits([])
+    setAddSearched(false)
+    setAddSearching(false)
+    addQueryRef.current = ''
+    setAdding(true)
+  }
+
+  function commitExtra(hit: Hit, name: string) {
+    const id: ExtraId | null = !places.heart ? 'heart' : !places.flag ? 'flag' : !places.star ? 'star' : null
+    if (!id || !name) return
+    const saved: ExtraPlace = {lat: hit.lat, lon: hit.lon, label: hit.label, name}
+    setPlaces(saveExtra(id, saved))
+    setAdding(false)
+    setAddHits([])
+    setAddSearched(false)
+  }
+
+  async function submitExtra() {
+    const name = addName.trim().slice(0, 40)
+    if (!name) return
+    const q = addAddress.trim()
+    if (q.length < 2) return
+    let hit = addQueryRef.current === q ? addHits[0] : undefined
+    if (!hit) {
+      setAddSearching(true)
+      try {
+        const params = new URLSearchParams({q, lang: locale})
+        const response = await fetch(`/api/geocode?${params}`)
+        const next = hitsFrom(response.ok ? await response.json() as unknown : [])
+        if (addAddress.trim() !== q) return
+        setAddHits(next)
+        setAddSearched(true)
+        addQueryRef.current = q
+        hit = next[0]
+      } catch {
+        if (addAddress.trim() !== q) return
+        setAddHits([])
+        setAddSearched(true)
+        return
+      } finally {
+        setAddSearching(false)
+      }
+    }
+    if (!hit) return
+    commitExtra(hit, name)
   }
 
   function recenter() {
@@ -740,11 +933,32 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setFollowing(true)
     const map = mapRef.current
     const go = (next: Fix) => {
-      if (!mapRef.current) return
-      mapRef.current.easeTo({center: [next.lon, next.lat], zoom: Math.max(mapRef.current.getZoom(), 15), duration: 600})
+      const current = mapRef.current
+      if (!current) return
+      if (drivingRef.current) {
+        easeBehind(current, next, false)
+        return
+      }
+      current.easeTo({center: [next.lon, next.lat], zoom: Math.max(current.getZoom(), 15), duration: 600})
     }
     if (pointRef.current) { go(pointRef.current); return }
     if (!map) return
+    void locate().then(next => { if (next) go(next) })
+  }
+
+  function startDrive() {
+    drivingRef.current = true
+    mapMemory.driving = true
+    setDriving(true)
+    followRef.current = true
+    setFollowing(true)
+    const go = (next: Fix) => {
+      const current = mapRef.current
+      if (!current || !drivingRef.current) return
+      easeBehind(current, next, true)
+      driveZoomedRef.current = true
+    }
+    if (pointRef.current) { go(pointRef.current); return }
     void locate().then(next => { if (next) go(next) })
   }
 
@@ -758,6 +972,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     const place: SavedPlace = {lat: hit.lat, lon: hit.lon, label: hit.label}
     setPlaces(savePlace(selected, place))
     setEditing(false)
+    setAdding(false)
     setHits([])
     void navigate(selected, place)
   }
@@ -769,6 +984,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setQuerySearched(false)
     hitsQueryRef.current = hit.label
     setEditing(false)
+    setAdding(false)
     void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label})
   }
 
@@ -858,13 +1074,27 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         </form>
         <div className="owned-map-places-bar">
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.5 10.6 12 4.2l7.5 6.4V20a1 1 0 0 1-1 1h-4.2v-5.2H9.7V21H5.5a1 1 0 0 1-1-1v-9.4z"/></svg>
+            <SlotIcon id="home" />
             <span>{t('HOME')}</span>
           </button>
           <button type="button" className={`owned-map-pill${workOn ? ' is-on' : ''}`} aria-pressed={workOn} onClick={() => onPlace('work')}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 4.5h6a1.5 1.5 0 0 1 1.5 1.5V7H19a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5V6A1.5 1.5 0 0 1 9 4.5zM9.5 7h5V6h-5v1z"/></svg>
+            <SlotIcon id="work" />
             <span>{t('WORK')}</span>
           </button>
+          {EXTRA_IDS.map(id => {
+            const saved = places[id]
+            if (!saved) return null
+            const on = trip?.id === id
+            return (
+              <button key={id} type="button" className={`owned-map-pill${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => void navigate(id, saved)}>
+                <SlotIcon id={id} />
+                <span>{saved.name}</span>
+              </button>
+            )
+          })}
+          {EXTRA_IDS.some(id => !places[id]) && (
+            <button type="button" className="owned-map-pill owned-map-add" aria-label={t('Add place')} onClick={openAdd}>+</button>
+          )}
         </div>
         {editing && (
           <form className="owned-map-edit" onSubmit={event => event.preventDefault()}>
@@ -891,7 +1121,45 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             )}
           </form>
         )}
-        {hint && !editing && <p className="owned-map-hint">{t(hint)}</p>}
+        {adding && (
+          <form className="owned-map-edit" onSubmit={event => { event.preventDefault(); void submitExtra() }}>
+            <input
+              className="owned-map-add-name"
+              value={addName}
+              onChange={event => setAddName(event.target.value.slice(0, 40))}
+              placeholder={t('Place name')}
+              aria-label={t('Place name')}
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={40}
+            />
+            <input
+              value={addAddress}
+              onChange={event => setAddAddress(event.target.value)}
+              placeholder={t('Address')}
+              aria-label={t('Address')}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {addSearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
+            {!addSearching && addSearched && addHits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
+            {addHits.length > 0 && (
+              <ul className="owned-map-suggest">
+                {addHits.map(hit => (
+                  <li key={`${hit.lat},${hit.lon},${hit.label}`}>
+                    <button type="button" onClick={() => {
+                      const name = addName.trim().slice(0, 40)
+                      if (!name) return
+                      commitExtra(hit, name)
+                    }}>{hit.label}</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </form>
+        )}
+        {hint && !editing && !adding && <p className="owned-map-hint">{t(hint)}</p>}
       </div>
       {showCore && (
         <button
@@ -950,10 +1218,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       <button type="button" className={`owned-map-pill owned-map-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('GPS')} onClick={recenter}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 20.2 20.2c.35.78-.48 1.55-1.24 1.16L12 17.7l-6.96 3.66c-.76.39-1.59-.38-1.24-1.16L12 2.6z"/></svg>
       </button>
-      <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
+      <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setAdding(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
       </div>
-      {trip && (
-        <button type="button" className="owned-map-cancel" onClick={cancelRoute}>{t('Cancel')}</button>
+      {trip && !driving && (
+        <button type="button" className="owned-map-cancel" onClick={startDrive}>{t('Start')}</button>
       )}
       <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>

@@ -1,8 +1,11 @@
 export type PlaceId = 'home' | 'work'
+export type ExtraId = 'heart' | 'flag' | 'star'
 export type SavedPlace = { lat: number; lon: number; label: string }
-export type Places = Record<PlaceId, SavedPlace | null>
+export type ExtraPlace = SavedPlace & { name: string }
+export type Places = Record<PlaceId, SavedPlace | null> & Record<ExtraId, ExtraPlace | null>
 
 const KEY = 'robaq-map-places'
+const EXTRAS: ExtraId[] = ['heart', 'flag', 'star']
 
 function place(value: unknown): SavedPlace | null {
   if (!value || typeof value !== 'object') return null
@@ -15,13 +18,31 @@ function place(value: unknown): SavedPlace | null {
   return { lat, lon, label }
 }
 
+function extra(value: unknown): ExtraPlace | null {
+  const saved = place(value)
+  if (!saved || !value || typeof value !== 'object') return null
+  const name = typeof (value as { name?: unknown }).name === 'string'
+    ? (value as { name: string }).name.trim().slice(0, 40)
+    : ''
+  if (!name) return null
+  return { ...saved, name }
+}
+
+const EMPTY: Places = { home: null, work: null, heart: null, flag: null, star: null }
+
 export function loadPlaces(): Places {
   try {
     const raw = localStorage.getItem(KEY)
-    const data = raw ? JSON.parse(raw) as { home?: unknown; work?: unknown } : {}
-    return { home: place(data.home), work: place(data.work) }
+    const data = raw ? JSON.parse(raw) as { home?: unknown; work?: unknown; heart?: unknown; flag?: unknown; star?: unknown } : {}
+    return {
+      home: place(data.home),
+      work: place(data.work),
+      heart: extra(data.heart),
+      flag: extra(data.flag),
+      star: extra(data.star),
+    }
   } catch {
-    return { home: null, work: null }
+    return { ...EMPTY }
   }
 }
 
@@ -30,3 +51,11 @@ export function savePlace(id: PlaceId, saved: SavedPlace): Places {
   try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* The choice still applies for this view. */ }
   return next
 }
+
+export function saveExtra(id: ExtraId, saved: ExtraPlace | null): Places {
+  const next = { ...loadPlaces(), [id]: saved }
+  try { localStorage.setItem(KEY, JSON.stringify(next)) } catch { /* The choice still applies for this view. */ }
+  return next
+}
+
+export const EXTRA_IDS: readonly ExtraId[] = EXTRAS
