@@ -7,7 +7,7 @@ import {IntelligenceOrb} from '../components/IntelligenceOrb'
 import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
 import {EXTRA_IDS, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
-import {loadMarkerKind, markerMarkup, saveMarkerKind, type MarkerKind} from './marker'
+import {loadMarkerKind, markerMarkup, type MarkerKind} from './marker'
 import {satelliteStyle} from './style'
 import './map.css'
 
@@ -48,8 +48,10 @@ const mapMemory: MapMemory = {
 
 const DEFAULT_CENTER: [number, number] = [20, 20]
 const DEFAULT_ZOOM = 1.6
-/** First GPS fix only. maxZoom is 19; later ticks must not keep forcing this. */
-const OPEN_ZOOM = 19
+/** First GPS fix only. maxZoom stays 19 so a pinch can go closer. Later ticks must not force this. */
+const OPEN_ZOOM = 15
+/** Behind-the-car zoom, applied once on Start. Not on later ticks and not on reopen. */
+const START_ZOOM = 17
 const EMPTY: RouteData = {type: 'FeatureCollection', features: []}
 const ARRIVAL_M = 50
 const SLOT_PATH = {
@@ -129,7 +131,7 @@ function directLine(from: Fix, place: SavedPlace): [number, number][] {
   return [[from.lon, from.lat], [place.lon, place.lat]]
 }
 
-const DRIVE_PITCH = 55
+const DRIVE_PITCH = 50
 
 /** Positive Y shifts the target down so the GPS marker sits in the lower part of the screen. */
 function behindOffset(map: Map): [number, number] {
@@ -137,16 +139,29 @@ function behindOffset(map: Map): [number, number] {
   return [0, Math.max(120, Math.round(height * 0.28))]
 }
 
-function easeBehind(map: Map, next: Fix, zoomOnce: boolean) {
-  const bearing = next.heading != null && next.heading >= 0 ? next.heading : undefined
+/** zoom is set only when a number is passed. Follow ticks pass false so a pinch is kept. */
+function easeBehind(map: Map, next: Fix, zoom: number | false) {
+  const bearing = next.heading != null && Number.isFinite(next.heading) && next.heading >= 0 ? next.heading : undefined
   map.easeTo({
     center: [next.lon, next.lat],
     pitch: DRIVE_PITCH,
     offset: behindOffset(map),
-    duration: zoomOnce ? 700 : 400,
+    duration: zoom !== false ? 700 : 400,
     ...(bearing !== undefined ? {bearing} : {}),
-    ...(zoomOnce ? {zoom: Math.max(map.getZoom(), 17)} : {}),
+    ...(zoom !== false ? {zoom} : {}),
   })
+}
+
+/** Left-button / one-finger pans. Pinch, rotate, and pitch must not stop follow. */
+function isOneFingerPan(event: Event | undefined): boolean {
+  if (!event) return false
+  if (typeof TouchEvent !== 'undefined' && event instanceof TouchEvent) return event.touches.length === 1
+  if (typeof MouseEvent !== 'undefined' && event instanceof MouseEvent) {
+    if (event.ctrlKey || event.metaKey || event.altKey) return false
+    if (event.buttons !== 0 && event.buttons !== 1) return false
+    return event.button === 0 || event.buttons === 1
+  }
+  return false
 }
 
 function fitRoute(map: Map, coordinates: [number, number][]) {
@@ -206,83 +221,6 @@ function commitRoute(map: Map, data: RouteData): boolean {
 }
 
 
-function AddressField({title, saved, onSave}: {title: string; saved: SavedPlace | null; onSave: (place: SavedPlace) => void}) {
-  const {t, locale} = useLocale()
-  const [draft, setDraft] = useState(saved?.label ?? '')
-  const [hits, setHits] = useState<Hit[]>([])
-  const [searching, setSearching] = useState(false)
-  const [searched, setSearched] = useState(false)
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => { setDraft(saved?.label ?? '') }, [saved?.label])
-
-  useEffect(() => {
-    if (!open) return
-    const q = draft.trim()
-    if (q.length < 2 || q === (saved?.label ?? '')) {
-      setHits([])
-      setSearching(false)
-      setSearched(false)
-      return
-    }
-    const ctrl = new AbortController()
-    const timer = window.setTimeout(() => {
-      setSearching(true)
-      const params = new URLSearchParams({q, lang: locale})
-      fetch(`/api/geocode?${params}`, {signal: ctrl.signal})
-        .then(response => response.ok ? response.json() as Promise<unknown> : [])
-        .then(data => {
-          if (ctrl.signal.aborted) return
-          const rows = Array.isArray(data) ? data : []
-          const next: Hit[] = []
-          for (const row of rows) {
-            if (!row || typeof row !== 'object') continue
-            const hit = row as {label?: unknown; lat?: unknown; lon?: unknown}
-            const lat = Number(hit.lat)
-            const lon = Number(hit.lon)
-            const label = typeof hit.label === 'string' ? hit.label : ''
-            if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
-            next.push({label, lat, lon})
-          }
-          setHits(next)
-          setSearched(true)
-        })
-        .catch(() => {
-          if (ctrl.signal.aborted) return
-          setHits([])
-          setSearched(true)
-        })
-        .finally(() => { if (!ctrl.signal.aborted) setSearching(false) })
-    }, 450)
-    return () => { window.clearTimeout(timer); ctrl.abort() }
-  }, [draft, locale, open, saved?.label])
-
-  return (
-    <div className="owned-map-field">
-      <p className="owned-map-edit-for">{title}</p>
-      <input
-        value={draft}
-        onChange={event => { setDraft(event.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
-        placeholder={t('Address')}
-        aria-label={title}
-        autoComplete="off"
-        spellCheck={false}
-      />
-      {open && searching && <p className="owned-map-search-status">{t('Searching…')}</p>}
-      {open && !searching && searched && hits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
-      {open && hits.length > 0 && (
-        <ul className="owned-map-suggest">
-          {hits.map(hit => (
-            <li key={`${hit.lat},${hit.lon},${hit.label}`}>
-              <button type="button" onClick={() => { onSave({lat: hit.lat, lon: hit.lon, label: hit.label}); setDraft(hit.label); setHits([]); setOpen(false) }}>{hit.label}</button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
 
 export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore = false}: {onClose: () => void; speedKmh?: number | null; speedUnit?: 'km/h' | 'mph'; showCore?: boolean}) {
   const {t, locale} = useLocale()
@@ -295,7 +233,8 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const destRef = useRef<Marker | null>(null)
   const followRef = useRef(mapMemory.following)
   const drivingRef = useRef(mapMemory.driving)
-  const driveZoomedRef = useRef(false)
+  /** False only until the next driving camera frame applies START_ZOOM once. */
+  const driveZoomedRef = useRef(true)
   const framedRef = useRef(false)
   const framedOpenRef = useRef(false)
   const pointRef = useRef<Fix | null>(null)
@@ -316,7 +255,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [markerKind, setMarkerKind] = useState<MarkerKind>(loadMarkerKind)
   const [trip, setTrip] = useState<Trip | null>(mapMemory.trip)
   const [arrival, setArrival] = useState<Arrival | null>(null)
@@ -334,7 +272,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [addHits, setAddHits] = useState<Hit[]>([])
   const [addSearching, setAddSearching] = useState(false)
   const [addSearched, setAddSearched] = useState(false)
-  const settingsRef = useRef(false)
   const kindRef = useRef(markerKind)
   const tripRef = useRef<Trip | null>(null)
   const arrivalRef = useRef<Arrival | null>(null)
@@ -352,7 +289,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   pointRef.current = point
   teslaOnRef.current = tesla.enabled
   editingRef.current = editing
-  settingsRef.current = settingsOpen
   kindRef.current = markerKind
   tripRef.current = trip
   drivingRef.current = driving
@@ -374,13 +310,18 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       if (arrivalRef.current) { dismissArrival(); return }
       if (editingRef.current) { setEditing(false); return }
       if (addingRef.current) { setAdding(false); return }
-      if (settingsRef.current) { setSettingsOpen(false); return }
       if (clearAskRef.current) { setClearAsk(false); return }
       onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  useEffect(() => {
+    const onMarker = () => setMarkerKind(loadMarkerKind())
+    window.addEventListener('robaq-marker', onMarker)
+    return () => window.removeEventListener('robaq-marker', onMarker)
+  }, [])
 
   function paintRoute(data: RouteData) {
     drawnRef.current = data
@@ -498,7 +439,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     showDestination(null)
   }
 
-  async function navigate(id: TripId, place: SavedPlace) {
+  async function navigate(id: TripId, place: SavedPlace, andDrive = false) {
     if (id === 'home' || id === 'work') setSelected(id)
     setEditing(false)
     arrivedRef.current = false
@@ -509,12 +450,14 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     mapMemory.trip = nextTrip
     tripRef.current = nextTrip
     setTrip(nextTrip)
-    followRef.current = false
-    setFollowing(false)
-    drivingRef.current = false
-    mapMemory.driving = false
-    setDriving(false)
-    driveZoomedRef.current = false
+    const freshStart = andDrive && !drivingRef.current
+    followRef.current = andDrive
+    setFollowing(andDrive)
+    drivingRef.current = andDrive
+    mapMemory.driving = andDrive
+    setDriving(andDrive)
+    if (freshStart) driveZoomedRef.current = false
+    if (andDrive) setQueryOpen(false)
     showDestination(place)
     const known = pointRef.current
     if (known) {
@@ -601,19 +544,16 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     const flush = () => flushRef.current()
     map.on('style.load', flush)
     map.on('idle', flush)
-    // Only a real finger/mouse pan stops follow. easeTo also moves the camera and must not.
+    // Only a real one-finger pan stops follow. Pinch, rotate, pitch, and easeTo must not.
     map.on('dragstart', (event) => {
-      const original = event.originalEvent
-      if (!original) return
-      if (typeof TouchEvent !== 'undefined' && original instanceof TouchEvent && original.touches.length !== 1) return
+      if (!isOneFingerPan(event.originalEvent)) return
       followRef.current = false
       setFollowing(false)
     })
     map.on('click', (event) => {
       const target = event.originalEvent?.target
       if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea, .owned-map-drop')) return
-      const panel = settingsRef.current || queryOpenRef.current || editingRef.current || addingRef.current || clearAskRef.current || !!arrivalRef.current
-      setSettingsOpen(false)
+      const panel = queryOpenRef.current || editingRef.current || addingRef.current || clearAskRef.current || !!arrivalRef.current
       setQueryOpen(false)
       setEditing(false)
       setAdding(false)
@@ -635,9 +575,18 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     if (opening) {
       framedOpenRef.current = true
       framedRef.current = true
-      // A restored drive keeps the behind-the-car camera. Otherwise show the fix up close once.
-      if (!drivingRef.current || !tripRef.current) {
-        map.jumpTo({center: [opening.lon, opening.lat], zoom: OPEN_ZOOM, pitch: 0})
+      if (drivingRef.current && tripRef.current) {
+        const bearing = opening.heading != null && opening.heading >= 0 ? opening.heading : 0
+        map.easeTo({
+          center: [opening.lon, opening.lat],
+          zoom: OPEN_ZOOM,
+          pitch: DRIVE_PITCH,
+          bearing,
+          offset: behindOffset(map),
+          duration: 0,
+        })
+      } else {
+        map.jumpTo({center: [opening.lon, opening.lat], zoom: OPEN_ZOOM, pitch: 0, bearing: 0})
       }
     }
     flush()
@@ -648,7 +597,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       const here = pointRef.current
       paintRoute(lineData(here ? sliceRoute(coords, here.lat, here.lon) : coords))
     } else if (active) {
-      void navigate(active.id, active.place)
+      void navigate(active.id, active.place, drivingRef.current)
     }
     return () => {
       observer.disconnect()
@@ -880,20 +829,23 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     if (!framedOpenRef.current) {
       framedOpenRef.current = true
       framedRef.current = true
-      if (!(drivingRef.current && tripRef.current)) {
-        map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, duration: 700})
+      if (drivingRef.current && tripRef.current) {
+        const stillDefault = map.getZoom() <= DEFAULT_ZOOM + 0.05
+        easeBehind(map, {lat, lon, heading}, stillDefault ? OPEN_ZOOM : false)
         return
       }
+      map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 700})
+      return
     }
     if (!followRef.current) return
     if (drivingRef.current) {
-      easeBehind(map, {lat, lon, heading}, !driveZoomedRef.current)
+      easeBehind(map, {lat, lon, heading}, driveZoomedRef.current ? false : START_ZOOM)
       driveZoomedRef.current = true
       return
     }
     if (!framedRef.current) {
       framedRef.current = true
-      map.easeTo({center: lngLat, zoom: OPEN_ZOOM, duration: 700})
+      map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 700})
     } else {
       map.easeTo({center: lngLat, duration: 400})
     }
@@ -912,12 +864,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     }
   }, [markerKind, heading])
 
-  function commitPlace(id: PlaceId, place: SavedPlace) {
-    const next = savePlace(id, place)
-    setPlaces(next)
-    if (tripRef.current?.id === id) void navigate(id, place)
-  }
-
   function openEditor(id: PlaceId) {
     setSelected(id)
     setDraft('')
@@ -925,14 +871,12 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setSearched(false)
     setSearching(false)
     setHint(null)
-    setSettingsOpen(false)
     setAdding(false)
     setEditing(true)
   }
 
   function openAdd() {
     setEditing(false)
-    setSettingsOpen(false)
     setQueryOpen(false)
     setAddName('')
     setAddAddress('')
@@ -994,7 +938,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         easeBehind(current, next, false)
         return
       }
-      current.easeTo({center: [next.lon, next.lat], zoom: Math.max(current.getZoom(), 15), duration: 600})
+      current.easeTo({center: [next.lon, next.lat], zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 600})
     }
     if (pointRef.current) { go(pointRef.current); return }
     if (!map) return
@@ -1007,14 +951,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setDriving(true)
     followRef.current = true
     setFollowing(true)
-    const go = (next: Fix) => {
-      const current = mapRef.current
-      if (!current || !drivingRef.current) return
-      easeBehind(current, next, true)
-      driveZoomedRef.current = true
-    }
-    if (pointRef.current) { go(pointRef.current); return }
-    void locate().then(next => { if (next) go(next) })
+    // The GPS effect applies START_ZOOM once, then leaves pinch zoom alone.
+    driveZoomedRef.current = false
+    if (!pointRef.current) void locate()
   }
 
   function stopDrive() {
@@ -1032,7 +971,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     }
     const place = places[id]
     if (!place) { openEditor(id); return }
-    void navigate(id, place)
+    void navigate(id, place, true)
   }
 
   function choose(hit: Hit) {
@@ -1041,10 +980,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setEditing(false)
     setAdding(false)
     setHits([])
-    void navigate(selected, place)
+    void navigate(selected, place, true)
   }
 
-  function goToQuery(hit: Hit) {
+  function goToQuery(hit: Hit, andDrive = false) {
     setQuery(hit.label)
     setQueryHits([])
     setQueryOpen(false)
@@ -1052,10 +991,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     hitsQueryRef.current = hit.label
     setEditing(false)
     setAdding(false)
-    void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label})
+    void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label}, andDrive)
   }
 
-  async function goFromSearch() {
+  async function goFromSearch(andDrive = false) {
     const q = query.trim()
     if (q.length < 2) return
     let hit = hitsQueryRef.current === q ? queryHits[0] : undefined
@@ -1081,7 +1020,20 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       }
     }
     if (!hit) return
-    goToQuery(hit)
+    goToQuery(hit, andDrive)
+  }
+
+  function onGo() {
+    if (drivingRef.current) {
+      stopDrive()
+      return
+    }
+    const drawn = routeCoordsRef.current
+    if (tripRef.current && drawn && drawn.length >= 2) {
+      startDrive()
+      return
+    }
+    void goFromSearch(true)
   }
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
@@ -1114,17 +1066,20 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     <section className={`owned-map${driving ? ' is-driving' : ''}`} role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
-        <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); void goFromSearch() }}>
+        <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); onGo() }}>
           <div className="owned-map-search-row">
           <input
             value={query}
             onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
-            onFocus={() => setQueryOpen(true)}
+            onFocus={() => { if (!driving) setQueryOpen(true) }}
             placeholder={t('Search address')}
             aria-label={t('Search address')}
             autoComplete="off"
             spellCheck={false}
+            readOnly={driving}
+            disabled={driving}
           />
+          <button type="submit" className={`owned-map-go${driving ? ' is-stop' : ''}`}>{driving ? t('Stop') : t('GO')}</button>
           </div>
           {queryOpen && querySearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
           {queryOpen && !querySearching && querySearched && queryHits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
@@ -1182,7 +1137,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
                   cancelRoute()
                   return
                 }
-                void navigate(id, saved)
+                void navigate(id, saved, true)
               }}>
                 <SlotIcon id={id} />
                 <span>{saved.name}</span>
@@ -1267,37 +1222,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         </div>
       )}
       <div className="owned-map-dock">
-      {settingsOpen && (
-        <div className="owned-map-settings" role="dialog" aria-label={t('Map Settings')}>
-          <AddressField title={t('HOME')} saved={places.home} onSave={place => commitPlace('home', place)} />
-          <AddressField title={t('WORK')} saved={places.work} onSave={place => commitPlace('work', place)} />
-          <label className="owned-map-marker-pick">
-            <span>{t('GPS icon')}</span>
-            <select
-              value={markerKind}
-              aria-label={t('GPS icon')}
-              onChange={event => setMarkerKind(saveMarkerKind(event.target.value as MarkerKind))}
-            >
-              <option value="dot">{t('Default')}</option>
-              <option value="model3">Model 3</option>
-              <option value="modely">Model Y</option>
-              <option value="models">Model S</option>
-              <option value="cybertruck">Cybertruck</option>
-            </select>
-          </label>
-        </div>
-      )}
       <button type="button" className={`owned-map-pill owned-map-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('GPS')} onClick={recenter}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.6 20.2 20.2c.35.78-.48 1.55-1.24 1.16L12 17.7l-6.96 3.66c-.76.39-1.59-.38-1.24-1.16L12 2.6z"/></svg>
       </button>
-      <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setAdding(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
       </div>
-      {trip && !driving && (
-        <button type="button" className="owned-map-cancel" onClick={startDrive}>{t('Start')}</button>
-      )}
-      {driving && (
-        <button type="button" className="owned-map-cancel" onClick={stopDrive}>{t('Stop')}</button>
-      )}
       <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
       </button>

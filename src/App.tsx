@@ -32,6 +32,7 @@ import { ApiKeyBridge } from './tesla/ApiKeyBridge'
 import { PairKeyPage } from './tesla/PairKeyPage'
 import { Navigation } from './navigation/Navigation'
 import { MapPage } from './map/MapPage'
+import {loadMarkerKind, saveMarkerKind, type MarkerKind} from './map/marker'
 import { packInstalled } from './translation/package'
 import { translateOffline, stopTranslationWorker } from './translation/client'
 import { automaticTranslation } from './translation/automatic'
@@ -63,6 +64,29 @@ import './ostra.css'
 import { IntelligenceOrb as LivingCell } from './components/IntelligenceOrb'
 
 const WatchTogether = lazy(() => import('./watch/WatchTogether').then(module => ({ default: module.WatchTogether })))
+
+function GpsIconSetting() {
+  const {t} = useLocale()
+  const [kind, setKind] = useState<MarkerKind>(loadMarkerKind)
+  return (
+    <fieldset className="chat-color-options">
+      <legend>{t('GPS icon')}</legend>
+      <label className="settings-language">
+        <select
+          value={kind}
+          aria-label={t('GPS icon')}
+          onChange={event => setKind(saveMarkerKind(event.target.value as MarkerKind))}
+        >
+          <option value="dot">{t('Default')}</option>
+          <option value="model3">Model 3</option>
+          <option value="modely">Model Y</option>
+          <option value="models">Model S</option>
+          <option value="cybertruck">Cybertruck</option>
+        </select>
+      </label>
+    </fieldset>
+  )
+}
 
 const INTRO_OFFLINE = "Hello, how can I help you?"
 /** Chat welcome: human online vibe when API is on; classic robaqAI line when off. */
@@ -1813,6 +1837,7 @@ function AppContent() {
             <p className="modal-help">{t('Default (web) is used until you choose Offline AI. Downloading a model does not switch the engine.')}</p>
             <p className="modal-help">{t("API credentials and updates.")}</p>
             <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'Automatic' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
+            <GpsIconSetting />
             {teslaActive?<TeslaSettings unit={teslaUnit} onUnit={unit=>{setTeslaUnit(unit);skillPreferences.setItem(TESLA_UNIT_KEY,unit)}}/>:<OfflineModelSelect disabled={thinking || Boolean(streamingId)} />}
             <div className="settings-menu-list" role="menu">
               <button

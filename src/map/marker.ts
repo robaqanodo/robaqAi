@@ -36,6 +36,8 @@ export function loadMarkerKind(): MarkerKind {
 export function saveMarkerKind(kind: MarkerKind): MarkerKind {
   const next = KINDS.includes(kind) ? kind : 'dot'
   try { localStorage.setItem(KEY, next) } catch { /* The choice still applies for this view. */ }
+  // Same-tab storage events do not fire. The open map listens for this.
+  window.dispatchEvent(new Event('robaq-marker'))
   return next
 }
 
