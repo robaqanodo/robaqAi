@@ -189,6 +189,15 @@ function preferredRecognitionLang(hintText?: string): string {
 const TEXTAREA_MAX_LINES = 5
 const ACCEPT_FILES =
   'image/*,application/pdf,text/plain,text/markdown,text/csv,application/json,.txt,.md,.csv,.json,.pdf'
+const TEXT_FILE_ACCEPT = '.txt,.md,.csv,.json,text/plain'
+
+function isChatTextFile(file: File): boolean {
+  const mime = (file.type || '').toLowerCase()
+  if (mime.startsWith('image/') || mime === 'application/pdf') return false
+  const name = file.name.toLowerCase()
+  if (/\.(txt|md|csv|json)$/.test(name)) return true
+  return mime === 'text/plain' || mime === 'text/markdown' || mime === 'text/csv' || mime === 'application/json'
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -547,7 +556,6 @@ function AppContent() {
   localModelsRef.current = localModels
   localeRef.current = locale
   chatEngineRef.current = chatEngine
-  const [modelMenuOpen, setModelMenuOpen] = useState(false)
   const birdPalette = (translatorReady || localModels.length > 0) ? 'mixed' : 'default'
   const birdColors = ['stock', 'black', ...(kasActive ? ['kas'] : []), ...(localModels.includes(localModel) ? ['model','model','model-buddy'] : [])]
   const [displayBirdColors, setDisplayBirdColors] = useState<string[]>(birdColors)
@@ -570,6 +578,7 @@ function AppContent() {
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textFileInputRef = useRef<HTMLInputElement>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const thinkTimer = useRef<number | null>(null)
   const typeTimer = useRef<number | null>(null)
@@ -1408,6 +1417,21 @@ function AppContent() {
     setPendingFiles((prev) => prev.filter((f) => f.id !== id))
   }
 
+  const onPickTextFile = (list: FileList | null) => {
+    const file = list?.[0]
+    if (textFileInputRef.current) textFileInputRef.current.value = ''
+    if (!file || !isChatTextFile(file)) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string' || reader.result.includes('\0')) return
+      const text = reader.result
+      if (!text) return
+      setInput(current => current ? (current.endsWith('\n') ? current + text : `${current}\n${text}`) : text)
+      inputRef.current?.focus()
+    }
+    reader.readAsText(file)
+  }
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     sendMessage(input)
@@ -1753,8 +1777,28 @@ function AppContent() {
 
           <div className="composer-right">
             {!hasApiKey && <div className="offline-model-menu">
-              <button type="button" className={`offline-model-trigger${modelMenuOpen ? ' is-open' : ''}`} aria-label={t('Offline AI')} aria-expanded={modelMenuOpen} onClick={() => setModelMenuOpen(open => !open)} disabled={thinking || Boolean(streamingId)}>AI</button>
-              {modelMenuOpen && <div className="offline-model-popover"><span>{MODELS.find(m=>m.id===localModel)?.name}</span><button className="modal-btn" onClick={()=>{setModelMenuOpen(false);openLandingPanel('settings');setTimeout(()=>document.getElementById('offline-ai-settings')?.scrollIntoView(),100)}}>{t('Settings')}</button></div>}
+              <input
+                ref={textFileInputRef}
+                type="file"
+                className="sr-only"
+                accept={TEXT_FILE_ACCEPT}
+                tabIndex={-1}
+                aria-hidden
+                onChange={(e) => onPickTextFile(e.target.files)}
+              />
+              <button
+                type="button"
+                className="offline-model-trigger"
+                aria-label={t('Choose file')}
+                title={t('Choose file')}
+                disabled={thinking || Boolean(streamingId)}
+                onClick={() => textFileInputRef.current?.click()}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <path d="M14 3v5h5M8 13h8M8 17h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>}
             {(thinking || Boolean(streamingId)) ? <button type="button" className="send-btn generation-stop-btn" aria-label={t('Stop generating')} title={t('Stop generating')} onClick={() => { cancelTyping(); webAbort.current?.abort(); sendGen.current += 1; stopTranslationWorker(); cancelDesktopReply(); cancelOfflineReply(); streamGen.current += 1; setThinking(false); setStreamingId(null) }}><IconStop /></button> : <button type="submit" className="send-btn" disabled={!canSend} aria-label={t("Send")}><IconSendUp /></button>}
           </div>
