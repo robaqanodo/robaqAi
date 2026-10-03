@@ -1,7 +1,7 @@
 /** Server-only Gemini call. The API key stays in the request header and is never logged. */
 
-export const PRIMARY_MODEL = 'gemini-2.5-flash'
-export const FALLBACK_MODEL = 'gemini-2.5-flash-lite'
+export const PRIMARY_MODEL = 'gemini-3.5-flash-lite'
+export const FALLBACK_MODEL = 'gemini-3.8-flash'
 export const MAX_MESSAGE = 4000
 
 export class ChatFailure extends Error {

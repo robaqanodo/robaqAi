@@ -55,7 +55,7 @@ describe('default web chat', () => {
     expect(JSON.stringify(missing.body)).not.toMatch(/AIza|GEMINI_API_KEY/)
   })
 
-  it('uses gemini-2.5-flash, falls back on 404, and returns text plus sources', async () => {
+  it('uses gemini-3.5-flash-lite, falls back on 404, and returns text plus sources', async () => {
     process.env.GEMINI_API_KEY = 'server-test-key'
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ error: { code: 404, status: 'NOT_FOUND' } }), { status: 404 }))
@@ -72,8 +72,8 @@ describe('default web chat', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const first = fetchMock.mock.calls[0]
     const second = fetchMock.mock.calls[1]
-    expect(String(first[0])).toContain('/models/gemini-2.5-flash:generateContent')
-    expect(String(second[0])).toContain('/models/gemini-2.5-flash-lite:generateContent')
+    expect(String(first[0])).toContain('/models/gemini-3.5-flash-lite:generateContent')
+    expect(String(second[0])).toContain('/models/gemini-3.8-flash:generateContent')
     expect(String(first[0])).not.toContain('server-test-key')
     expect(first[1].headers['x-goog-api-key']).toBe('server-test-key')
     const sent = JSON.parse(first[1].body as string)
