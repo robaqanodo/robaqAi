@@ -12,6 +12,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react(), liveRoomsPlugin(), kasPlugin(), desktopAI(), watchTogether(), guestPresence(), keyHandoffPlugin(), mapProxyPlugin(), chatPlugin()],
   worker: { format: 'es' },
+  optimizeDeps: {
+    // MapLibre v6's worker breaks under Vite's dep pre-bundler, so GeoJSON lines never draw.
+    exclude: ['maplibre-gl'],
+  },
   build: {
     rolldownOptions: {
       output: {

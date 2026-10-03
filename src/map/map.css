@@ -212,6 +212,16 @@
 .owned-map-core .cell-api-glow,
 .owned-map-core .cell-status-light{display:none!important}
 .owned-map-core .intelligence-orb .cell-nucleus.link-tesla-core{width:70%;height:70%}
+.owned-map-core .cell-nucleus.link-tesla-core::before{
+  content:'';
+  position:absolute;left:50%;top:50%;width:68%;height:68%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(255,255,255,.8);
+  box-shadow:0 2px 8px rgba(0,0,0,.35);
+  z-index:1;pointer-events:none;
+}
+.owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2}
 .owned-map-core.is-holding{animation:map-hold 1s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes map-hold{to{outline-color:rgba(255,255,255,.8)}}

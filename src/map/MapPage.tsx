@@ -1,5 +1,6 @@
 import {useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react'
-import {Map, Marker, NavigationControl, type GeoJSONSource} from 'maplibre-gl'
+import {Map, Marker, NavigationControl, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
 import {IntelligenceOrb} from '../components/IntelligenceOrb'
@@ -9,6 +10,11 @@ import {loadPlaces, savePlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, saveMarkerKind, type MarkerKind} from './marker'
 import {satelliteStyle} from './style'
 import './map.css'
+
+// Vite bundles maplibre-gl.mjs into the app chunk, so the default worker URL
+// (./maplibre-gl-worker.mjs next to that chunk) 404s. GeoJSON then never tiles:
+// raster imagery and HTML markers still show, the route line does not.
+setWorkerUrl(maplibreWorkerUrl)
 
 type Fix = {lat: number; lon: number; heading: number | null}
 type Hit = {label: string; lat: number; lon: number}
@@ -92,6 +98,10 @@ function sliceRoute(coords: [number, number][], lat: number, lon: number): [numb
   if (!tail) return [here, [lon, lat]]
   const body = rest.filter(point => point[0] !== here[0] || point[1] !== here[1])
   return [here, ...(body.length ? body : [tail])]
+}
+
+function directLine(from: Fix, place: SavedPlace): [number, number][] {
+  return [[from.lon, from.lat], [place.lon, place.lat]]
 }
 
 /** Add the GeoJSON source and Tesla-blue line even while raster tiles are still loading. */
@@ -410,17 +420,31 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     arrivalRef.current = null
     setArrival(null)
     const seq = ++routeSeq.current
-    routeCoordsRef.current = null
-    mapMemory.route = null
-    paintRoute(EMPTY)
     const nextTrip = {id, place}
     mapMemory.trip = nextTrip
     tripRef.current = nextTrip
     setTrip(nextTrip)
     followRef.current = true
     setFollowing(true)
+    framedRef.current = false
     showDestination(place)
-    if (!pointRef.current) setHint('Waiting for location…')
+    const known = pointRef.current
+    if (known) {
+      const straight = directLine(known, place)
+      routeCoordsRef.current = straight
+      mapMemory.route = straight
+      paintRoute(lineData(straight))
+      const map = mapRef.current
+      if (map) {
+        framedRef.current = true
+        map.easeTo({center: [known.lon, known.lat], zoom: Math.max(map.getZoom(), 15), duration: 700})
+      }
+    } else {
+      routeCoordsRef.current = null
+      mapMemory.route = null
+      paintRoute(EMPTY)
+      setHint('Waiting for location…')
+    }
     const origin = await locate()
     if (seq !== routeSeq.current) return
     if (!origin) { setHint('Waiting for location…'); return }
@@ -430,6 +454,15 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       return
     }
     setHint(null)
+    const straight = directLine(origin, place)
+    routeCoordsRef.current = straight
+    mapMemory.route = straight
+    paintRoute(lineData(straight))
+    const framed = mapRef.current
+    if (framed && followRef.current) {
+      framedRef.current = true
+      framed.easeTo({center: [origin.lon, origin.lat], zoom: Math.max(framed.getZoom(), 15), duration: 700})
+    }
     try {
       const response = await fetch(`/api/route?from=${origin.lon},${origin.lat}&to=${place.lon},${place.lat}`)
       const body = await response.json() as {geometry?: {type?: string; coordinates?: unknown}}
@@ -443,23 +476,15 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue
         coordinates.push([lon, lat])
       }
-      if (!response.ok || coordinates.length < 2) {
-        setHint('Route unavailable')
-        return
-      }
+      // OSRM can fail. The straight line already on the map stays, so navigation is never blank.
+      if (!response.ok || coordinates.length < 2) return
       routeCoordsRef.current = coordinates
       mapMemory.route = coordinates
       mapMemory.trip = tripRef.current
       const here = pointRef.current ?? origin
       paintRoute(lineData(sliceRoute(coordinates, here.lat, here.lon)))
-      const map = mapRef.current
-      if (map && followRef.current) {
-        framedRef.current = true
-        map.easeTo({center: [here.lon, here.lat], zoom: Math.max(map.getZoom(), 15), duration: 700})
-      }
     } catch {
       if (seq !== routeSeq.current) return
-      setHint('Route unavailable')
     }
   }
 
@@ -496,7 +521,21 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     const flush = () => flushRef.current()
     map.on('style.load', flush)
     map.on('idle', flush)
-    map.on('dragstart', () => { followRef.current = false; setFollowing(false) })
+    // Only a real finger/mouse pan stops follow. easeTo also moves the camera and must not.
+    map.on('dragstart', (event) => {
+      if (!event.originalEvent) return
+      followRef.current = false
+      setFollowing(false)
+    })
+    map.on('click', (event) => {
+      const target = event.originalEvent?.target
+      if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea')) return
+      setSettingsOpen(false)
+      setQueryOpen(false)
+      setEditing(false)
+      setClearAsk(false)
+      if (arrivalRef.current) dismissArrival()
+    })
     const resize = () => map.resize()
     const observer = new ResizeObserver(resize)
     observer.observe(el)
@@ -648,8 +687,14 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     marker.getElement().classList.toggle('is-headed', kindRef.current === 'dot' && headed)
     if (!marker.getElement().isConnected) marker.addTo(map)
     const coords = routeCoordsRef.current
-    if (coords && coords.length >= 2 && tripRef.current && !arrivalRef.current) {
-      paintRoute(lineData(sliceRoute(coords, lat, lon)))
+    if (coords && coords.length >= 2 && active && !arrivalRef.current) {
+      // Two points is the straight fallback. Keep it glued to the car instead of slicing a stale start.
+      const next = coords.length <= 2 ? directLine({lat, lon, heading}, active.place) : sliceRoute(coords, lat, lon)
+      if (coords.length <= 2) {
+        routeCoordsRef.current = next
+        mapMemory.route = next
+      }
+      paintRoute(lineData(next))
     }
     if (!followRef.current) return
     if (!framedRef.current) {
@@ -658,7 +703,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     } else {
       map.easeTo({center: lngLat, duration: 400})
     }
-  }, [lat, lon, heading])
+  }, [lat, lon, heading, following])
 
   useEffect(() => {
     const el = markerRef.current?.getElement()
