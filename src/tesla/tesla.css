@@ -99,13 +99,7 @@
 }
 .app-shell.theme-default .tesla-menu-toggle svg{stroke:#ffffff0f}
 
-/* History stays in the rail while LinkyourTesla is connected (do not clip it off the dock). */
-.app-shell.has-navigation.tesla-connected .navigation-rail .rail-history{
-  display:flex;
-  visibility:visible;
-  flex-shrink:0;
-}
-.app-shell.tesla-connected .history-drawer{z-index:12}
+/* Home and History are omitted from the rail while LinkyourTesla is connected. */
 @media(max-width:760px), (pointer:coarse) and (max-height:500px){
   .app-shell.has-navigation.tesla-connected .navigation-rail{
     overflow-x:auto;

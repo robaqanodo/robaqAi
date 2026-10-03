@@ -303,7 +303,7 @@ function AppContent() {
   const [teslaOpen,setTeslaOpen]=useState(false)
   const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
   const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
-  useEffect(()=>{setTeslaMenuCollapsed(false)},[teslaActive,session])
+  useEffect(()=>{setTeslaMenuCollapsed(false);if(teslaActive)setHistoryOpen(false)},[teslaActive,session])
   useEffect(()=>{if(teslaActive&&locale==='ka')setLocale('en')},[teslaActive,locale,setLocale])
   useEffect(()=>{setTeslaUnit(skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')},[session,teslaActive])
 
@@ -1382,7 +1382,7 @@ function AppContent() {
       {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d={teslaMenuCollapsed?'m9 6 6 6-6 6':'m15 6-6 6 6 6'}/></svg></button>}
       <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setTeslaOpen(true)}} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
-      {session && chatOpen && historyOpen && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
+      {session && chatOpen && historyOpen && !teslaActive && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
       <div
         className={`chat-panel chat-color-${chatColor}`}
@@ -1392,7 +1392,7 @@ function AppContent() {
       >
         <header className="panel-top">
           <div className="chat-intelligence">
-            {session && !historyOpen && <button type="button" className="history-corner-toggle" onClick={() => setHistoryOpen(true)} aria-label={t("Expand chat sidebar")} title={t("Expand chat sidebar")}>→</button>}
+            {session && !historyOpen && !teslaActive && <button type="button" className="history-corner-toggle" onClick={() => setHistoryOpen(true)} aria-label={t("Expand chat sidebar")} title={t("Expand chat sidebar")}>→</button>}
             <div className="chat-intelligence-label">
               <span>robaqAI</span>
             </div>
