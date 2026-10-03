@@ -528,6 +528,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const chargerPopupRef = useRef<Popup | null>(null)
   const syncChargersRef = useRef<(map: Map) => void>(() => {})
   const suppressChargerClick = useRef(false)
+  const dropPinRef = useRef<{lat: number; lon: number; title?: string} | null>(null)
   useEffect(() => () => {
     if (placeHoldTimer.current) window.clearTimeout(placeHoldTimer.current)
   }, [])
@@ -839,6 +840,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     const beginHold = (point: {x: number; y: number}, lngLat: {lat: number; lng: number}, target: EventTarget | null) => {
       if (holdPress.timer) return
       if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea, .owned-map-drop')) return
+      if (dropPinRef.current) return
       const site = chargerUnder(point)
       holdPress.x = point.x
       holdPress.y = point.y
@@ -885,6 +887,11 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     map.on('click', (event) => {
       if (suppressChargerClick.current) {
         suppressChargerClick.current = false
+        return
+      }
+      if (dropPinRef.current) {
+        const pressed = event.originalEvent?.target
+        if (!(pressed instanceof Element && pressed.closest('.owned-map-drop-go, .owned-map-drop-add'))) setDropPin(null)
         return
       }
       if (map.getLayer('chargers-bolt')) {
@@ -1581,6 +1588,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [holding, setHolding] = useState(false)
   const [clearAsk, setClearAsk] = useState(false)
   clearAskRef.current = clearAsk
+  dropPinRef.current = dropPin
   syncChargersRef.current = syncChargers
   const mapCore = useTeslaCoreInteraction({enabled: showCore, onTap: onClose})
   function startHold(event: ReactPointerEvent<HTMLButtonElement>) {

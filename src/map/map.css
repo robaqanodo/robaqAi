@@ -96,9 +96,9 @@
   -webkit-backdrop-filter:none;
   z-index:6;
 }
-.owned-map-search-row{display:flex;align-items:center;gap:0;min-height:54px}
+.owned-map-search-row{display:flex;align-items:center;gap:0;min-height:64px}
 .owned-map-search input{
-  width:100%;box-sizing:border-box;min-height:54px;padding:0 12px;border-radius:16px;
+  width:100%;box-sizing:border-box;min-height:64px;padding:0 12px;border-radius:16px;
   color:#111;font:inherit;font-size:16px;
   background:transparent;border:0;
 }
@@ -152,8 +152,8 @@
 .owned-map-pill svg{width:16px;height:16px;flex:none;display:block}
 
 .owned-map-places-bar button.owned-map-add{
-  width:40px;height:40px;min-width:40px;min-height:40px;padding:0;
-  font-size:24px;font-weight:500;letter-spacing:0;text-transform:none;line-height:1;
+  width:56px;height:56px;min-width:56px;min-height:56px;padding:0;
+  font-size:28px;font-weight:500;letter-spacing:0;text-transform:none;line-height:1;
 }
 .owned-map-edit input.owned-map-add-name{margin-bottom:8px}
 .owned-map-saved{
@@ -239,7 +239,7 @@
 }
 .owned-map-places-bar .owned-map-pill svg{width:16px;height:16px}
 .owned-map-places-bar .owned-map-pill{
-  min-height:40px;padding:0 12px;border-radius:16px;gap:6px;
+  min-height:56px;padding:0 16px;border-radius:18px;gap:8px;
   color:#111;
   background:rgba(255,255,255,.9);
   border:0;
@@ -248,8 +248,8 @@
   -webkit-backdrop-filter:none;
 }
 .owned-map-places-bar button.owned-map-add{
-  width:40px;height:40px;min-width:40px;min-height:40px;
-  padding:0;border-radius:16px;font-size:24px;color:#111;
+  width:56px;height:56px;min-width:56px;min-height:56px;
+  padding:0;border-radius:18px;font-size:28px;color:#111;
 }
 .owned-map-pill:focus-visible,
 .owned-map-places-bar button:focus-visible,
@@ -334,13 +334,13 @@
 .owned-map-core{
   position:relative;z-index:4;
   top:auto;left:auto;
-  width:48px;height:48px;flex:none;padding:0;border:0;background:transparent;color:inherit;
+  width:64px;height:64px;flex:none;padding:0;border:0;background:transparent;color:inherit;
   cursor:pointer;pointer-events:auto;
   outline:2px solid transparent;outline-offset:4px;
   -webkit-user-select:none;user-select:none;touch-action:none;
 }
 .owned-map-core{overflow:visible}
-.owned-map-core .living-cell{width:48px;height:48px;overflow:visible}
+.owned-map-core .living-cell{width:64px;height:64px;overflow:visible}
 .owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2;color:#e82127}
 .owned-map-core.is-holding{animation:map-hold 1s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
@@ -350,7 +350,7 @@
 .owned-map-core .tesla-core-speed small{font-size:7px;letter-spacing:.02em}
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-places{width:max-content;max-width:calc(100vw - 96px)}
-  .owned-map-core,.owned-map-core .living-cell{width:48px;height:48px}
+  .owned-map-core,.owned-map-core .living-cell{width:64px;height:64px}
   .owned-map-core .tesla-core-speed strong{font-size:11px}
   .owned-map-core .tesla-core-speed small{font-size:7px}
 }
@@ -611,13 +611,13 @@
 }
 .owned-map-rail-gap{height:0;flex:none}
 .owned-map-rail button{
-  width:48px;height:48px;padding:0;border:0;border-radius:14px;cursor:pointer;
+  width:64px;height:64px;padding:0;border:0;border-radius:18px;cursor:pointer;
   display:grid;place-items:center;color:#1c1c1e;background:rgba(255,255,255,.9);
   box-shadow:0 8px 20px rgba(0,0,0,.16);
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
 }
-.owned-map-rail button svg{width:22px;height:22px;display:block}
+.owned-map-rail button svg{width:26px;height:26px;display:block}
 .owned-map-rail button.is-on{color:#111}
 .owned-map-rail button.is-3d{font-size:13px;font-weight:750;letter-spacing:.04em}
 .owned-map-rail button.is-3d.is-on,
@@ -630,7 +630,7 @@
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 64px);width:min(340px, calc(100vw - 76px))}
   .owned-map.is-driving .owned-map-guide{top:max(10px, env(safe-area-inset-top))}
-  .owned-map-rail button{width:44px;height:44px;border-radius:13px}
+  .owned-map-rail button{width:64px;height:64px;border-radius:18px}
 }
 
 .owned-map.is-driving .owned-map-places{width:min(280px, calc(100vw - 120px))}
