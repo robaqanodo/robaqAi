@@ -36,9 +36,9 @@
   top:max(10px, env(safe-area-inset-top));
   left:50%;
   transform:translateX(-50%);
-  width:min(760px, calc(100vw - 140px));
-  max-width:min(760px, calc(100vw - 140px));
-  display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  width:max-content;
+  max-width:calc(100vw - 120px);
+  display:flex;flex-direction:column;align-items:center;gap:8px;
   pointer-events:none;
 }
 .owned-map-places-bar,
@@ -57,7 +57,9 @@
   -webkit-backdrop-filter:none;
 }
 .owned-map-search{
-  width:100%;
+  width:auto;
+  align-self:stretch;
+  margin-inline:-10px;
   box-sizing:border-box;padding:0 8px 0 4px;border-radius:16px;
   color:#111;
   background:#fff;
@@ -66,16 +68,16 @@
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
 }
-.owned-map-search-row{display:flex;align-items:center;gap:0;min-height:52px}
+.owned-map-search-row{display:flex;align-items:center;gap:0;min-height:44px}
 .owned-map-search input{
-  width:100%;box-sizing:border-box;min-height:52px;padding:0 14px;border-radius:16px;
+  width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;border-radius:16px;
   color:#111;font:inherit;font-size:16px;
   background:transparent;border:0;
 }
 .owned-map-search input:disabled{
   opacity:1;color:#6b7280;-webkit-text-fill-color:#6b7280;
 }
-.owned-map-search-row input{flex:1;width:auto;min-width:0}
+.owned-map-search-row input{flex:1 1 0;width:0;min-width:0}
 .owned-map-go{
   flex:none;height:36px;margin:0 2px 0 6px;padding:0 16px;border:0;border-radius:10px;
   color:#fff;font:inherit;font-size:13px;font-weight:700;letter-spacing:.06em;
@@ -323,7 +325,7 @@
 .owned-map-core .tesla-core-speed strong{font-size:11px;-webkit-text-stroke:.5px #000}
 .owned-map-core .tesla-core-speed small{font-size:7px;letter-spacing:.02em}
 @media (max-width: 760px), (max-height: 680px){
-  .owned-map-places{width:calc(100vw - 112px);max-width:calc(100vw - 112px)}
+  .owned-map-places{width:max-content;max-width:calc(100vw - 96px)}
   .owned-map-core,.owned-map-core .living-cell{width:44px;height:44px}
   .owned-map-core .tesla-core-speed strong{font-size:11px}
   .owned-map-core .tesla-core-speed small{font-size:7px}
@@ -589,3 +591,6 @@
   .owned-map.is-driving .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 66px)}
   .owned-map-rail button{width:44px;height:44px;border-radius:13px}
 }
+
+.owned-map.is-driving .owned-map-places{width:min(280px, calc(100vw - 120px))}
+.owned-map.is-driving .owned-map-search{margin-inline:0;width:100%}
