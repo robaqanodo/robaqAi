@@ -1,12 +1,39 @@
-import type {StyleSpecification} from 'maplibre-gl'
+import type {ExpressionSpecification, StyleSpecification} from 'maplibre-gl'
 
 const ROUTE_BLUE = '#3E9BFF'
 
-/** Owned client style. One public raster, no key, no style JSON hosted elsewhere.
- *  The route source is part of the style so the Tesla-blue line sits above the imagery
- *  as soon as the style loads. Filling it is a setData, not a late addLayer. */
+/** OpenFreeMap planet vector tiles. No key. Overlay only; the Esri raster stays the basemap. */
+const OPENFREEMAP = 'https://tiles.openfreemap.org/planet'
+
+const labelName: ExpressionSpecification = ['coalesce', ['get', 'name_en'], ['get', 'name']]
+
+/** render_height, else building:levels * 3, else about 8m. OpenFreeMap buildings carry render_height. */
+const buildingHeight: ExpressionSpecification = [
+  'case',
+  ['>', ['to-number', ['coalesce', ['get', 'render_height'], 0]], 0],
+  ['to-number', ['get', 'render_height']],
+  ['>', ['to-number', ['coalesce', ['get', 'building:levels'], 0]], 0],
+  ['*', ['to-number', ['get', 'building:levels']], 3],
+  8,
+]
+
+const labelLayout: { 'text-field': ExpressionSpecification, 'text-font': string[], 'text-size': number } = {
+  'text-field': labelName,
+  'text-font': ['Noto Sans Regular'],
+  'text-size': 13,
+}
+
+const labelPaint = {
+  'text-color': '#f7f8fa',
+  'text-halo-color': '#121418',
+  'text-halo-width': 1.4,
+  'text-halo-blur': 0.2,
+}
+
+/** Owned client style. Esri World Imagery stays the only basemap. Vector layers are overlays. */
 export const satelliteStyle: StyleSpecification = {
   version: 8,
+  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
   sources: {
     satellite: {
       type: 'raster',
@@ -17,6 +44,11 @@ export const satelliteStyle: StyleSpecification = {
       maxzoom: 19,
       attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
     },
+    openfreemap: {
+      type: 'vector',
+      url: OPENFREEMAP,
+      attribution: '© OpenFreeMap © OpenMapTiles © OpenStreetMap contributors',
+    },
     route: {
       type: 'geojson',
       data: {type: 'FeatureCollection', features: []},
@@ -24,6 +56,65 @@ export const satelliteStyle: StyleSpecification = {
   },
   layers: [
     {id: 'satellite', type: 'raster', source: 'satellite'},
+    {
+      id: 'buildings-3d',
+      type: 'fill-extrusion',
+      source: 'openfreemap',
+      'source-layer': 'building',
+      minzoom: 14,
+      filter: ['!=', ['get', 'hide_3d'], true],
+      paint: {
+        'fill-extrusion-color': '#d9d5ce',
+        'fill-extrusion-opacity': 0.82,
+        'fill-extrusion-base': ['to-number', ['coalesce', ['get', 'render_min_height'], 0]],
+        'fill-extrusion-height': buildingHeight,
+      },
+    },
+    {
+      id: 'road-names',
+      type: 'symbol',
+      source: 'openfreemap',
+      'source-layer': 'transportation_name',
+      minzoom: 13,
+      filter: ['has', 'name'],
+      layout: {
+        ...labelLayout,
+        'symbol-placement': 'line',
+        'text-rotation-alignment': 'map',
+        'text-pitch-alignment': 'viewport',
+        'text-size': ['interpolate', ['linear'], ['zoom'], 13, 11, 16, 14],
+      },
+      paint: labelPaint,
+    },
+    {
+      id: 'place-names',
+      type: 'symbol',
+      source: 'openfreemap',
+      'source-layer': 'place',
+      minzoom: 4,
+      filter: ['match', ['get', 'class'], ['country', 'state', 'city', 'town', 'village', 'suburb', 'neighbourhood', 'hamlet', 'quarter'], true, false],
+      layout: {
+        ...labelLayout,
+        'text-font': ['Noto Sans Regular'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 4, 11, 8, 13, 12, 15],
+        'text-max-width': 8,
+      },
+      paint: labelPaint,
+    },
+    {
+      id: 'poi-names',
+      type: 'symbol',
+      source: 'openfreemap',
+      'source-layer': 'poi',
+      minzoom: 15,
+      filter: ['has', 'name'],
+      layout: {
+        ...labelLayout,
+        'text-size': 11,
+        'text-max-width': 8,
+      },
+      paint: labelPaint,
+    },
     {
       id: 'route-casing',
       type: 'line',

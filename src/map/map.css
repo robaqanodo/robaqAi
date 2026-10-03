@@ -17,7 +17,7 @@
   position:absolute;z-index:6;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));
   width:44px;height:44px;min-height:44px;padding:0;border-radius:14px;color:#111;font:inherit;cursor:pointer;
   display:grid;place-items:center;
-  background:#fff;
+  background:rgba(255,255,255,.9);
   border:0;
   box-shadow:0 8px 22px rgba(0,0,0,.18);
   backdrop-filter:none;
@@ -53,7 +53,7 @@
 .owned-map-edit,
 .owned-map-hint{
   color:#111;
-  background:#fff;
+  background:rgba(255,255,255,.9);
   border:0;
   box-shadow:0 10px 28px rgba(0,0,0,.16);
   backdrop-filter:none;
@@ -62,6 +62,7 @@
 .owned-map-search{
   position:absolute;
   left:50%;
+  right:auto;
   bottom:0;
   transform:translateX(-50%);
   width:calc(200% + 40px);
@@ -69,7 +70,7 @@
   margin-inline:0;
   box-sizing:border-box;padding:0 8px 0 4px;border-radius:16px;
   color:#111;
-  background:#fff;
+  background:rgba(255,255,255,.9);
   border:0;
   box-shadow:0 8px 24px rgba(0,0,0,.16);
   backdrop-filter:none;
@@ -161,7 +162,7 @@
 .owned-map-places-bar .owned-map-pill:focus-visible,
 .owned-map-close:hover,
 .owned-map-close:focus-visible{
-  background:#f4f5f7;
+  background:rgba(244,245,247,.9);
   color:#111;
   border-color:transparent;
 }
@@ -173,7 +174,7 @@
 .owned-map-places-bar .owned-map-pill.is-on,
 .owned-map-places-bar .owned-map-pill.is-on:hover,
 .owned-map-places-bar .owned-map-pill.is-on:focus-visible{
-  background:#111;
+  background:rgba(17,17,17,.9);
   color:#fff;
   border-color:transparent;
 }
@@ -208,7 +209,7 @@
 .owned-map-places-bar .owned-map-pill{
   min-height:36px;padding:0 12px;border-radius:16px;gap:6px;
   color:#111;
-  background:#fff;
+  background:rgba(255,255,255,.9);
   border:0;
   box-shadow:0 6px 16px rgba(0,0,0,.14);
   backdrop-filter:none;
@@ -297,37 +298,9 @@
   outline:2px solid transparent;outline-offset:4px;
   -webkit-user-select:none;user-select:none;touch-action:none;
 }
-.owned-map-core .living-cell{width:44px;height:44px;animation:none;filter:none}
-.owned-map-core .capability-orbits,
-.owned-map-core .guest-orbits,
-.owned-map-core .cell-boundary,
-.owned-map-core .cell-ring,
-.owned-map-core .cell-blob,
-.owned-map-core .cell-api-glow,
-.owned-map-core .cell-status-light{display:none!important}
-.owned-map-core .intelligence-orb .cell-nucleus.link-tesla-core{width:70%;height:70%;overflow:visible}
-.owned-map-core .cell-nucleus.link-tesla-core::before{
-  content:'';
-  position:absolute;left:50%;top:50%;width:118%;height:118%;
-  transform:translate(-50%,-50%);
-  border-radius:50%;
-  background:rgba(255,255,255,.22);
-  border:1px solid rgba(255,255,255,.35);
-  box-sizing:border-box;
-  box-shadow:0 2px 8px rgba(0,0,0,.24),0 1px 0 rgba(255,255,255,.18) inset;
-  backdrop-filter:blur(10px) saturate(1.4);
-  -webkit-backdrop-filter:blur(10px) saturate(1.4);
-  z-index:1;pointer-events:none;
-}
-.owned-map-core .link-tesla-core:after{
-  z-index:3;pointer-events:none;
-  border:2px solid transparent;
-  border-right-color:#ffffffb3;
-  border-left-color:#88889880;
-  box-shadow:inset 0 0 12px #ffffff30,0 0 8px #ffffff20;
-  animation:link-tesla-ring 12s linear infinite;
-}
-.owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2;width:62%;height:62%}
+.owned-map-core{overflow:visible}
+.owned-map-core .living-cell{width:44px;height:44px;overflow:visible}
+.owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2;color:#e82127}
 .owned-map-core.is-holding{animation:map-hold 1s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes map-hold{to{outline-color:rgba(255,255,255,.8)}}
@@ -473,7 +446,7 @@
 .app-shell.is-map-entering .owned-map-settings-btn{animation-delay:70ms}
 @keyframes map-chrome-in{from{opacity:0;transform:translate3d(0,-8px,0)}to{opacity:1;transform:none}}
 @keyframes map-chrome-up{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
-.owned-map-search,.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings{animation:map-panel-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
+.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings{animation:map-panel-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
 @keyframes map-panel-in{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
 .owned-map-arrival{animation:map-arrival-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
 @keyframes map-arrival-in{from{opacity:0;transform:translate(-50%,calc(-50% + 8px))}to{opacity:1;transform:translate(-50%,-50%)}}
@@ -528,7 +501,7 @@
   max-height:min(78vh, 640px);
   box-sizing:border-box;
   display:flex;flex-direction:column;
-  padding:14px 14px 10px;border-radius:16px;color:#111;background:#fff;
+  padding:14px 14px 10px;border-radius:16px;color:#111;background:rgba(255,255,255,.9);
   border:0;
   box-shadow:0 12px 32px rgba(0,0,0,.16);
   overflow:hidden;
@@ -574,7 +547,7 @@
   transform:translateX(-50%);
   max-width:min(460px, calc(100vw - 150px));
   box-sizing:border-box;padding:10px 16px;border-radius:12px;
-  background:#fff;color:#111;
+  background:rgba(255,255,255,.9);color:#111;
   border:0;
   font-size:15px;font-weight:680;line-height:1.2;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -594,7 +567,7 @@
 .owned-map-rail-gap{height:14px;flex:none}
 .owned-map-rail button{
   width:48px;height:48px;padding:0;border:0;border-radius:14px;cursor:pointer;
-  display:grid;place-items:center;color:#1c1c1e;background:#fff;
+  display:grid;place-items:center;color:#1c1c1e;background:rgba(255,255,255,.9);
   box-shadow:0 8px 20px rgba(0,0,0,.16);
   backdrop-filter:none;
   -webkit-backdrop-filter:none;
@@ -602,7 +575,7 @@
 .owned-map-rail button svg{width:22px;height:22px;display:block}
 .owned-map-rail button.is-on{color:#111}
 .owned-map-rail button:hover,
-.owned-map-rail button:focus-visible{background:#f4f5f7}
+.owned-map-rail button:focus-visible{background:rgba(244,245,247,.9)}
 .owned-map-rail button:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 64px);width:min(340px, calc(100vw - 76px))}
@@ -616,10 +589,10 @@
 .owned-map-search .owned-map-suggest,
 .owned-map-search .owned-map-search-status{
   position:absolute;left:4px;right:4px;bottom:calc(100% + 6px);margin:0;
-  background:#fff;color:#111;border-radius:12px;
+  background:rgba(255,255,255,.9);color:#111;border-radius:12px;
   box-shadow:0 8px 22px rgba(0,0,0,.16);z-index:2;
 }
-.owned-map-core .tesla-core-logo{color:#111}
+.owned-map-core .tesla-core-logo,.app-shell.theme-default .owned-map-core .tesla-core-logo{color:#e82127}
 .app-shell.theme-default .owned-map-close,
 .app-shell.theme-default .owned-map-search,
 .app-shell.theme-default .owned-map-edit,
@@ -628,7 +601,7 @@
 .app-shell.theme-default .owned-map-banner,
 .app-shell.theme-default .owned-map-rail button,
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill{
-  background:#1c1c1e;color:#f4f7fb;border:1px solid rgba(255,255,255,.14);
+  background:rgba(28,28,30,.9);color:#f4f7fb;border:1px solid rgba(255,255,255,.14);
   box-shadow:0 8px 22px rgba(0,0,0,.35);
 }
 .app-shell.theme-default .owned-map-search input,
@@ -640,7 +613,7 @@
 .app-shell.theme-default .owned-map-search .owned-map-suggest,
 .app-shell.theme-default .owned-map-search .owned-map-search-status,
 .app-shell.theme-default .owned-map-edit input{
-  background:#111;color:#f4f7fb;border-color:rgba(255,255,255,.12);
+  background:rgba(17,17,17,.9);color:#f4f7fb;border-color:rgba(255,255,255,.12);
 }
 .app-shell.theme-default .owned-map-suggest button{color:#f4f7fb}
 .app-shell.theme-default .owned-map-suggest button:hover,
@@ -667,7 +640,7 @@
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on,
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on:hover,
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on:focus-visible{
-  background:#111;color:#fff;border-color:rgba(255,255,255,.28);
+  background:rgba(17,17,17,.9);color:#fff;border-color:rgba(255,255,255,.28);
 }
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill:hover,
 .app-shell.theme-default .owned-map-places-bar .owned-map-pill:focus-visible,
@@ -675,6 +648,6 @@
 .app-shell.theme-default .owned-map-close:focus-visible,
 .app-shell.theme-default .owned-map-rail button:hover,
 .app-shell.theme-default .owned-map-rail button:focus-visible{
-  background:#2a2a2e;color:#fff;border-color:rgba(255,255,255,.18);
+  background:rgba(42,42,46,.9);color:#fff;border-color:rgba(255,255,255,.18);
 }
 .app-shell.theme-default .owned-map-rail button.is-on{color:#fff}
