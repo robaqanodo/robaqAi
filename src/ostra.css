@@ -43,6 +43,7 @@
 .color-choice { display:grid; justify-items:center; gap:6px; min-width:70px; padding:9px; border:1px solid #ffffff18; border-radius:13px; cursor:pointer; font-size:12px; }
 .color-choice input { accent-color:#c7d3f0; }
 .color-choice > span { width:30px; height:20px; border-radius:6px; background:#292b34; border:1px solid #ffffff30; }
+.color-system > span { width:22px; height:22px; border-radius:50%; background:linear-gradient(90deg,#111 50%,#f1f3f8 50%); border:1px solid #ffffff40; }
 .color-white > span { background:#f1f3f8; }
 .color-green > span { background:#14533f; }
 .color-choice:has(input:checked) { border-color:#bec9e7; background:#ffffff09; }

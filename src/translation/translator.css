@@ -6,8 +6,8 @@
 .store-panel a.modal-btn { text-decoration: none; white-space: nowrap; }
 
 .modal-card.side-panel.store-panel {
-  width: min(520px, 100%);
-  max-width: 520px;
+  width: min(600px, 100%);
+  max-width: 600px;
   height: auto;
   max-height: 90dvh;
   overflow-y: auto;

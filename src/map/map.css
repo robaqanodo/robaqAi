@@ -44,8 +44,10 @@
   pointer-events:none;
 }
 .owned-map-places-bar,
+.owned-map-search,
 .owned-map-edit,
 .owned-map-hint,
+.owned-map-cancel,
 .owned-map-dock .owned-map-pill{pointer-events:auto}
 .owned-map-edit,
 .owned-map-hint{
@@ -56,10 +58,41 @@
   backdrop-filter:blur(28px) saturate(1.55);
   -webkit-backdrop-filter:blur(28px) saturate(1.55);
 }
+.owned-map-search{
+  width:min(360px, calc(100vw - 150px));
+  box-sizing:border-box;padding:8px;border-radius:20px;
+  color:#fff;
+  background:linear-gradient(155deg, rgba(255,255,255,.18) 0%, rgba(255,255,255,.05) 42%, rgba(255,255,255,.08) 100%), rgba(16,16,22,.42);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 18px 50px rgba(0,0,0,.4), 0 1px 0 rgba(255,255,255,.16) inset, 0 -1px 0 rgba(0,0,0,.22) inset;
+  backdrop-filter:blur(28px) saturate(1.55);
+  -webkit-backdrop-filter:blur(28px) saturate(1.55);
+}
+.owned-map-search input{
+  width:100%;box-sizing:border-box;min-height:40px;padding:0 12px;border-radius:12px;
+  color:#fff;font:inherit;font-size:15px;
+  background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.22);
+}
+.owned-map-search input::placeholder{color:rgba(255,255,255,.55)}
+.owned-map-search .owned-map-suggest{max-height:min(34vh, 240px)}
 .owned-map-places-bar{
   display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:0;
   background:none;border:0;box-shadow:none;
 }
+.owned-map-cancel{
+  position:absolute;z-index:6;left:50%;
+  bottom:max(22px, calc(env(safe-area-inset-bottom) + 16px));
+  transform:translateX(-50%);
+  min-width:148px;min-height:48px;padding:0 22px;border-radius:24px;
+  color:#fff;font:inherit;font-size:15px;font-weight:680;letter-spacing:.04em;cursor:pointer;
+  background:rgba(12,14,18,.78);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 14px 36px rgba(0,0,0,.45);
+  backdrop-filter:blur(18px) saturate(1.25);
+  -webkit-backdrop-filter:blur(18px) saturate(1.25);
+}
+.owned-map-cancel:focus-visible,
+.owned-map-search input:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .owned-map-pill{
   color:#f4f7fb;font:inherit;cursor:pointer;
   display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -266,7 +299,7 @@
 .app-shell.is-map-entering .owned-map-settings-btn{animation-delay:70ms}
 @keyframes map-chrome-in{from{opacity:0;transform:translate3d(0,-8px,0)}to{opacity:1;transform:none}}
 @keyframes map-chrome-up{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
-.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings{animation:map-panel-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
+.owned-map-search,.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings{animation:map-panel-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
 @keyframes map-panel-in{from{opacity:0;transform:translate3d(0,8px,0)}to{opacity:1;transform:none}}
 .owned-map-arrival{animation:map-arrival-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both}
 @keyframes map-arrival-in{from{opacity:0;transform:translate(-50%,calc(-50% + 8px))}to{opacity:1;transform:translate(-50%,-50%)}}
@@ -286,7 +319,7 @@
   .app-shell.is-map-entering .owned-map-close,
   .app-shell.is-map-entering .landing-entry,
   .app-shell.is-map-leaving .owned-map,
-  .owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings,.owned-map-arrival,.owned-map-core.is-holding{
+  .owned-map-search,.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings,.owned-map-arrival,.owned-map-core.is-holding{
     animation:none!important;
   }
   .landing-entry.is-map-flight{transition:none!important}

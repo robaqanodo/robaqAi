@@ -18,7 +18,8 @@ type RouteFeature = {
   geometry: {type: 'LineString'; coordinates: [number, number][]}
 }
 type RouteData = RouteFeature | {type: 'FeatureCollection'; features: []}
-type Trip = {id: PlaceId; place: SavedPlace}
+type TripId = PlaceId | 'search'
+type Trip = {id: TripId; place: SavedPlace}
 type Arrival = {label: string; left: number}
 
 const DEFAULT_CENTER: [number, number] = [20, 20]
@@ -48,14 +49,14 @@ function ensureRoute(map: Map) {
     type: 'line',
     source: 'route',
     layout: {'line-cap': 'round', 'line-join': 'round'},
-    paint: {'line-color': '#0b0b0b', 'line-width': 8, 'line-opacity': 0.92},
+    paint: {'line-color': '#0A3F9E', 'line-width': 10, 'line-opacity': 0.95},
   })
   map.addLayer({
     id: 'route-line',
     type: 'line',
     source: 'route',
     layout: {'line-cap': 'round', 'line-join': 'round'},
-    paint: {'line-color': '#ffffff', 'line-width': 4},
+    paint: {'line-color': '#3E9BFF', 'line-width': 6},
   })
 }
 
@@ -166,11 +167,17 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [trip, setTrip] = useState<Trip | null>(null)
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(true)
+  const [query, setQuery] = useState('')
+  const [queryHits, setQueryHits] = useState<Hit[]>([])
+  const [querySearching, setQuerySearching] = useState(false)
+  const [querySearched, setQuerySearched] = useState(false)
+  const [queryOpen, setQueryOpen] = useState(false)
   const settingsRef = useRef(false)
   const kindRef = useRef(markerKind)
   const tripRef = useRef<Trip | null>(null)
   const arrivalRef = useRef<Arrival | null>(null)
   const arrivedRef = useRef(false)
+  const queryOpenRef = useRef(false)
 
   const point: Fix | null = tesla.coordinates
     ? finiteFix(tesla.coordinates.latitude, tesla.coordinates.longitude, tesla.coordinates.heading)
@@ -183,10 +190,12 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   kindRef.current = markerKind
   tripRef.current = trip
   arrivalRef.current = arrival
+  queryOpenRef.current = queryOpen
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      if (queryOpenRef.current) { setQueryOpen(false); return }
       if (arrivalRef.current) { dismissArrival(); return }
       if (editingRef.current) { setEditing(false); return }
       if (settingsRef.current) { setSettingsOpen(false); return }
@@ -287,7 +296,21 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     })
   }
 
-  async function navigate(id: PlaceId, place: SavedPlace) {
+  function cancelRoute() {
+    routeSeq.current += 1
+    tripRef.current = null
+    setTrip(null)
+    followRef.current = false
+    setFollowing(false)
+    arrivedRef.current = false
+    arrivalRef.current = null
+    setArrival(null)
+    setHint(null)
+    paintRoute(EMPTY)
+    showDestination(null)
+  }
+
+  async function navigate(id: TripId, place: SavedPlace) {
     setSelected(id)
     setEditing(false)
     arrivedRef.current = false
@@ -341,9 +364,15 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       maxZoom: 19,
       attributionControl: {compact: false},
       fadeDuration: 0,
+      dragRotate: true,
+      touchZoomRotate: true,
+      touchPitch: true,
+      pitchWithRotate: true,
     })
     map.addControl(new NavigationControl({showCompass: false, visualizePitch: false}), 'bottom-left')
-    map.touchZoomRotate.disableRotation()
+    map.touchZoomRotate.enableRotation()
+    map.dragRotate.enable()
+    map.touchPitch.enable()
     const pin = document.createElement('div')
     const initialKind = kindRef.current
     pin.className = `owned-map-pin${initialKind === 'dot' ? ' is-puck' : ' is-vehicle'}`
@@ -354,8 +383,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     destEl.className = 'owned-map-dest'
     destEl.innerHTML = '<span></span>'
     const dest = new Marker({element: destEl, anchor: 'center'})
-    map.dragRotate.disable()
     map.on('dragstart', () => { followRef.current = false; setFollowing(false) })
+    map.on('rotatestart', (event) => {
+      if (event.originalEvent) { followRef.current = false; setFollowing(false) }
+    })
+    map.on('pitchstart', (event) => {
+      if (event.originalEvent) { followRef.current = false; setFollowing(false) }
+    })
     map.on('load', () => {
       ensureRoute(map)
       if (queuedRoute.current) {
@@ -435,6 +469,47 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     }, 450)
     return () => { window.clearTimeout(timer); ctrl.abort() }
   }, [draft, editing, locale])
+
+  useEffect(() => {
+    if (!queryOpen) return
+    const q = query.trim()
+    if (q.length < 2) {
+      setQueryHits([])
+      setQuerySearching(false)
+      setQuerySearched(false)
+      return
+    }
+    const ctrl = new AbortController()
+    const timer = window.setTimeout(() => {
+      setQuerySearching(true)
+      const params = new URLSearchParams({q, lang: locale})
+      fetch(`/api/geocode?${params}`, {signal: ctrl.signal})
+        .then(response => response.ok ? response.json() as Promise<unknown> : [])
+        .then(data => {
+          if (ctrl.signal.aborted) return
+          const rows = Array.isArray(data) ? data : []
+          const next: Hit[] = []
+          for (const row of rows) {
+            if (!row || typeof row !== 'object') continue
+            const hit = row as {label?: unknown; lat?: unknown; lon?: unknown}
+            const lat = Number(hit.lat)
+            const lon = Number(hit.lon)
+            const label = typeof hit.label === 'string' ? hit.label : ''
+            if (!label || !Number.isFinite(lat) || !Number.isFinite(lon)) continue
+            next.push({label, lat, lon})
+          }
+          setQueryHits(next)
+          setQuerySearched(true)
+        })
+        .catch(() => {
+          if (ctrl.signal.aborted) return
+          setQueryHits([])
+          setQuerySearched(true)
+        })
+        .finally(() => { if (!ctrl.signal.aborted) setQuerySearching(false) })
+    }, 450)
+    return () => { window.clearTimeout(timer); ctrl.abort() }
+  }, [query, queryOpen, locale])
 
   const lat = point?.lat
   const lon = point?.lon
@@ -516,6 +591,16 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     setPlaces(savePlace(selected, place))
     setEditing(false)
     setHits([])
+    void navigate(selected, place)
+  }
+
+  function goToQuery(hit: Hit) {
+    setQuery(hit.label)
+    setQueryHits([])
+    setQueryOpen(false)
+    setQuerySearched(false)
+    setEditing(false)
+    void navigate('search', {lat: hit.lat, lon: hit.lon, label: hit.label})
   }
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
@@ -546,6 +631,28 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     <section className="owned-map" role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
+        <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); if (queryHits[0]) goToQuery(queryHits[0]) }}>
+          <input
+            value={query}
+            onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
+            onFocus={() => setQueryOpen(true)}
+            placeholder={t('Search address')}
+            aria-label={t('Search address')}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {queryOpen && querySearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
+          {queryOpen && !querySearching && querySearched && queryHits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
+          {queryOpen && queryHits.length > 0 && (
+            <ul className="owned-map-suggest">
+              {queryHits.map(hit => (
+                <li key={`${hit.lat},${hit.lon},${hit.label}`}>
+                  <button type="button" onClick={() => goToQuery(hit)}>{hit.label}</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </form>
         <div className="owned-map-places-bar">
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4.5 10.6 12 4.2l7.5 6.4V20a1 1 0 0 1-1 1h-4.2v-5.2H9.7V21H5.5a1 1 0 0 1-1-1v-9.4z"/></svg>
@@ -642,6 +749,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       </button>
       <button type="button" className={`owned-map-pill owned-map-settings-btn${settingsOpen ? ' is-on' : ''}`} aria-expanded={settingsOpen} onClick={() => { setEditing(false); setSettingsOpen(open => !open) }}>{t('Map Settings')}</button>
       </div>
+      {trip && (
+        <button type="button" className="owned-map-cancel" onClick={cancelRoute}>{t('Cancel')}</button>
+      )}
       <button type="button" className="owned-map-close" aria-label={t('Close')} onClick={onClose}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
       </button>

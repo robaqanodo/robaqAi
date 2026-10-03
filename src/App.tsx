@@ -378,6 +378,7 @@ function AppContent() {
     return ()=>stopTeslaLocation()
   },[teslaActive,session])
   useEffect(()=>{setTeslaActive(skillPreferences.getItem(TESLA_KEY)==='true');setTeslaOpen(false)},[session])
+  useEffect(()=>{if(!teslaActive){setMapOpen(false);setMapEntering(false);setMapLeaving(false)}},[teslaActive])
   useEffect(() => {
     if (!teslaActive || !session?.online || !session.syncKey) return
     let cancelled = false
@@ -1477,6 +1478,7 @@ function AppContent() {
   }, [chatOpen, openChat,labMinimized,labInstalling,teslaActive])
 
   const openMap = () => {
+    if (!teslaActive) return
     const el = document.querySelector<HTMLElement>('.landing-entry')
     if (el) {
       const style = getComputedStyle(el)
@@ -1810,7 +1812,7 @@ function AppContent() {
             <fieldset className="chat-color-options engine-options"><legend>{t('Chat engine')}</legend><label className="color-choice"><input type="radio" name="chat-engine" value="web" checked={chatEngine === 'web'} onChange={() => setChatEngine('web')} />{t('Default (web)')}</label><label className="color-choice"><input type="radio" name="chat-engine" value="offline" checked={chatEngine === 'offline'} onChange={() => setChatEngine('offline')} />{t('Offline AI')}</label></fieldset>
             <p className="modal-help">{t('Default (web) is used until you choose Offline AI. Downloading a model does not switch the engine.')}</p>
             <p className="modal-help">{t("API credentials and updates.")}</p>
-            <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'System theme' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
+            <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'Automatic' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
             {teslaActive?<TeslaSettings unit={teslaUnit} onUnit={unit=>{setTeslaUnit(unit);skillPreferences.setItem(TESLA_UNIT_KEY,unit)}}/>:<OfflineModelSelect disabled={thinking || Boolean(streamingId)} />}
             <div className="settings-menu-list" role="menu">
               <button
