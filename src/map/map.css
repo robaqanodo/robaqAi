@@ -17,11 +17,11 @@
   position:absolute;z-index:6;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));
   width:44px;height:44px;min-height:44px;padding:0;border-radius:14px;color:#111;font:inherit;cursor:pointer;
   display:grid;place-items:center;
-  background:rgba(255,255,255,.62);
-  border:1px solid rgba(255,255,255,.55);
-  box-shadow:0 8px 22px rgba(0,0,0,.16);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  background:#fff;
+  border:0;
+  box-shadow:0 8px 22px rgba(0,0,0,.18);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 .owned-map-close svg{width:16px;height:16px;display:block}
 .owned-map-close:focus-visible{outline:2px solid #fff;outline-offset:3px}
@@ -36,10 +36,11 @@
 .owned-map-places{
   position:absolute;z-index:5;
   top:max(10px, env(safe-area-inset-top));
+  bottom:max(12px, env(safe-area-inset-bottom));
   left:50%;
   transform:translateX(-50%);
   width:max-content;
-  max-width:calc(100vw - 120px);
+  max-width:calc(100vw - 24px);
   display:flex;flex-direction:column;align-items:center;gap:8px;
   pointer-events:none;
 }
@@ -52,23 +53,28 @@
 .owned-map-edit,
 .owned-map-hint{
   color:#111;
-  background:rgba(255,255,255,.62);
-  border:1px solid rgba(255,255,255,.55);
+  background:#fff;
+  border:0;
   box-shadow:0 10px 28px rgba(0,0,0,.16);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 .owned-map-search{
-  width:auto;
-  align-self:stretch;
-  margin-inline:-10px;
+  position:absolute;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+  width:calc(200% + 40px);
+  max-width:calc(100vw - 24px);
+  margin-inline:0;
   box-sizing:border-box;padding:0 8px 0 4px;border-radius:16px;
   color:#111;
-  background:rgba(255,255,255,.62);
-  border:1px solid rgba(255,255,255,.55);
+  background:#fff;
+  border:0;
   box-shadow:0 8px 24px rgba(0,0,0,.16);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+  z-index:6;
 }
 .owned-map-search-row{display:flex;align-items:center;gap:0;min-height:44px}
 .owned-map-search input{
@@ -83,12 +89,12 @@
 .owned-map-go{
   flex:none;height:36px;margin:0 2px 0 6px;padding:0 16px;border:0;border-radius:10px;
   color:#fff;font:inherit;font-size:13px;font-weight:700;letter-spacing:.06em;
-  text-transform:uppercase;cursor:pointer;background:#3E6AE1;
+  text-transform:uppercase;cursor:pointer;background:#111;
 }
 .owned-map-go.is-stop{
-  color:#fff;background:rgba(28,28,30,.72);border:1px solid rgba(255,255,255,.18);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  color:#fff;background:#8e1b1b;border:0;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 .owned-map-go:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
 .owned-map-search input::placeholder{color:#8b919a}
@@ -155,9 +161,9 @@
 .owned-map-places-bar .owned-map-pill:focus-visible,
 .owned-map-close:hover,
 .owned-map-close:focus-visible{
-  background:rgba(255,255,255,.78);
+  background:#f4f5f7;
   color:#111;
-  border-color:rgba(255,255,255,.6);
+  border-color:transparent;
 }
 .owned-map-search:hover,
 .owned-map-search:focus-within{
@@ -167,7 +173,7 @@
 .owned-map-places-bar .owned-map-pill.is-on,
 .owned-map-places-bar .owned-map-pill.is-on:hover,
 .owned-map-places-bar .owned-map-pill.is-on:focus-visible{
-  background:#3E6AE1;
+  background:#111;
   color:#fff;
   border-color:transparent;
 }
@@ -202,11 +208,11 @@
 .owned-map-places-bar .owned-map-pill{
   min-height:36px;padding:0 12px;border-radius:16px;gap:6px;
   color:#111;
-  background:rgba(255,255,255,.62);
-  border:1px solid rgba(255,255,255,.55);
+  background:#fff;
+  border:0;
   box-shadow:0 6px 16px rgba(0,0,0,.14);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 .owned-map-places-bar button.owned-map-add{
   width:36px;height:36px;min-width:36px;min-height:36px;
@@ -224,7 +230,7 @@
 .owned-map-edit input{
   width:100%;box-sizing:border-box;min-height:40px;padding:0 12px;border-radius:12px;
   color:#111;font:inherit;font-size:15px;
-  background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.4);
+  background:#f3f4f6;border:0;
 }
 .owned-map-edit input::placeholder{color:#8b919a}
 .owned-map-search-status{margin:8px 2px 0;font-size:13px;color:#4b5563}
@@ -236,7 +242,7 @@
   padding:8px 8px;border-radius:10px;cursor:pointer;font-size:13px;line-height:1.35;
 }
 .owned-map-suggest button:hover,
-.owned-map-suggest button:focus-visible{background:rgba(255,255,255,.45)}
+.owned-map-suggest button:focus-visible{background:#f3f4f6}
 .owned-map-hint{
   margin:0;padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.35;
   max-width:min(280px, calc(100vw - 150px));
@@ -516,21 +522,21 @@
 
 .owned-map-guide{
   position:absolute;z-index:5;
-  top:calc(max(10px, env(safe-area-inset-top)) + 112px);
+  top:calc(max(10px, env(safe-area-inset-top)) + 56px);
   left:max(12px, env(safe-area-inset-left));
   width:min(340px, calc(100vw - 84px));
   max-height:min(78vh, 640px);
   box-sizing:border-box;
   display:flex;flex-direction:column;
-  padding:14px 14px 10px;border-radius:16px;color:#111;background:rgba(255,255,255,.66);
-  border:1px solid rgba(255,255,255,.55);
+  padding:14px 14px 10px;border-radius:16px;color:#111;background:#fff;
+  border:0;
   box-shadow:0 12px 32px rgba(0,0,0,.16);
-  overflow:visible;
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  overflow:hidden;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 .owned-map.is-driving .owned-map-guide{
-  top:calc(max(10px, env(safe-area-inset-top)) + 70px);
+  top:max(12px, env(safe-area-inset-top));
 }
 .owned-map-guide-next{display:flex;align-items:center;gap:12px;padding:2px 2px 12px}
 .owned-map-guide-dist{font-size:28px;font-weight:720;letter-spacing:-.03em;line-height:1.05}
@@ -551,12 +557,12 @@
 .owned-map-guide-dest strong{font-size:15px;font-weight:700;line-height:1.25}
 .owned-map-guide-dest span{color:#6b7280;font-size:13px;line-height:1.3}
 .owned-map-guide-cancel{
-  margin-top:12px;width:100%;min-height:46px;border:1px solid rgba(255,255,255,.45);border-radius:12px;cursor:pointer;
-  background:rgba(255,255,255,.42);color:#1c1c1e;
+  margin-top:12px;width:100%;min-height:46px;border:0;border-radius:12px;cursor:pointer;
+  background:#e7eaee;color:#3a414b;
   font:inherit;font-size:14px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;
 }
 .owned-map-guide-cancel:hover,
-.owned-map-guide-cancel:focus-visible{background:rgba(255,255,255,.62)}
+.owned-map-guide-cancel:focus-visible{background:#dde1e6}
 .owned-map-guide-cancel:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
 .owned-map-guide-meta{
   display:flex;justify-content:space-between;gap:10px;
@@ -565,18 +571,18 @@
 }
 .owned-map-banner{
   position:absolute;z-index:5;left:50%;
-  bottom:max(16px, env(safe-area-inset-bottom));
   transform:translateX(-50%);
   max-width:min(460px, calc(100vw - 150px));
   box-sizing:border-box;padding:10px 16px;border-radius:12px;
-  background:rgba(255,255,255,.66);color:#111;
-  border:1px solid rgba(255,255,255,.55);
+  background:#fff;color:#111;
+  border:0;
   font-size:15px;font-weight:680;line-height:1.2;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   box-shadow:0 8px 22px rgba(0,0,0,.16);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
   pointer-events:none;
+  bottom:calc(max(12px, env(safe-area-inset-bottom)) + 64px);
 }
 .owned-map-rail{
   position:absolute;z-index:6;
@@ -587,22 +593,88 @@
 }
 .owned-map-rail-gap{height:14px;flex:none}
 .owned-map-rail button{
-  width:48px;height:48px;padding:0;border:1px solid rgba(255,255,255,.55);border-radius:14px;cursor:pointer;
-  display:grid;place-items:center;color:#1c1c1e;background:rgba(255,255,255,.62);
+  width:48px;height:48px;padding:0;border:0;border-radius:14px;cursor:pointer;
+  display:grid;place-items:center;color:#1c1c1e;background:#fff;
   box-shadow:0 8px 20px rgba(0,0,0,.16);
-  backdrop-filter:blur(16px) saturate(1.2);
-  -webkit-backdrop-filter:blur(16px) saturate(1.2);
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 .owned-map-rail button svg{width:22px;height:22px;display:block}
-.owned-map-rail button.is-on{color:#3E6AE1}
+.owned-map-rail button.is-on{color:#111}
 .owned-map-rail button:hover,
-.owned-map-rail button:focus-visible{background:rgba(255,255,255,.8)}
+.owned-map-rail button:focus-visible{background:#f4f5f7}
 .owned-map-rail button:focus-visible{outline:2px solid #3E6AE1;outline-offset:2px}
 @media (max-width: 760px), (max-height: 680px){
-  .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 128px);width:min(340px, calc(100vw - 76px))}
-  .owned-map.is-driving .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 66px)}
+  .owned-map-guide{top:calc(max(8px, env(safe-area-inset-top)) + 64px);width:min(340px, calc(100vw - 76px))}
+  .owned-map.is-driving .owned-map-guide{top:max(10px, env(safe-area-inset-top))}
   .owned-map-rail button{width:44px;height:44px;border-radius:13px}
 }
 
 .owned-map.is-driving .owned-map-places{width:min(280px, calc(100vw - 120px))}
-.owned-map.is-driving .owned-map-search{margin-inline:0;width:100%}
+.owned-map.is-driving .owned-map-search{margin-inline:0;width:min(560px, calc(100vw - 24px))}
+
+.owned-map-search .owned-map-suggest,
+.owned-map-search .owned-map-search-status{
+  position:absolute;left:4px;right:4px;bottom:calc(100% + 6px);margin:0;
+  background:#fff;color:#111;border-radius:12px;
+  box-shadow:0 8px 22px rgba(0,0,0,.16);z-index:2;
+}
+.owned-map-core .tesla-core-logo{color:#111}
+.app-shell.theme-default .owned-map-close,
+.app-shell.theme-default .owned-map-search,
+.app-shell.theme-default .owned-map-edit,
+.app-shell.theme-default .owned-map-hint,
+.app-shell.theme-default .owned-map-guide,
+.app-shell.theme-default .owned-map-banner,
+.app-shell.theme-default .owned-map-rail button,
+.app-shell.theme-default .owned-map-places-bar .owned-map-pill{
+  background:#1c1c1e;color:#f4f7fb;border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 8px 22px rgba(0,0,0,.35);
+}
+.app-shell.theme-default .owned-map-search input,
+.app-shell.theme-default .owned-map-search input:disabled{
+  color:#f4f7fb;-webkit-text-fill-color:#f4f7fb;
+}
+.app-shell.theme-default .owned-map-search input::placeholder,
+.app-shell.theme-default .owned-map-edit input::placeholder{color:rgba(255,255,255,.5)}
+.app-shell.theme-default .owned-map-search .owned-map-suggest,
+.app-shell.theme-default .owned-map-search .owned-map-search-status,
+.app-shell.theme-default .owned-map-edit input{
+  background:#111;color:#f4f7fb;border-color:rgba(255,255,255,.12);
+}
+.app-shell.theme-default .owned-map-suggest button{color:#f4f7fb}
+.app-shell.theme-default .owned-map-suggest button:hover,
+.app-shell.theme-default .owned-map-suggest button:focus-visible{background:rgba(255,255,255,.08)}
+.app-shell.theme-default .owned-map-guide-dist,
+.app-shell.theme-default .owned-map-guide-road,
+.app-shell.theme-default .owned-map-guide-step-name,
+.app-shell.theme-default .owned-map-guide-dest strong,
+.app-shell.theme-default .owned-map-turn,
+.app-shell.theme-default .owned-map-close,
+.app-shell.theme-default .owned-map-rail button{color:#f4f7fb}
+.app-shell.theme-default .owned-map-guide-step-dist,
+.app-shell.theme-default .owned-map-guide-dest span,
+.app-shell.theme-default .owned-map-guide-meta,
+.app-shell.theme-default .owned-map-edit-for,
+.app-shell.theme-default .owned-map-search-status{color:rgba(255,255,255,.66)}
+.app-shell.theme-default .owned-map-guide-list{border-top-color:rgba(255,255,255,.12)}
+.app-shell.theme-default .owned-map-guide-list li{border-bottom-color:rgba(255,255,255,.08)}
+.app-shell.theme-default .owned-map-guide-cancel{background:#2c2c2e;color:#f4f7fb}
+.app-shell.theme-default .owned-map-guide-cancel:hover,
+.app-shell.theme-default .owned-map-guide-cancel:focus-visible{background:#3a3a3e}
+.app-shell.theme-default .owned-map-go{background:#111;color:#fff;border:1px solid rgba(255,255,255,.28)}
+.app-shell.theme-default .owned-map-go.is-stop{background:#8e1b1b;border:0;color:#fff}
+.app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on,
+.app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on:hover,
+.app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on:focus-visible{
+  background:#111;color:#fff;border-color:rgba(255,255,255,.28);
+}
+.app-shell.theme-default .owned-map-places-bar .owned-map-pill:hover,
+.app-shell.theme-default .owned-map-places-bar .owned-map-pill:focus-visible,
+.app-shell.theme-default .owned-map-close:hover,
+.app-shell.theme-default .owned-map-close:focus-visible,
+.app-shell.theme-default .owned-map-rail button:hover,
+.app-shell.theme-default .owned-map-rail button:focus-visible{
+  background:#2a2a2e;color:#fff;border-color:rgba(255,255,255,.18);
+}
+.app-shell.theme-default .owned-map-rail button.is-on{color:#fff}

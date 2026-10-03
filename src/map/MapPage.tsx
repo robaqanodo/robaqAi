@@ -1327,6 +1327,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             >
               <IntelligenceOrb
                 linkTesla
+                svgMark
                 teslaHomeVisible={false}
                 teslaSpeedKmh={speedKmh}
                 teslaUnit={speedUnit}

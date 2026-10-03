@@ -14,6 +14,8 @@ type OrbProps = {
   teslaSpinKey?: number
   onTeslaSpinEnd?: () => void
   linkTesla?: boolean
+  /** Map control only: draw the in-app Tesla path instead of the photo mark. */
+  svgMark?: boolean
   tesla?: boolean
   memberCount?:number
   modelColor?:string
@@ -78,7 +80,7 @@ export function IntelligenceOrb(props: OrbProps) {
       {props.connectionIndicator
         ? <span className="cell-status-light" />
         : <span className={`cell-nucleus${props.linkTesla ? ' link-tesla-core' : props.tesla ? ' tesla-nucleus' : ''}${props.linkTesla && props.teslaSpinning ? ' is-core-spinning' : ''}${props.linkTesla && props.teslaSettling ? ' is-core-settling' : ''}`}>
-          {props.linkTesla && <><svg key={props.teslaSpinning?`spin-${props.teslaSpinKey??0}`:'logo'} className={`tesla-core-logo${props.teslaHomeVisible!==false&&!teslaIntroPlayed&&!props.teslaSpinning?' is-opening':''}${props.teslaSpinning?' is-spinning':''}`} onAnimationEnd={event=>{if(event.target!==event.currentTarget)return;const name=event.animationName||'';if(props.teslaSpinning&&(name.includes('tesla-logo-orbit')||name.includes('tesla-logo-spin'))){props.onTeslaSpinEnd?.();return}if(!teslaIntroPlayed&&name.includes('tesla-logo-orbit'))setTeslaIntroPlayed(true)}} style={{visibility:typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1?'hidden':'visible'}} viewBox="1000 300 1000 1000" overflow="hidden" aria-hidden="true"><defs><filter id="tesla-core-logo-depth" x="-20%" y="-22%" width="140%" height="150%" colorInterpolationFilters="sRGB">
+          {props.linkTesla && <><svg key={props.teslaSpinning?`spin-${props.teslaSpinKey??0}`:'logo'} className={`tesla-core-logo${props.teslaHomeVisible!==false&&!teslaIntroPlayed&&!props.teslaSpinning?' is-opening':''}${props.teslaSpinning?' is-spinning':''}`} onAnimationEnd={event=>{if(event.target!==event.currentTarget)return;const name=event.animationName||'';if(props.teslaSpinning&&(name.includes('tesla-logo-orbit')||name.includes('tesla-logo-spin'))){props.onTeslaSpinEnd?.();return}if(!teslaIntroPlayed&&name.includes('tesla-logo-orbit'))setTeslaIntroPlayed(true)}} style={{visibility:typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1?'hidden':'visible'}} viewBox={props.svgMark?"0 0 100 120":"1000 300 1000 1000"} overflow="hidden" aria-hidden="true">{props.svgMark ? <path fill="currentColor" d="M8 15 Q50 -3 92 15 L88 24 Q50 9 12 24 Z M16 30 Q50 16 84 30 L78 43 Q66 35 59 35 L50 111 L41 35 Q34 35 22 43 Z"/> : <><defs><filter id="tesla-core-logo-depth" x="-20%" y="-22%" width="140%" height="150%" colorInterpolationFilters="sRGB">
             <feGaussianBlur in="SourceAlpha" stdDeviation="26" result="softBlur"/>
             <feOffset in="softBlur" dx="0" dy="20" result="softOff"/>
             <feFlood floodColor="#000" floodOpacity="0.38" result="softInk"/>
@@ -97,7 +99,7 @@ export function IntelligenceOrb(props: OrbProps) {
               <feMergeNode in="SourceGraphic"/>
               <feMergeNode in="highlight"/>
             </feMerge>
-          </filter></defs><image href={teslaLogo} width="3000" height="2000"/></svg>{typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1&&<span className="tesla-core-speed"><strong>{Math.round(props.teslaSpeedKmh/(props.teslaUnit!=='km/h'?1.609344:1))}</strong><small>GPS · {props.teslaUnit??'mph'}</small></span>}</>}
+          </filter></defs><image href={teslaLogo} width="3000" height="2000"/></>}</svg>{typeof props.teslaSpeedKmh==='number'&&props.teslaSpeedKmh>=1&&<span className="tesla-core-speed"><strong>{Math.round(props.teslaSpeedKmh/(props.teslaUnit!=='km/h'?1.609344:1))}</strong><small>GPS · {props.teslaUnit??'mph'}</small></span>}</>}
           {!props.linkTesla && props.tesla && <svg className="tesla-emblem" viewBox="0 0 100 120" focusable="false" aria-hidden="true">
             <path fill="currentColor" d="M8 15 Q50 -3 92 15 L88 24 Q50 9 12 24 Z M16 30 Q50 16 84 30 L78 43 Q66 35 59 35 L50 111 L41 35 Q34 35 22 43 Z"/>
           </svg>}
