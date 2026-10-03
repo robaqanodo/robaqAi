@@ -3,8 +3,6 @@ import {Map, Marker, Popup, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
-import {IntelligenceOrb} from '../components/IntelligenceOrb'
-import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
 import {EXTRA_IDS, clearSavedPlace, loadPlaces, saveExtra, savePlace, type ExtraId, type ExtraPlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, type MarkerKind} from './marker'
@@ -456,7 +454,7 @@ function commitRoute(map: Map, data: RouteData): boolean {
 
 
 
-export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore = false}: {onClose: () => void; speedKmh?: number | null; speedUnit?: 'km/h' | 'mph'; showCore?: boolean}) {
+export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; speedUnit?: 'km/h' | 'mph'}) {
   const {t, locale} = useLocale()
   const tRef = useRef(t)
   tRef.current = t
@@ -1381,6 +1379,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     mapRef.current?.easeTo({bearing: 0, duration: 280})
   }
 
+  // Rail no longer shows these. Pinch still zooms. Keep the handlers.
+  void zoomBy
+  void northUp
+
   function toggle3d() {
     const next = !map3dOn
     map3dOn = next
@@ -1585,31 +1587,10 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
   const workOn = trip ? trip.id === 'work' : editing && selected === 'work'
-  const [holding, setHolding] = useState(false)
   const [clearAsk, setClearAsk] = useState(false)
   clearAskRef.current = clearAsk
   dropPinRef.current = dropPin
   syncChargersRef.current = syncChargers
-  const mapCore = useTeslaCoreInteraction({enabled: showCore, onTap: onClose})
-  function startHold(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!event.isPrimary || event.button !== 0) return
-    setHolding(true)
-    try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* already released */ }
-    mapCore.onPointerDown(event)
-  }
-  function moveHold(event: ReactPointerEvent<HTMLButtonElement>) {
-    mapCore.onPointerMove(event)
-  }
-  function endHold(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    setHolding(false)
-    mapCore.onPointerUp(event)
-  }
-  function cancelHold(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    setHolding(false)
-    mapCore.onPointerCancel(event)
-  }
 
   const routeLine = routeCoordsRef.current
   const remainMeters = guide && trip && routeLine && routeLine.length >= 2
@@ -1706,32 +1687,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
         <div className="owned-map-search-line">
-            {showCore && (
-              <button
-                type="button"
-                className={`owned-map-core${holding ? ' is-holding' : ''}`}
-                aria-label={t('Hold to close the map')}
-                onPointerDown={startHold}
-                onPointerMove={moveHold}
-                onPointerUp={endHold}
-                onPointerCancel={cancelHold}
-                onClickCapture={mapCore.onClickCapture}
-                onContextMenu={event => event.preventDefault()}
-              >
-                <IntelligenceOrb
-                  linkTesla
-                  svgMark
-                  teslaHomeVisible={false}
-                  teslaSpeedKmh={speedKmh}
-                  teslaUnit={speedUnit}
-                  teslaSpinning={mapCore.spinning}
-                  teslaSettling={mapCore.settling}
-                  teslaSpinMs={mapCore.spinMs}
-                  teslaSpinKey={mapCore.spinKey}
-                  onTeslaSpinEnd={mapCore.onSpinEnd}
-                />
-              </button>
-            )}
         <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); onGo() }}>
           <div className="owned-map-search-row">
           <input
@@ -1869,7 +1824,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         <button type="button" className={`is-chargers${chargersOn ? ' is-on' : ''}`} aria-pressed={chargersOn} aria-label={t('Superchargers')} onClick={toggleChargers}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M13.2 3.4 7.2 12.6h3.6l-1.2 7.2 6.6-10.2h-3.7l.7-6.2z"/></svg>
         </button>
-        <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
         <button type="button" className={`is-basemap${basemap === 'street' ? ' is-on' : ''}`} aria-pressed={basemap === 'street'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>
           {basemap === 'street' ? (
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><ellipse cx="12" cy="12" rx="3.3" ry="7.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M5.1 12h13.8M6.4 8.6h11.2M6.4 15.4h11.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
@@ -1877,15 +1831,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 4.6 3.8 6.2v12.6l4.4-1.6 6.4 1.6 4.4-1.6V4.6l-4.4 1.6-6.4-1.6z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8.2 4.6v12.6M14.6 6.2v12.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
           )}
         </button>
-        <button type="button" aria-label={t('North up')} onClick={northUp}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M12 4.2 14.1 11 12 9.6 9.9 11 12 4.2z"/><path fill="#c5cad1" d="M12 19.8 9.9 13 12 14.4 14.1 13 12 19.8z"/></svg>
-        </button>
-        <button type="button" aria-label={t('Zoom in')} onClick={() => zoomBy(1)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        </button>
-        <button type="button" aria-label={t('Zoom out')} onClick={() => zoomBy(-1)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        </button>
+        <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
         <button type="button" className={following ? 'is-on' : ''} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M12 3.5v3.2M12 17.3v3.2M3.5 12h3.2M17.3 12h3.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
         </button>
