@@ -154,12 +154,12 @@
   position:absolute;z-index:4;
   top:max(6px, env(safe-area-inset-top));
   left:max(6px, env(safe-area-inset-left));
-  width:120px;height:120px;padding:0;border:0;background:transparent;color:inherit;
+  width:240px;height:240px;padding:0;border:0;background:transparent;color:inherit;
   cursor:pointer;pointer-events:auto;
   outline:2px solid transparent;outline-offset:4px;
   -webkit-user-select:none;user-select:none;touch-action:none;
 }
-.owned-map-core .living-cell{width:120px;height:120px}
+.owned-map-core .living-cell{width:240px;height:240px}
 .owned-map-core.is-holding{animation:map-hold 3s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes map-hold{to{outline-color:rgba(255,255,255,.8)}}
@@ -168,7 +168,7 @@
 .owned-map-core .tesla-core-speed small{font-size:9px;letter-spacing:.04em}
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-places{max-width:calc(100vw - 150px)}
-  .owned-map-core,.owned-map-core .living-cell{width:80px;height:80px}
+  .owned-map-core,.owned-map-core .living-cell{width:160px;height:160px}
   .owned-map-core .tesla-core-speed strong{font-size:16px}
 }
 .owned-map-settings-btn:focus-visible,

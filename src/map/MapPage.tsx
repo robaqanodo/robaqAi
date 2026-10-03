@@ -3,6 +3,7 @@ import {Map, Marker, NavigationControl, type GeoJSONSource} from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {useLocale} from '../i18n/Locale'
 import {IntelligenceOrb} from '../components/IntelligenceOrb'
+import {useTeslaCoreInteraction} from '../tesla/useTeslaCoreInteraction'
 import {useTeslaLocation} from '../tesla/location'
 import {loadPlaces, savePlace, type PlaceId, type SavedPlace} from './places'
 import {loadMarkerKind, markerMarkup, saveMarkerKind, type MarkerKind} from './marker'
@@ -519,28 +520,26 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
 
   const homeOn = trip ? trip.id === 'home' : editing && selected === 'home'
   const workOn = trip ? trip.id === 'work' : editing && selected === 'work'
-  const holdRef = useRef<number | null>(null)
   const [holding, setHolding] = useState(false)
-  useEffect(() => () => { if (holdRef.current != null) window.clearTimeout(holdRef.current) }, [])
-  function clearHold() {
-    if (holdRef.current != null) window.clearTimeout(holdRef.current)
-    holdRef.current = null
-    setHolding(false)
-  }
+  const mapCore = useTeslaCoreInteraction({enabled: showCore, onLongPress: onClose})
   function startHold(event: ReactPointerEvent<HTMLButtonElement>) {
     if (!event.isPrimary || event.button !== 0) return
-    clearHold()
     setHolding(true)
     try { event.currentTarget.setPointerCapture(event.pointerId) } catch { /* already released */ }
-    holdRef.current = window.setTimeout(() => {
-      holdRef.current = null
-      setHolding(false)
-      onClose()
-    }, 3000)
+    mapCore.onPointerDown(event)
+  }
+  function moveHold(event: ReactPointerEvent<HTMLButtonElement>) {
+    mapCore.onPointerMove(event)
   }
   function endHold(event: ReactPointerEvent<HTMLButtonElement>) {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
-    clearHold()
+    setHolding(false)
+    mapCore.onPointerUp(event)
+  }
+  function cancelHold(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    setHolding(false)
+    mapCore.onPointerCancel(event)
   }
 
   return (
@@ -590,11 +589,23 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           className={`owned-map-core${holding ? ' is-holding' : ''}`}
           aria-label={t('Hold to close the map')}
           onPointerDown={startHold}
+          onPointerMove={moveHold}
           onPointerUp={endHold}
-          onPointerCancel={endHold}
+          onPointerCancel={cancelHold}
+          onClickCapture={mapCore.onClickCapture}
           onContextMenu={event => event.preventDefault()}
         >
-          <IntelligenceOrb linkTesla teslaHomeVisible={false} teslaSpeedKmh={speedKmh} teslaUnit={speedUnit} />
+          <IntelligenceOrb
+            linkTesla
+            teslaHomeVisible={false}
+            teslaSpeedKmh={speedKmh}
+            teslaUnit={speedUnit}
+            teslaSpinning={mapCore.spinning}
+            teslaSettling={mapCore.settling}
+            teslaSpinMs={mapCore.spinMs}
+            teslaSpinKey={mapCore.spinKey}
+            onTeslaSpinEnd={mapCore.onSpinEnd}
+          />
         </button>
       )}
       {arrival && (
