@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { ServerResponse } from 'node:http'
-import { generateGroundedReply, MAX_MESSAGE, sanitizeHistory } from '../server/gemini-chat.ts'
+import { ChatFailure, generateGroundedReply, MAX_MESSAGE, sanitizeHistory } from '../server/gemini-chat.ts'
 import { bodyOf, limit, redis, respond, sameOrigin, type ApiRequest } from '../server/redis.ts'
 
 async function saveTemporary(req: ApiRequest, res: ServerResponse, body: Record<string, unknown>) {
@@ -23,13 +23,15 @@ async function answer(res: ServerResponse, body: Record<string, unknown>) {
   if (!message) { respond(res, 400, { error: 'invalid' }); return }
   if (message.length > MAX_MESSAGE) { respond(res, 400, { error: 'too_long' }); return }
   const apiKey = process.env.GEMINI_API_KEY?.trim() ?? ''
-  if (!apiKey) { respond(res, 503, { error: 'unavailable' }); return }
+  if (!apiKey) { respond(res, 503, { error: 'not_configured' }); return }
   const locale = body.locale === 'ka' || body.locale === 'ru' ? body.locale : 'en'
   try {
     const result = await generateGroundedReply({ apiKey, message, locale, history: sanitizeHistory(body.history) })
     respond(res, 200, { text: result.text, sources: result.sources })
-  } catch {
-    respond(res, 503, { error: 'unavailable' })
+  } catch (error) {
+    const code = error instanceof ChatFailure ? error.code : error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'timeout' : 'unavailable'
+    console.warn('Chat request failed:', code)
+    respond(res, code === 'quota' ? 429 : 503, { error: code })
   }
 }
 

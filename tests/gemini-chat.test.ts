@@ -50,7 +50,7 @@ describe('default web chat', () => {
     expect((await call({ message: 'hi' }, 'GET')).status).toBe(405)
     const missing = await call({ message: 'hi' })
     expect(missing.status).toBe(503)
-    expect(missing.body).toEqual({ error: 'unavailable' })
+    expect(missing.body).toEqual({ error: 'not_configured' })
     expect(fetchMock).not.toHaveBeenCalled()
     expect(JSON.stringify(missing.body)).not.toMatch(/AIza|GEMINI_API_KEY/)
   })

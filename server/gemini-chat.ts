@@ -4,6 +4,21 @@ export const PRIMARY_MODEL = 'gemini-3.8-flash'
 export const FALLBACK_MODEL = 'gemini-2.5-flash'
 export const MAX_MESSAGE = 4000
 
+export class ChatFailure extends Error {
+  code: string
+  constructor(code: string) { super(code); this.code = code }
+}
+
+function providerFailure(status: number, payload: unknown): ChatFailure {
+  const error = (payload as { error?: { message?: string } } | null)?.error
+  const message = error?.message ?? ''
+  if (/API key not valid|API_KEY_INVALID|expired|leaked/i.test(message) || status === 401) return new ChatFailure('key_invalid')
+  if (status === 403) return new ChatFailure('access_denied')
+  if (status === 429) return new ChatFailure('quota')
+  if (status === 404) return new ChatFailure('model_unavailable')
+  return new ChatFailure('unavailable')
+}
+
 export type ChatSource = { title: string; url: string }
 export type ChatTurn = { role: 'user' | 'assistant'; text: string }
 
@@ -77,14 +92,14 @@ function contents(history: ChatTurn[], message: string) {
   return rows.map(row => ({ role: row.role, parts: [{ text: row.text }] }))
 }
 
-async function callModel(model: string, body: unknown, apiKey: string, fetchImpl: FetchLike) {
+async function callModel(model: string, body: unknown, apiKey: string, fetchImpl: FetchLike, signal: AbortSignal) {
   const response = await fetchImpl(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(25000),
+      signal,
     },
   )
   const payload = await response.json().catch(() => null)
@@ -104,9 +119,11 @@ export async function generateGroundedReply(options: {
     contents: contents(options.history ?? [], options.message),
     tools: [{ google_search: {} }],
   }
-  let result = await callModel(PRIMARY_MODEL, body, options.apiKey, fetchImpl)
-  if (result.status === 404) result = await callModel(FALLBACK_MODEL, body, options.apiKey, fetchImpl)
-  const text = result.status === 200 ? replyText(result.payload) : ''
+  const signal = AbortSignal.timeout(24000)
+  let result = await callModel(PRIMARY_MODEL, body, options.apiKey, fetchImpl, signal)
+  if (result.status === 404) result = await callModel(FALLBACK_MODEL, body, options.apiKey, fetchImpl, signal)
+  if (result.status !== 200) throw providerFailure(result.status, result.payload)
+  const text = replyText(result.payload)
   if (!text) throw new Error('unavailable')
   return { text, sources: sourcesFromPayload(result.payload) }
 }

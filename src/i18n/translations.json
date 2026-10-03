@@ -3014,5 +3014,29 @@
   "Superchargers": [
     "სუპერჩარჯერები",
     "Суперчарджеры"
+  ],
+  "Chat is not configured on the server. Add the API key and redeploy.": [
+    "სერვერზე ჩათი გამართული არ არის. დაამატეთ API გასაღები და ხელახლა განათავსეთ საიტი.",
+    "Чат на сервере не настроен. Добавьте ключ API и повторите развёртывание."
+  ],
+  "The server API key is invalid or expired. The site owner needs to replace it.": [
+    "სერვერის API გასაღები არასწორია ან ვადაგასულია. საიტის მფლობელმა უნდა შეცვალოს იგი.",
+    "Ключ API сервера недействителен или просрочен. Владельцу сайта нужно заменить его."
+  ],
+  "Google denied access to the chat API. The site owner needs to check API permissions.": [
+    "Google-მა ჩათის API-ზე წვდომა უარყო. საიტის მფლობელმა API-ის უფლებები უნდა შეამოწმოს.",
+    "Google отказал в доступе к API чата. Владельцу сайта нужно проверить разрешения API."
+  ],
+  "The chat API quota is exhausted. Please try again later.": [
+    "ჩათის API-ის ლიმიტი ამოიწურა. სცადეთ მოგვიანებით.",
+    "Лимит API чата исчерпан. Попробуйте позже."
+  ],
+  "The configured chat models are unavailable.": [
+    "ჩათისთვის შერჩეული მოდელები მიუწვდომელია.",
+    "Настроенные модели чата недоступны."
+  ],
+  "The chat request timed out. Please try again.": [
+    "ჩათის პასუხის მოლოდინის დრო ამოიწურა. სცადეთ ხელახლა.",
+    "Время ожидания ответа истекло. Попробуйте снова."
   ]
 }

@@ -19,7 +19,16 @@ export async function requestWebChat(input: {
   let data: { text?: unknown; sources?: unknown; error?: unknown } = {}
   try { data = await response.json() } catch { /* A non-JSON failure is still a short error below. */ }
   if (!response.ok || typeof data.text !== 'string' || !data.text.trim()) {
-    throw new Error(data.error === 'too_long' ? 'That message is too long.' : 'Chat is unavailable right now.')
+    const errors: Record<string, string> = {
+      too_long: 'That message is too long.',
+      not_configured: 'Chat is not configured on the server. Add the API key and redeploy.',
+      key_invalid: 'The server API key is invalid or expired. The site owner needs to replace it.',
+      access_denied: 'Google denied access to the chat API. The site owner needs to check API permissions.',
+      quota: 'The chat API quota is exhausted. Please try again later.',
+      model_unavailable: 'The configured chat models are unavailable.',
+      timeout: 'The chat request timed out. Please try again.',
+    }
+    throw new Error(errors[String(data.error)] ?? 'Chat is unavailable right now.')
   }
   const sources: WebSource[] = []
   if (Array.isArray(data.sources)) {
