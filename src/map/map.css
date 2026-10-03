@@ -70,20 +70,12 @@
 }
 .owned-map-search-row{display:flex;align-items:center;gap:8px}
 .owned-map-search input{
-  width:100%;box-sizing:border-box;min-height:40px;padding:0 12px;border-radius:12px;
-  color:#fff;font:inherit;font-size:15px;
+  width:100%;box-sizing:border-box;min-height:44px;padding:0 12px;border-radius:12px;
+  color:#fff;font:inherit;font-size:17px;
   background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.22);
 }
-.owned-map-search-row input{flex:1;width:auto;min-width:0}
+.owned-map-search-row input{flex:1;width:100%;min-width:0}
 .owned-map-search input::placeholder{color:rgba(255,255,255,.55)}
-.owned-map-go{
-  flex:none;min-height:40px;padding:0 14px;border-radius:12px;
-  color:#f4f7fb;font:inherit;font-size:12px;font-weight:680;letter-spacing:.12em;cursor:pointer;
-  background:rgba(12,14,18,.66);
-  border:1px solid rgba(255,255,255,.16);
-  box-shadow:0 10px 28px rgba(0,0,0,.38);
-}
-.owned-map-go:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .owned-map-search .owned-map-suggest{max-height:min(34vh, 240px)}
 .owned-map-places-bar{
   display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;padding:0;
@@ -135,6 +127,58 @@
   background:rgba(62,106,225,.92);
   border-color:rgba(176,204,255,.55);
 }
+.owned-map-pill,
+.owned-map-cancel,
+.owned-map-close,
+.owned-map-drop-add,
+.owned-map-search,
+.owned-map-search input{
+  transition:background .15s ease, color .15s ease, border-color .15s ease;
+}
+.owned-map-pill:hover,
+.owned-map-pill:focus-visible,
+.owned-map-cancel:hover,
+.owned-map-cancel:focus-visible,
+.owned-map-close:hover,
+.owned-map-close:focus-visible,
+.owned-map-drop-add:hover,
+.owned-map-drop-add:focus-visible{
+  background:#ffffff0d;
+  color:#fff;
+  border-color:#ffffff1f;
+}
+.owned-map-search:hover,
+.owned-map-search:focus-within,
+.owned-map-search input:hover,
+.owned-map-search input:focus-visible{
+  border-color:#ffffff1f;
+}
+.owned-map-pill.is-on:hover,
+.owned-map-pill.is-on:focus-visible{
+  background:rgba(90,130,235,.96);
+  color:#fff;
+  border-color:#ffffff1f;
+}
+.owned-map.is-driving .owned-map-places,
+.owned-map.is-driving .owned-map-dock,
+.owned-map.is-driving .owned-map-close{display:none}
+.owned-map-drop{position:relative;width:18px;height:18px;pointer-events:none}
+.owned-map-drop-pin{
+  width:18px;height:18px;border-radius:50%;
+  background:#111;border:2px solid #fff;
+  box-shadow:0 4px 12px #000a;
+  pointer-events:none;
+}
+.owned-map-drop-add{
+  position:absolute;left:26px;top:50%;transform:translateY(-50%);
+  pointer-events:auto;cursor:pointer;white-space:nowrap;
+  min-height:36px;padding:0 12px;border-radius:18px;
+  color:#fff;font:inherit;font-size:13px;font-weight:680;
+  background:rgba(12,14,18,.88);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 10px 28px rgba(0,0,0,.4);
+}
+.owned-map-drop-add:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .owned-map-places-bar button{
   font-size:11px;font-weight:680;letter-spacing:.12em;text-transform:uppercase;
   pointer-events:auto;
@@ -174,7 +218,7 @@
   background:#fff;border:3px solid #111;box-shadow:0 0 0 2px rgba(255,255,255,.85), 0 6px 16px #000a;
 }
 
-.owned-map-pin.is-vehicle{width:20px;height:34px}
+.owned-map-pin.is-vehicle{width:41px;height:72px}
 .owned-map-vehicle{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px #000) drop-shadow(0 3px 4px #000a)}
 .owned-map-vehicle .shell{fill:#f7f8fb;stroke:#111;stroke-width:3.2;stroke-linejoin:round;paint-order:stroke fill}
 .owned-map-vehicle.is-cyber .shell{stroke-linejoin:miter}
@@ -211,15 +255,14 @@
 .owned-map-gps svg{width:22px;height:22px}
 
 .owned-map-core{
-  position:absolute;z-index:4;
-  top:max(8px, env(safe-area-inset-top));
-  left:max(8px, env(safe-area-inset-left));
-  width:128px;height:128px;padding:0;border:0;background:transparent;color:inherit;
+  position:relative;z-index:4;
+  top:auto;left:auto;
+  width:44px;height:44px;flex:none;padding:0;border:0;background:transparent;color:inherit;
   cursor:pointer;pointer-events:auto;
   outline:2px solid transparent;outline-offset:4px;
   -webkit-user-select:none;user-select:none;touch-action:none;
 }
-.owned-map-core .living-cell{width:128px;height:128px;animation:none;filter:none}
+.owned-map-core .living-cell{width:44px;height:44px;animation:none;filter:none}
 .owned-map-core .capability-orbits,
 .owned-map-core .guest-orbits,
 .owned-map-core .cell-boundary,
@@ -230,25 +273,37 @@
 .owned-map-core .intelligence-orb .cell-nucleus.link-tesla-core{width:70%;height:70%;overflow:visible}
 .owned-map-core .cell-nucleus.link-tesla-core::before{
   content:'';
-  position:absolute;left:50%;top:50%;width:124%;height:124%;
+  position:absolute;left:50%;top:50%;width:118%;height:118%;
   transform:translate(-50%,-50%);
   border-radius:50%;
-  background:rgba(255,255,255,.8);
-  box-shadow:0 2px 8px rgba(0,0,0,.35);
+  background:rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.35);
+  box-sizing:border-box;
+  box-shadow:0 2px 8px rgba(0,0,0,.24),0 1px 0 rgba(255,255,255,.18) inset;
+  backdrop-filter:blur(10px) saturate(1.4);
+  -webkit-backdrop-filter:blur(10px) saturate(1.4);
   z-index:1;pointer-events:none;
 }
-.owned-map-core .link-tesla-core:after{z-index:3;pointer-events:none}
-.owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2}
+.owned-map-core .link-tesla-core:after{
+  z-index:3;pointer-events:none;
+  border:2px solid transparent;
+  border-right-color:#ffffffb3;
+  border-left-color:#88889880;
+  box-shadow:inset 0 0 12px #ffffff30,0 0 8px #ffffff20;
+  animation:link-tesla-ring 12s linear infinite;
+}
+.owned-map-core .link-tesla-core>svg.tesla-core-logo{position:relative;z-index:2;width:62%;height:62%}
 .owned-map-core.is-holding{animation:map-hold 1s linear forwards}
 .owned-map-core:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes map-hold{to{outline-color:rgba(255,255,255,.8)}}
 .owned-map-core .tesla-core-speed{z-index:2;gap:2px}
-.owned-map-core .tesla-core-speed strong{font-size:22px;-webkit-text-stroke:.8px #000}
-.owned-map-core .tesla-core-speed small{font-size:9px;letter-spacing:.04em}
+.owned-map-core .tesla-core-speed strong{font-size:11px;-webkit-text-stroke:.5px #000}
+.owned-map-core .tesla-core-speed small{font-size:7px;letter-spacing:.02em}
 @media (max-width: 760px), (max-height: 680px){
   .owned-map-places{max-width:calc(100vw - 150px)}
-  .owned-map-core,.owned-map-core .living-cell{width:108px;height:108px}
-  .owned-map-core .tesla-core-speed strong{font-size:16px}
+  .owned-map-core,.owned-map-core .living-cell{width:44px;height:44px}
+  .owned-map-core .tesla-core-speed strong{font-size:11px}
+  .owned-map-core .tesla-core-speed small{font-size:7px}
 }
 .owned-map-settings-btn:focus-visible,
 .owned-map-marker-pick select:focus-visible{outline:2px solid #fff;outline-offset:3px}
@@ -409,6 +464,14 @@
   .app-shell.is-map-leaving .owned-map,
   .owned-map-search,.owned-map-edit,.owned-map-hint,.owned-map-dock .owned-map-settings,.owned-map-arrival,.owned-map-warn,.owned-map-core.is-holding{
     animation:none!important;
+  }
+  .owned-map-pill,
+  .owned-map-cancel,
+  .owned-map-close,
+  .owned-map-drop-add,
+  .owned-map-search,
+  .owned-map-search input{
+    transition:none;
   }
   .landing-entry.is-map-flight{transition:none!important}
   .app-shell.is-map-entering .landing-entry.is-map-flight .capability-orbits,

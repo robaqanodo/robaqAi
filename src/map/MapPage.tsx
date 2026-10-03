@@ -48,6 +48,8 @@ const mapMemory: MapMemory = {
 
 const DEFAULT_CENTER: [number, number] = [20, 20]
 const DEFAULT_ZOOM = 1.6
+/** First GPS fix only. maxZoom is 19; later ticks must not keep forcing this. */
+const OPEN_ZOOM = 19
 const EMPTY: RouteData = {type: 'FeatureCollection', features: []}
 const ARRIVAL_M = 50
 const SLOT_PATH = {
@@ -284,6 +286,8 @@ function AddressField({title, saved, onSave}: {title: string; saved: SavedPlace 
 
 export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore = false}: {onClose: () => void; speedKmh?: number | null; speedUnit?: 'km/h' | 'mph'; showCore?: boolean}) {
   const {t, locale} = useLocale()
+  const tRef = useRef(t)
+  tRef.current = t
   const tesla = useTeslaLocation()
   const canvasRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<Map | null>(null)
@@ -293,6 +297,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const drivingRef = useRef(mapMemory.driving)
   const driveZoomedRef = useRef(false)
   const framedRef = useRef(false)
+  const framedOpenRef = useRef(false)
   const pointRef = useRef<Fix | null>(null)
   const teslaOnRef = useRef(false)
   const editingRef = useRef(false)
@@ -323,6 +328,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   const [querySearched, setQuerySearched] = useState(false)
   const [queryOpen, setQueryOpen] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [dropPin, setDropPin] = useState<{lat: number; lon: number} | null>(null)
   const [addName, setAddName] = useState('')
   const [addAddress, setAddAddress] = useState('')
   const [addHits, setAddHits] = useState<Hit[]>([])
@@ -605,13 +611,19 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     })
     map.on('click', (event) => {
       const target = event.originalEvent?.target
-      if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea')) return
+      if (target instanceof Element && target.closest('.maplibregl-ctrl, button, a, input, select, textarea, .owned-map-drop')) return
+      const panel = settingsRef.current || queryOpenRef.current || editingRef.current || addingRef.current || clearAskRef.current || !!arrivalRef.current
       setSettingsOpen(false)
       setQueryOpen(false)
       setEditing(false)
       setAdding(false)
       setClearAsk(false)
       if (arrivalRef.current) dismissArrival()
+      if (panel) return
+      const lat = event.lngLat.lat
+      const lon = event.lngLat.lng
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) return
+      setDropPin({lat, lon})
     })
     const resize = () => map.resize()
     const observer = new ResizeObserver(resize)
@@ -619,6 +631,15 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     mapRef.current = map
     markerRef.current = marker
     destRef.current = dest
+    const opening = pointRef.current
+    if (opening) {
+      framedOpenRef.current = true
+      framedRef.current = true
+      // A restored drive keeps the behind-the-car camera. Otherwise show the fix up close once.
+      if (!drivingRef.current || !tripRef.current) {
+        map.jumpTo({center: [opening.lon, opening.lat], zoom: OPEN_ZOOM, pitch: 0})
+      }
+    }
     flush()
     const active = tripRef.current
     const coords = routeCoordsRef.current
@@ -662,6 +683,32 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       if (placeMarkersRef.current === next) placeMarkersRef.current = []
     }
   }, [places])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !dropPin) return
+    const el = document.createElement('div')
+    el.className = 'owned-map-drop'
+    const pin = document.createElement('div')
+    pin.className = 'owned-map-drop-pin'
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'owned-map-drop-add'
+    btn.textContent = tRef.current('Add to favorite')
+    const here = dropPin
+    btn.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      const label = `${here.lat.toFixed(5)}, ${here.lon.toFixed(5)}`
+      const name = tRef.current('Favorite').trim().slice(0, 40)
+      setPlaces(saveExtra('star', {lat: here.lat, lon: here.lon, label, name}))
+      setDropPin(null)
+    })
+    el.append(pin, btn)
+    const marker = new Marker({element: el, anchor: 'center'})
+    marker.setLngLat([here.lon, here.lat]).addTo(map)
+    return () => { marker.remove() }
+  }, [dropPin])
 
   useEffect(() => {
     if (tesla.enabled) return
@@ -830,6 +877,14 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       }
       paintRoute(lineData(next))
     }
+    if (!framedOpenRef.current) {
+      framedOpenRef.current = true
+      framedRef.current = true
+      if (!(drivingRef.current && tripRef.current)) {
+        map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, duration: 700})
+        return
+      }
+    }
     if (!followRef.current) return
     if (drivingRef.current) {
       easeBehind(map, {lat, lon, heading}, !driveZoomedRef.current)
@@ -838,7 +893,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     }
     if (!framedRef.current) {
       framedRef.current = true
-      map.easeTo({center: lngLat, zoom: 15, duration: 700})
+      map.easeTo({center: lngLat, zoom: OPEN_ZOOM, duration: 700})
     } else {
       map.easeTo({center: lngLat, duration: 400})
     }
@@ -962,7 +1017,19 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
     void locate().then(next => { if (next) go(next) })
   }
 
+  function stopDrive() {
+    drivingRef.current = false
+    mapMemory.driving = false
+    setDriving(false)
+    followRef.current = false
+    setFollowing(false)
+  }
+
   function onPlace(id: PlaceId) {
+    if (tripRef.current?.id === id) {
+      cancelRoute()
+      return
+    }
     const place = places[id]
     if (!place) { openEditor(id); return }
     void navigate(id, place)
@@ -1044,7 +1111,7 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
   }
 
   return (
-    <section className="owned-map" role="dialog" aria-modal="true" aria-label={t('Map')}>
+    <section className={`owned-map${driving ? ' is-driving' : ''}`} role="dialog" aria-modal="true" aria-label={t('Map')}>
       <div ref={canvasRef} className="owned-map-canvas" />
       <div className="owned-map-places">
         <form className="owned-map-search" role="search" onSubmit={event => { event.preventDefault(); void goFromSearch() }}>
@@ -1058,7 +1125,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             autoComplete="off"
             spellCheck={false}
           />
-          <button type="submit" className="owned-map-go">{t('GO')}</button>
           </div>
           {queryOpen && querySearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
           {queryOpen && !querySearching && querySearched && queryHits.length === 0 && <p className="owned-map-search-status">{t('No addresses found')}</p>}
@@ -1073,6 +1139,31 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
           )}
         </form>
         <div className="owned-map-places-bar">
+          {showCore && (
+            <button
+              type="button"
+              className={`owned-map-core${holding ? ' is-holding' : ''}`}
+              aria-label={t('Hold to close the map')}
+              onPointerDown={startHold}
+              onPointerMove={moveHold}
+              onPointerUp={endHold}
+              onPointerCancel={cancelHold}
+              onClickCapture={mapCore.onClickCapture}
+              onContextMenu={event => event.preventDefault()}
+            >
+              <IntelligenceOrb
+                linkTesla
+                teslaHomeVisible={false}
+                teslaSpeedKmh={speedKmh}
+                teslaUnit={speedUnit}
+                teslaSpinning={mapCore.spinning}
+                teslaSettling={mapCore.settling}
+                teslaSpinMs={mapCore.spinMs}
+                teslaSpinKey={mapCore.spinKey}
+                onTeslaSpinEnd={mapCore.onSpinEnd}
+              />
+            </button>
+          )}
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlace('home')}>
             <SlotIcon id="home" />
             <span>{t('HOME')}</span>
@@ -1086,7 +1177,13 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
             if (!saved) return null
             const on = trip?.id === id
             return (
-              <button key={id} type="button" className={`owned-map-pill${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => void navigate(id, saved)}>
+              <button key={id} type="button" className={`owned-map-pill${on ? ' is-on' : ''}`} aria-pressed={on} onClick={() => {
+                if (tripRef.current?.id === id) {
+                  cancelRoute()
+                  return
+                }
+                void navigate(id, saved)
+              }}>
                 <SlotIcon id={id} />
                 <span>{saved.name}</span>
               </button>
@@ -1161,31 +1258,6 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
         )}
         {hint && !editing && !adding && <p className="owned-map-hint">{t(hint)}</p>}
       </div>
-      {showCore && (
-        <button
-          type="button"
-          className={`owned-map-core${holding ? ' is-holding' : ''}`}
-          aria-label={t('Hold to close the map')}
-          onPointerDown={startHold}
-          onPointerMove={moveHold}
-          onPointerUp={endHold}
-          onPointerCancel={cancelHold}
-          onClickCapture={mapCore.onClickCapture}
-          onContextMenu={event => event.preventDefault()}
-        >
-          <IntelligenceOrb
-            linkTesla
-            teslaHomeVisible={false}
-            teslaSpeedKmh={speedKmh}
-            teslaUnit={speedUnit}
-            teslaSpinning={mapCore.spinning}
-            teslaSettling={mapCore.settling}
-            teslaSpinMs={mapCore.spinMs}
-            teslaSpinKey={mapCore.spinKey}
-            onTeslaSpinEnd={mapCore.onSpinEnd}
-          />
-        </button>
-      )}
       {arrival && (
         <div className="owned-map-arrival" role="status" aria-live="polite">
           <button type="button" className="owned-map-arrival-x" aria-label={t('Close')} onClick={dismissArrival}>×</button>
@@ -1222,6 +1294,9 @@ export function MapPage({onClose, speedKmh = null, speedUnit = 'mph', showCore =
       </div>
       {trip && !driving && (
         <button type="button" className="owned-map-cancel" onClick={startDrive}>{t('Start')}</button>
+      )}
+      {driving && (
+        <button type="button" className="owned-map-cancel" onClick={stopDrive}>{t('Stop')}</button>
       )}
       <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
