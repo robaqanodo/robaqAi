@@ -1767,14 +1767,14 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
         <button type="button" className={`is-chargers${chargersOn ? ' is-on' : ''}`} aria-pressed={chargersOn} aria-label={t('Superchargers')} onClick={toggleChargers}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M13.2 3.4 7.2 12.6h3.6l-1.2 7.2 6.6-10.2h-3.7l.7-6.2z"/></svg>
         </button>
-        <button type="button" className={`is-basemap${basemap === 'street' ? ' is-on' : ''}`} aria-pressed={basemap === 'street'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>
+        <button type="button" className="is-basemap" aria-pressed={basemap === 'satellite'} aria-label={basemap === 'street' ? t('Map') : t('Satellite')} onClick={toggleBasemap}>
           {basemap === 'street' ? (
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><ellipse cx="12" cy="12" rx="3.3" ry="7.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path d="M5.1 12h13.8M6.4 8.6h11.2M6.4 15.4h11.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
           ) : (
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 4.6 3.8 6.2v12.6l4.4-1.6 6.4 1.6 4.4-1.6V4.6l-4.4 1.6-6.4-1.6z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8.2 4.6v12.6M14.6 6.2v12.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 8 7 7-3 3-7-7zM10 7l4-4 7 7-4 4M7 10l-4 4 7 7 4-4M14 3l7 7M17.5 6.5l-4 4M6.5 17.5l4-4M5 3a4 4 0 0 1 4 4M3 3a6 6 0 0 1 6 6"/></g></svg>
           )}
         </button>
-        <button type="button" className={following ? 'is-on' : ''} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
+        <button type="button" className={`is-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
         </button>
       </div>

@@ -740,3 +740,18 @@
 .app-shell.is-map-open.has-navigation .navigation-rail{z-index:40010;animation:none}
 .app-shell.is-map-open.has-navigation .navigation-rail > *{animation:none}
 .app-shell.is-map-open.has-navigation .tesla-menu-toggle{z-index:40011;animation:none;pointer-events:auto}
+
+/* Search follows the navigation rail; map controls retain a consistent surface. */
+.app-shell.is-map-open .owned-map-places{transition:left .3s ease,width .3s ease}
+@media(min-width:761px){
+ .app-shell.is-map-open:not(.tesla-menu-collapsed) .owned-map-places{
+  left:calc(var(--rail-left) + var(--rail-width) + 20px);
+  width:min(520px,calc(100vw - var(--rail-left) - var(--rail-width) - 112px));
+ }
+}
+.owned-map .owned-map-rail{top:48%;bottom:max(28px,env(safe-area-inset-bottom));transform:none;pointer-events:none}
+.owned-map .owned-map-rail button{flex-shrink:0;pointer-events:auto}
+.owned-map .owned-map-rail .is-gps{margin-top:auto}
+.app-shell .owned-map-rail button.is-basemap{background:#303237;color:#fff;box-shadow:0 3px 14px #0003}
+.app-shell .owned-map-rail button.is-basemap:hover{background:#42454b;color:#fff}
+@media(prefers-reduced-motion:reduce){.app-shell.is-map-open .owned-map-places{transition:none}}
