@@ -41,7 +41,7 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
       if (!authenticated) { setCookie(res, '', 0); respond(res, 401, { error: 'Sign in again.' }); return }
       if (action === 'music' || action === 'music-save') {
         const ids = body.ids
-        if (action === 'music-save' && (!Array.isArray(ids) || ids.length > 1000 || !ids.every(id => typeof id === 'string' && /^[\w-]{11}$/.test(id)))) { respond(res, 400, {error: 'Invalid queue (maximum 1000 tracks).'}); return }
+        if (action === 'music-save' && (!Array.isArray(ids) || ids.length > 10 || !ids.every(id => typeof id === 'string' && /^[\w-]{11}$/.test(id)))) { respond(res, 400, {error: 'Invalid queue (maximum 10 tracks).'}); return }
         const proposal = {token: randomBytes(24).toString('hex'), ids: [], index: 0, volume: 70}
         // Atomic merge preserves concurrent profile/key updates and the permanent share token.
         const raw = await redis<string | null>('EVAL', "local raw=redis.call('GET',KEYS[1]); if not raw then return nil end; local a=cjson.decode(raw); if a.generation~=ARGV[1] then return nil end; if not a.music then a.music=cjson.decode(ARGV[2]) end; if ARGV[3]=='music-save' then a.music.ids=cjson.decode(ARGV[4]); a.music.index=tonumber(ARGV[5]); a.music.volume=tonumber(ARGV[6]) end; redis.call('SET',KEYS[1],cjson.encode(a)); redis.call('SET','robaq:music:'..a.music.token,a.id); return cjson.encode(a.music)", 1, `robaq:account:${authenticated.id}`, authenticated.generation, JSON.stringify(proposal), action, JSON.stringify(ids || []), Math.max(0, Math.min(999, Number(body.index) || 0)), Math.max(0, Math.min(100, Number(body.volume) || 0)))

@@ -11,3 +11,15 @@
 .owned-map .owned-map-rail .is-music{border-radius:50%}.owned-map .owned-map-rail .is-gps{margin-top:0}.owned-map .owned-map-rail .is-music{margin-top:auto}
 @media(min-width:761px){.app-shell.is-map-open:not(.tesla-menu-collapsed) .owned-map>.music-panel{left:calc(var(--rail-left) + var(--rail-width) + 20px);width:min(460px,calc(100vw - var(--rail-left) - var(--rail-width) - 112px))}}
 @media(max-width:600px){.owned-map>.music-panel{left:10px;width:calc(100vw - 80px);padding:12px}.music-panel form{flex-wrap:wrap}.music-panel form input{flex-basis:100%}.music-preview{height:200px}.music-page{padding:8px}}
+
+.music-panel .music-editor{display:flex;flex-direction:column;gap:8px}
+.music-editor label{display:flex;align-items:center;gap:10px}
+.music-editor label>span{width:20px;text-align:right;color:#aaa;font-size:13px;flex-shrink:0}
+.music-panel .music-audio-source{position:absolute;width:200px;height:200px;opacity:0;pointer-events:none;overflow:hidden;z-index:-1}
+.music-queue .music-track span{font-size:12px}
+.music-account-note{font-size:13px;color:#c7cad2}.music-account-note a{color:#a4caff}
+
+.app-music-layer{position:fixed;inset:0;z-index:40030;pointer-events:none}
+.app-music-layer>.music-panel{position:absolute;top:max(16px,env(safe-area-inset-top));left:calc(var(--rail-left, 14px) + var(--rail-width, 76px) + 20px);width:min(420px,calc(100vw - 130px));max-height:calc(100dvh - 32px);overflow:auto;pointer-events:auto}
+.tesla-menu-collapsed .app-music-layer>.music-panel{left:16px;width:min(420px,calc(100vw - 32px))}
+@media(max-width:760px){.app-music-layer>.music-panel{left:12px;width:calc(100vw - 24px);max-height:calc(100dvh - 100px)}}

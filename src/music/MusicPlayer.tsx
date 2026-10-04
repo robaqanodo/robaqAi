@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'react'
 import {QrMark} from '../tesla/QrMark'
-import {restoreQueue, shareUrl, youtubeId} from './queue'
+import {restoreQueue, youtubeId} from './queue'
 import {youtubeSDK, type Player} from './youtube'
 import './music.css'
 
@@ -8,10 +8,12 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
   const [queue, setQueue] = useState(() => phone ? restoreQueue(new URLSearchParams(location.search).has('ids') ? location.search : '?ids=') : {ids: [] as string[], index: 0, volume: 70})
   const [shareToken, setShareToken] = useState(''), [synced, setSynced] = useState(false)
   const publicToken = phone ? new URLSearchParams(location.search).get('queue') : null
-  const [input, setInput] = useState(''), [error, setError] = useState('')
+  const [links, setLinks] = useState<string[]>(Array(10).fill('')), [editing, setEditing] = useState(true), [error, setError] = useState('')
+  const [phoneAccount, setPhoneAccount] = useState(false)
+  const canSave = account || phoneAccount
   const [ready, setReady] = useState(false), [playing, setPlaying] = useState(false)
   const [titles, setTitles] = useState<Record<string, string>>({})
-  const [qr, setQr] = useState(false), [copyState, setCopyState] = useState('')
+  const [qr, setQr] = useState(!phone), [copyState, setCopyState] = useState('')
   const mount = useRef<HTMLDivElement>(null), player = useRef<Player | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const current = useRef(queue); current.current = queue
@@ -24,20 +26,37 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
     if (account || publicToken) {
       void fetch('/api/account', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(publicToken ? {action: 'music-public', token: publicToken} : {action: 'music'})})
         .then(async response => { const data = await response.json(); if (!response.ok) throw new Error(data.error); return data.music })
-        .then(music => { if (!cancelled) { const ids = Array.isArray(music.ids) ? music.ids.filter((id: unknown) => typeof id === 'string' && /^[\w-]{11}$/.test(id)) : []; setQueue({ids, index: Math.max(0, Math.min(ids.length - 1, music.index || 0)), volume: music.volume ?? 70}); setShareToken(music.token); setSynced(true) } })
+        .then(music => { if (!cancelled) { const ids = Array.isArray(music.ids) ? music.ids.filter((id: unknown) => typeof id === 'string' && /^[\w-]{11}$/.test(id)) : []; setQueue({ids, index: Math.max(0, Math.min(ids.length - 1, music.index || 0)), volume: music.volume ?? 70}); setShareToken(music.token); setLinks(Array.from({length:10}, (_, i) => ids[i] || '')); setEditing(ids.length === 0); setSynced(true) } })
         .catch(reason => { if (!cancelled) setError(reason.message || 'Saved queue unavailable.') })
-    } else setSynced(true)
+    } else { setLinks(Array.from({length:10}, (_, i) => current.current.ids[i] || '')); setEditing(current.current.ids.length === 0); setSynced(true) }
     return () => { cancelled = true }
   }, [account, publicToken])
+  useEffect(() => {
+    if (!phone) return
+    let cancelled = false
+    void fetch('/api/account', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'music'})})
+      .then(async r => { if (!r.ok) return null; return (await r.json()).music })
+      .then(music => {
+        if (cancelled || !music || (publicToken && music.token !== publicToken)) return
+        setPhoneAccount(true)
+        setShareToken(music.token)
+        if (!publicToken) {
+          const ids = Array.isArray(music.ids) ? music.ids.slice(0,10) : []
+          setQueue({ids,index:0,volume:music.volume ?? 70})
+          setLinks(Array.from({length:10},(_,i)=>ids[i]||'')); setEditing(ids.length===0)
+        }
+      }).catch(()=>{})
+    return () => {cancelled=true}
+  }, [phone, publicToken])
   const saveChain = useRef(Promise.resolve())
   useEffect(() => {
-    if (!account || !synced) return
+    if (!canSave || !synced) return
     try { localStorage.setItem('robaq-music', JSON.stringify(queue)) } catch { /* Server remains authoritative. */ }
     saveChain.current = saveChain.current.catch(() => {}).then(async () => {
       const response = await fetch('/api/account', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({action: 'music-save', ...queue}), keepalive: true})
       if (!response.ok) throw new Error('save failed')
     }).catch(() => {setError('Queue could not be saved. Change the queue or reopen Music to retry.')})
-  }, [queue, account, synced])
+  }, [queue, canSave, synced])
   useEffect(() => {
     let disposed = false
     const target = document.createElement('div'); mount.current!.append(target)
@@ -88,16 +107,26 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
     if (index === queue.index) { loadedId.current = undefined; player.current?.stopVideo(); setPlaying(false) }
     const next = {...queue, ids, index: nextIndex}; current.current = next; setQueue(next)
   }
-  const fullUrl = shareToken ? `https://robaq.app/play?queue=${shareToken}` : shareUrl(queue.ids)
+  const fullUrl = shareToken ? `https://robaq.app/play?queue=${shareToken}` : 'https://robaq.app/play'
   return <section className={`music-panel${phone ? ' music-phone' : ''}`} aria-label="Music">
     <header><h2>Music</h2>{onClose && <button aria-label="Close Music" onClick={onClose}>×</button>}</header>
     {phone && <p>Connect this phone to the car with Bluetooth, then press play.</p>}
-    <form onSubmit={event => { event.preventDefault(); if (!synced) return; const id = youtubeId(input); if (!id) { setError('Invalid YouTube link or ID'); return }; setQueue(q => ({...q, ids: [...q.ids, id]})); setInput(''); setError('') }}>
-      <input aria-label="YouTube link or video ID" placeholder="YouTube link or video ID" value={input} onChange={e => setInput(e.target.value)} />
-      <button type="submit" disabled={!synced}>Add</button>
-    </form>
+    {phone && publicToken && !phoneAccount && <p className="music-account-note">To save changes to this permanent playlist, sign in to its owner's account on this phone, then reopen the QR. <a href="/" target="_blank" rel="noopener noreferrer">Sign in</a></p>}
+    {editing ? <form className="music-editor" onSubmit={event => {
+      event.preventDefault(); if (!synced) return
+      const filled = links.map(link=>link.trim()).filter(Boolean)
+      const ids = filled.map(youtubeId)
+      if (!filled.length || ids.some(id=>!id)) { setError('Invalid YouTube link or ID'); return }
+      if (publicToken && !phoneAccount) { setError('Sign in to the playlist owner account to save changes.'); return }
+      player.current?.stopVideo(); loadedId.current=undefined; setPlaying(false)
+      setQueue(q=>({...q,ids:ids as string[],index:0})); setEditing(false); setError('')
+    }}>
+      {links.map((link,i)=><label key={i}><span>{i+1}</span><input aria-label={`YouTube link ${i+1}`} placeholder="YouTube link or video ID" value={link} onChange={e=>setLinks(old=>old.map((value,n)=>n===i?e.target.value:value))}/></label>)}
+      <button type="submit" disabled={!synced}>Save playlist</button>
+    </form> : <button onClick={()=>{setLinks(Array.from({length:10},(_,i)=>queue.ids[i]||''));setEditing(true)}}>Edit playlist</button>}
     {error && <p className="music-error" role="alert">{error}</p>}
-    <div className="music-preview" ref={mount} />
+    <div className="music-preview music-audio-source" ref={mount} />
+    {!editing && <>
     <p className="music-now" aria-live="polite">Now playing: {selected ? titles[selected] || selected : 'Queue is empty'}</p>
     <div className="music-transport">
       <button aria-label="Previous track" disabled={!ready || queue.index === 0} onClick={() => choose(queue.index - 1)}>⏮</button>
@@ -106,15 +135,17 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
     </div>
     <label className="music-volume">Volume<input type="range" min="0" max="100" value={queue.volume} onChange={e => setQueue(q => ({...q, volume: Number(e.target.value)}))} /></label>
     <ol className="music-queue">{queue.ids.map((id, i) => <li key={`${i}-${id}`} className={i === queue.index ? 'is-current' : ''}>
-      <button className="music-track" disabled={!ready} aria-current={i === queue.index ? 'true' : undefined} onClick={() => choose(i)}><img src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`} alt="" loading="lazy" /><span>{titles[id] || id}</span></button>
+      <button className="music-track" disabled={!ready} aria-current={i === queue.index ? 'true' : undefined} onClick={() => choose(i)}><span>{titles[id] || id}</span></button>
       <button aria-label={`Remove ${titles[id] || id}`} onClick={() => remove(i)}>×</button>
     </li>)}</ol>
-    <button disabled={!synced || !queue.ids.length} onClick={() => {setQr(true); setCopyState('')}}>QR</button>
+    </>}
+    <button disabled={!synced} onClick={() => {setQr(true); setCopyState('')}}>QR</button>
     {qr && <dialog className="music-share" ref={dialog} onCancel={() => setQr(false)} onClose={() => setQr(false)}>
       <header><h2>Open on your phone</h2><button aria-label="Close QR" onClick={() => setQr(false)}>×</button></header>
-      <QrMark value={shareToken ? fullUrl : shareUrl(queue.ids.slice(0, 40))} label="Scan to open this queue" />
-      {!shareToken && queue.ids.length > 40 && <p>QR truncated to the first 40 tracks. Copy link includes the entire queue.</p>}
-      <p>{shareToken ? 'Permanent link: anyone with this QR can open your saved queue.' : 'Guest queue: cleared on close. A copied link contains a snapshot of these IDs.'}</p>
+      {synced ? <QrMark value={shareToken ? fullUrl : 'https://robaq.app/play'} label="Scan to build your playlist" /> : <p role="status">Preparing your QR…</p>}
+      {error && <p role="alert">{error}</p>}
+      
+      <p>{shareToken ? 'Permanent link: anyone with this QR can open your saved queue.' : 'Guest playlist stays only on this phone while this page is open.'}</p>
       <label>Share URL<textarea readOnly value={fullUrl} onFocus={e => e.target.select()} /></label>
       <button onClick={() => { void navigator.clipboard.writeText(fullUrl).then(() => setCopyState('Link copied.')).catch(() => setCopyState('Select the URL above and copy it manually.')) }}>Copy link</button>
       <p role="status">{copyState}</p>

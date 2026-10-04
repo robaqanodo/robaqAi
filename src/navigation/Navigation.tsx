@@ -2,8 +2,8 @@ import {TeslaMark} from '../tesla/TeslaSkill'
 import { useLocale } from '../i18n/Locale'
 import './navigation.css'
 
-export function Navigation({ teslaActive, onTesla, onMap, kasActive, onKas, movieSyncActive, onMovieSync, onHome, onLibrary, onSettings, onAbout, onAccount, email, historyOpen, onHistory, hasApiKey, voiceMode, voiceMoving, voiceDisabled, onVoice }: {
-  teslaActive?: boolean; onTesla?:()=>void; onMap: () => void; kasActive?: boolean; onKas?: () => void; movieSyncActive?: boolean; onMovieSync?: () => void; hasApiKey: boolean; voiceMode: boolean; voiceMoving: boolean; voiceDisabled: boolean; onVoice: () => void; email?: string; historyOpen: boolean; onHistory: () => void; onHome: () => void; onLibrary: () => void; onSettings: () => void; onAbout: () => void; onAccount: () => void
+export function Navigation({ teslaActive, onTesla, onMap, onMusic, kasActive, onKas, movieSyncActive, onMovieSync, onHome, onLibrary, onSettings, onAbout, onAccount, email, historyOpen, onHistory, hasApiKey, voiceMode, voiceMoving, voiceDisabled, onVoice }: {
+  teslaActive?: boolean; onTesla?:()=>void; onMap: () => void; onMusic: () => void; kasActive?: boolean; onKas?: () => void; movieSyncActive?: boolean; onMovieSync?: () => void; hasApiKey: boolean; voiceMode: boolean; voiceMoving: boolean; voiceDisabled: boolean; onVoice: () => void; email?: string; historyOpen: boolean; onHistory: () => void; onHome: () => void; onLibrary: () => void; onSettings: () => void; onAbout: () => void; onAccount: () => void
 }) {
   const { t } = useLocale()
 
@@ -15,6 +15,7 @@ export function Navigation({ teslaActive, onTesla, onMap, kasActive, onKas, movi
     {kasActive && <button onClick={onKas} aria-label="Kas 1.0" title="Keeping a secret"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg><span>Kas</span></button>}
     {teslaActive && <button onClick={onMap} aria-label={t("Map")} title={t("Map")}><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/></svg><span>{t("Map")}</span></button>}
     {teslaActive && <button onClick={onTesla} aria-label="LinkyourTesla 1.0" title="LinkyourTesla 1.0"><TeslaMark/><span>Tesla</span></button>}
+    <button onClick={onMusic} aria-label={t('Music')} title={t('Music')}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2"/><ellipse cx="6" cy="17" rx="3" ry="2.5"/><ellipse cx="17" cy="15" rx="3" ry="2.5"/></svg><span>{t('Music')}</span></button>
     <button onClick={onLibrary} aria-label={t("AI Lab")} title={t("AI Lab")}><svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="16" rx="1"/><path d="M12 4v16M16 4l5 15"/></svg><span>{t("AI Lab")}</span></button>
     <button onClick={onSettings} aria-label={t("Settings")} title={t("Settings")}><svg viewBox="0 0 24 24"><path d="M4 7h5m4 0h7M4 17h9m4 0h3"/><circle cx="11" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg><span>{t("Settings")}</span></button>
     <div className="rail-bottom">

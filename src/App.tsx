@@ -1,3 +1,4 @@
+import {MusicPlayer} from './music/MusicPlayer'
 import {IdeaForm} from './components/IdeaForm'
 import {useTeslaLocation,stopTeslaLocation,enableTeslaLocation} from './tesla/location'
 import {requestApiFeaturePermissions} from './tesla/permissions'
@@ -377,6 +378,7 @@ function AppContent() {
     }
   },[mapOpen,mapEntering,teslaActive])
   const [teslaUnit,setTeslaUnit]=useState<'km/h'|'mph'>(()=>skillPreferences.getItem(TESLA_UNIT_KEY)==='km/h'?'km/h':'mph')
+  const [musicOpen,setMusicOpen]=useState(false)
   const [teslaMenuCollapsed,setTeslaMenuCollapsed]=useState(false)
   useEffect(()=>{setTeslaMenuCollapsed(false);if(teslaActive)setHistoryOpen(false)},[teslaActive,session])
   useEffect(()=>{if(teslaActive&&locale==='ka')setLocale('en')},[teslaActive,locale,setLocale])
@@ -1581,7 +1583,7 @@ function AppContent() {
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
       {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);if(mapOpen)return;setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false);setMapOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>}
-      <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)}} onMap={openMap} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setMapOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setMapOpen(false); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); setMapOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
+      <Navigation onMusic={()=>setMusicOpen(true)} teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)}} onMap={openMap} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setMapOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setMapOpen(false); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); setMapOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && !teslaActive && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
       {saveError && <div className="history-save-error" role="alert">{t(saveError)}</div>}
@@ -1935,7 +1937,8 @@ function AppContent() {
         </div>
       )}
 
-      {mapOpen && <MapPage onClose={closeMap} speedUnit={teslaUnit} musicAccount={Boolean(session?.online)} />}
+      {musicOpen && <div className="app-music-layer"><MusicPlayer account={Boolean(session?.online)} onClose={()=>setMusicOpen(false)}/></div>}
+      {mapOpen && <MapPage onClose={closeMap} speedUnit={teslaUnit} />}
       {teslaActive && teslaOpen && <TeslaPanel unit={teslaUnit} onClose={()=>setTeslaOpen(false)} />}
       {kasOpen && <Kas onClose={() => setKasOpen(false)} />}
       {watchOpen && <Suspense fallback={<div role="status">MovieSync…</div>}><WatchTogether signedIn={Boolean(session)} displayName={session ? ([session.firstName, session.lastName].filter(Boolean).join(' ') || session.email.split('@')[0]).slice(0, 32) : ''} onClose={() => { setWatchOpen(false); const url = new URL(window.location.href); url.searchParams.delete('watch'); window.history.replaceState(null, '', url) }} /></Suspense>}

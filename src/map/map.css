@@ -759,3 +759,23 @@
 /* Active guidance replaces destination search and its adjacent stop control. */
 .app-shell .owned-map.is-driving .owned-map-places{display:none}
 .app-shell .owned-map.is-driving .owned-map-guide{top:max(16px,env(safe-area-inset-top))}
+
+/* Compact destination panels; the requested panel replaces guidance temporarily. */
+.app-shell .owned-map .owned-map-guide{width:min(300px,calc(100vw - 90px));padding:12px;box-sizing:border-box;max-height:calc(100dvh - 40px);overflow:auto}
+.owned-map .owned-map-guide-dist{font-size:24px}
+.owned-map .owned-map-guide-road{font-size:17px}
+.owned-map .owned-map-guide-next{gap:10px;padding-bottom:8px}
+.owned-map .owned-map-guide-list li{padding:8px 0;gap:8px}
+.owned-map .owned-map-guide-step-name,.owned-map .owned-map-guide-dest strong{font-size:13px}
+.owned-map .owned-map-guide-step-dist,.owned-map .owned-map-guide-dest span{font-size:12px}
+.owned-map .owned-map-guide-cancel{min-height:44px;padding:10px;font-size:13px}
+.owned-map .owned-map-guide-meta{font-size:12px}
+.owned-map .owned-map-charging-panel{z-index:12;top:max(16px,env(safe-area-inset-top));width:min(320px,calc(100vw - 90px));padding:14px;box-sizing:border-box;background:#25272b}
+.owned-map .owned-map-charging-panel h2{font-size:18px}
+.owned-map .owned-map-charging-panel>p{font-size:12px;margin:6px 0}
+.owned-map .owned-map-charging-panel small{font-size:11px}
+.owned-map .owned-map-charging-results>button{padding:12px 0;min-height:74px}
+.owned-map .owned-map-charging-results strong{font-size:14px}
+.owned-map .owned-map-charge-distance{min-width:52px;font-size:21px;padding:6px}
+.owned-map .owned-map-rail .is-gps{margin-top:auto}
+@media(min-width:761px){.app-shell.is-map-open:not(.tesla-menu-collapsed) .owned-map-charging-panel,.app-shell.is-map-open:not(.tesla-menu-collapsed) .owned-map-guide{left:calc(var(--rail-left) + var(--rail-width) + 20px)}}
