@@ -108,7 +108,7 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
     const next = {...queue, ids, index: nextIndex}; current.current = next; setQueue(next)
   }
   const fullUrl = shareToken ? `https://robaq.app/play?queue=${shareToken}` : 'https://robaq.app/play'
-  return <section className={`music-panel${phone ? ' music-phone' : ''}`} aria-label="Music">
+  return <section className={`music-panel${phone ? ' music-phone' : ''}${qr ? ' is-qr-only' : ''}`} aria-label="Music">
     <header><h2>Music</h2>{onClose && <button aria-label="Close Music" onClick={onClose}>×</button>}</header>
     {phone && <p>Connect this phone to the car with Bluetooth, then press play.</p>}
     {phone && publicToken && !phoneAccount && <p className="music-account-note">To save changes to this permanent playlist, sign in to its owner's account on this phone, then reopen the QR. <a href="/" target="_blank" rel="noopener noreferrer">Sign in</a></p>}
@@ -140,8 +140,8 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
     </li>)}</ol>
     </>}
     <button disabled={!synced} onClick={() => {setQr(true); setCopyState('')}}>QR</button>
-    {qr && <dialog className="music-share" ref={dialog} onCancel={() => setQr(false)} onClose={() => setQr(false)}>
-      <header><h2>Open on your phone</h2><button aria-label="Close QR" onClick={() => setQr(false)}>×</button></header>
+    {qr && <dialog className="music-share" ref={dialog} onCancel={() => {setQr(false);onClose?.()}} onClose={() => {setQr(false);onClose?.()}}>
+      <header><h2>Open on your phone</h2><button aria-label="Close QR" onClick={() => {setQr(false);onClose?.()}}>×</button></header>
       {synced ? <QrMark value={shareToken ? fullUrl : 'https://robaq.app/play'} label="Scan to build your playlist" /> : <p role="status">Preparing your QR…</p>}
       <div className="music-share-actions">
         <button disabled={!synced} onClick={() => { void (async () => { try { await navigator.clipboard.writeText(fullUrl); setCopyState('Link copied.') } catch { setCopyState('Select the URL below and copy it manually.') } })() }}>Copy Link</button>

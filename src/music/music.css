@@ -38,3 +38,7 @@
 .music-share-actions{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
 .music-share-actions button{flex:1;min-height:48px}
 @media(max-width:760px){.app-music-layer>.music-panel,.tesla-menu-collapsed .app-music-layer>.music-panel{width:calc(100vw - 24px);left:12px;padding:18px}.music-share{padding:18px}}
+
+/* The QR is the only visible surface until the user opens the editor. */
+.music-panel.is-qr-only{visibility:hidden;pointer-events:none!important}
+.music-panel.is-qr-only .music-share{visibility:visible;pointer-events:auto;position:fixed;inset:0;margin:auto}
