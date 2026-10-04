@@ -143,11 +143,13 @@ export function MusicPlayer({phone = false, account = false, onClose}: {phone?: 
     {qr && <dialog className="music-share" ref={dialog} onCancel={() => setQr(false)} onClose={() => setQr(false)}>
       <header><h2>Open on your phone</h2><button aria-label="Close QR" onClick={() => setQr(false)}>×</button></header>
       {synced ? <QrMark value={shareToken ? fullUrl : 'https://robaq.app/play'} label="Scan to build your playlist" /> : <p role="status">Preparing your QR…</p>}
+      <div className="music-share-actions">
+        <button disabled={!synced} onClick={() => { void (async () => { try { await navigator.clipboard.writeText(fullUrl); setCopyState('Link copied.') } catch { setCopyState('Select the URL below and copy it manually.') } })() }}>Copy Link</button>
+        <button disabled={!synced} onClick={() => {setLinks(Array.from({length:10},(_,i)=>queue.ids[i]||''));setEditing(true);setQr(false);setError('');requestAnimationFrame(()=>mount.current?.closest('section')?.querySelector<HTMLInputElement>('.music-editor input')?.focus())}}>Edit Playlist Now</button>
+      </div>
       {error && <p role="alert">{error}</p>}
-      
-      <p>{shareToken ? 'Permanent link: anyone with this QR can open your saved queue.' : 'Guest playlist stays only on this phone while this page is open.'}</p>
+      <p>{shareToken ? 'Permanent link: anyone with this QR can open your saved queue.' : 'Guest playlist stays only while Music is open.'}</p>
       <label>Share URL<textarea readOnly value={fullUrl} onFocus={e => e.target.select()} /></label>
-      <button onClick={() => { void navigator.clipboard.writeText(fullUrl).then(() => setCopyState('Link copied.')).catch(() => setCopyState('Select the URL above and copy it manually.')) }}>Copy link</button>
       <p role="status">{copyState}</p>
     </dialog>}
   </section>

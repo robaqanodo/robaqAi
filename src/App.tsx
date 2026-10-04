@@ -1522,7 +1522,7 @@ function AppContent() {
 
   return (
     <div
-      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''}${mapOpen ? ' is-map-open' : ''}${mapEntering ? ' is-map-entering' : ''}${mapLeaving ? ' is-map-leaving' : ''} theme-${chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
+      className={`app-shell has-navigation${teslaActive?' tesla-connected':''}${teslaActive&&teslaMenuCollapsed?' tesla-menu-collapsed':''}${watchOpen ? ' is-watch-open' : ''}${liveEntry ? ' is-live-open' : ''}${mapOpen ? ' is-map-open' : ''}${mapEntering ? ' is-map-entering' : ''}${mapLeaving ? ' is-map-leaving' : ''} theme-${teslaActive && mapOpen ? 'default' : chatColor}${session && chatOpen && historyOpen ? ' has-history' : ''} ${chatOpen ? 'is-chat-open' : 'is-landing'}${
         hasApiKey && provider ? ` ${providerThemeClass(provider)}` : ''
       }`}
     >
