@@ -1,13 +1,9 @@
-/* Full-screen satellite. Menus stay off, same idea as a live page. */
+/* Full-screen map with a user-controlled navigation rail. */
 .app-shell.is-map-open{padding:0!important}
 .app-shell.is-map-open .history-drawer,
 .app-shell.is-map-open .chat-panel,
 .app-shell.is-map-open .landing-voice-status,
 .app-shell.is-map-open .history-save-error{display:none!important}
-.app-shell.is-map-open:not(.is-map-entering) .navigation-rail,
-.app-shell.is-map-open:not(.is-map-entering).has-navigation .navigation-rail,
-.app-shell.is-map-open:not(.is-map-entering).has-navigation.tesla-menu-collapsed .navigation-rail,
-.app-shell.is-map-open:not(.is-map-entering) .tesla-menu-toggle,
 .app-shell.is-map-open:not(.is-map-entering) .landing-stage{display:none!important}
 
 .owned-map{position:fixed;inset:0;z-index:40000;background:#071018}
@@ -720,3 +716,27 @@
 .owned-map-search-dropdown .owned-map-places-bar .owned-map-pill{flex:1;min-width:105px;min-height:52px;border-radius:6px}
 
 .owned-map.is-driving .owned-map-rail{display:flex}
+
+/* Top search with an anchored destination drawer. */
+.owned-map .owned-map-places,
+.owned-map.is-driving .owned-map-places,
+.owned-map:has(.owned-map-banner) .owned-map-places {
+  top:max(16px,env(safe-area-inset-top));bottom:auto;left:20px;
+  transform:none;width:min(520px,calc(100vw - 112px));max-width:none;align-items:stretch;
+}
+.owned-map .owned-map-search-line{position:relative;left:auto;bottom:auto;transform:none;width:100%;max-width:none;flex-shrink:0}
+.owned-map .owned-map-search,.owned-map.is-driving .owned-map-search,.owned-map.is-search-route .owned-map-search{display:block;width:100%;min-height:62px;padding:6px 16px;border-radius:12px}
+.owned-map .owned-map-search input{font-size:20px;min-height:50px;width:100%;box-sizing:border-box}
+.owned-map .owned-map-search-dropdown{pointer-events:auto;width:100%;box-sizing:border-box;transform-origin:top;animation:map-drawer-open .24s ease-out;max-height:calc(100dvh - 125px)}
+.owned-map .owned-map-search .owned-map-suggest,.owned-map .owned-map-search .owned-map-search-status{top:calc(100% + 8px);bottom:auto;max-height:50vh;overflow:auto;z-index:10}
+.owned-map.is-driving .owned-map-places-bar{display:flex}
+.owned-map.is-driving .owned-map-suggest,.owned-map.is-driving .owned-map-search-status{display:block}
+.owned-map.is-driving .owned-map-guide{top:96px}
+@keyframes map-drawer-open{from{opacity:0;transform:translateY(-12px) scaleY(.96)}to{opacity:1;transform:translateY(0) scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.owned-map .owned-map-search-dropdown{animation:none}}
+@media(max-width:600px){.owned-map .owned-map-places,.owned-map.is-driving .owned-map-places{left:10px;width:calc(100vw - 84px)}.owned-map .owned-map-search{min-height:56px;padding:4px 12px}.owned-map .owned-map-search input{font-size:18px;min-height:48px}}
+
+/* Keep navigation reachable above the map without closing the map. */
+.app-shell.is-map-open.has-navigation .navigation-rail{z-index:40010;animation:none}
+.app-shell.is-map-open.has-navigation .navigation-rail > *{animation:none}
+.app-shell.is-map-open.has-navigation .tesla-menu-toggle{z-index:40011;animation:none;pointer-events:auto}

@@ -271,13 +271,8 @@ function directLine(from: Fix, place: SavedPlace): [number, number][] {
   return [[from.lon, from.lat], [place.lon, place.lat]]
 }
 
-const MAP_3D_KEY = 'robaq-map-3d'
 const MAP_BASEMAP_KEY = 'robaq-map-basemap'
 type BasemapMode = 'satellite' | 'street'
-
-function readMap3d() {
-  try { return localStorage.getItem(MAP_3D_KEY) !== '0' } catch { return true }
-}
 
 /** Navigation starts in dark street mode, independently of the app theme. */
 function bootBasemap(): BasemapMode { return 'street' }
@@ -333,26 +328,14 @@ function viewHolds(map: Map, lat: number, lon: number) {
   return lon >= west - lonPad && lon <= east + lonPad
 }
 
-/** Shared with the follow camera so a 3D-off choice is not overwritten by the next GPS tick. */
-let map3dOn = readMap3d()
-
-function applyMap3d(map: Map, on: boolean, animate: boolean) {
-  map3dOn = on
-  // Satellite uses our extrusions. The dark street style has its own buildings; do not add a second set.
+/** Buildings and pitch controls are always enabled in navigation. */
+function applyMap3d(map: Map) {
   for (const id of ['buildings-walls', 'buildings-roofs', 'building-3d']) {
-    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none')
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible')
   }
-  if (on) {
-    map.dragRotate.enable()
-    map.touchPitch.enable()
-    map.touchZoomRotate.enableRotation()
-    return
-  }
-  map.dragRotate.disable()
-  map.touchPitch.disable()
-  map.touchZoomRotate.disableRotation()
-  if (animate) map.easeTo({pitch: 0, bearing: 0, duration: 350})
-  else map.jumpTo({pitch: 0, bearing: 0})
+  map.dragRotate.enable()
+  map.touchPitch.enable()
+  map.touchZoomRotate.enableRotation()
 }
 
 /** Positive Y shifts the target down so the GPS marker sits in the lower part of the screen. */
@@ -490,7 +473,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   const [guide, setGuide] = useState<Guide | null>(mapMemory.guide)
   const [arrival, setArrival] = useState<Arrival | null>(null)
   const [following, setFollowing] = useState(mapMemory.following)
-  const [buildings3d, setBuildings3d] = useState(map3dOn)
   const [basemap, setBasemap] = useState<BasemapMode>(bootBasemap)
   const [chargersOn, setChargersOn] = useState(false)
   const [nearbyChargers, setNearbyChargers] = useState<{site: Charger; distance: number}[]>([])
@@ -802,7 +784,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     map.touchZoomRotate.enableRotation()
     map.dragRotate.enable()
     map.touchPitch.enable()
-    map.on('style.load', () => applyMap3d(map, map3dOn, false))
+    map.on('style.load', () => applyMap3d(map))
     const pin = document.createElement('div')
     const initialKind = kindRef.current
     pin.className = `owned-map-pin${initialKind === 'dot' ? ' is-puck' : ' is-vehicle'}`
@@ -1353,16 +1335,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   void zoomBy
   void northUp
 
-  function toggle3d() {
-    const next = !map3dOn
-    map3dOn = next
-    setBuildings3d(next)
-    try { localStorage.setItem(MAP_3D_KEY, next ? '1' : '0') } catch { /* The choice still applies for this view. */ }
-    const map = mapRef.current
-    if (!map) return
-    applyMap3d(map, next, true)
-  }
-
   function syncChargers(map: Map) {
     if (!map.isStyleLoaded()) return
     if (!chargersOnRef.current) {
@@ -1646,13 +1618,14 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
           <input
             value={query}
             onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
-            onFocus={() => { if (!driving) {setQueryOpen(true); if (chargersOnRef.current) toggleChargers()} }}
+            onFocus={() => {setQueryOpen(true); if (chargersOnRef.current) toggleChargers()} }
+            onClick={() => setQueryOpen(true)}
+            aria-expanded={queryOpen}
+            aria-controls="map-destination-menu"
             placeholder={t('Search address')}
             aria-label={t('Search address')}
             autoComplete="off"
             spellCheck={false}
-            readOnly={driving}
-            disabled={driving}
           />
           </div>
           {queryOpen && querySearching && <p className="owned-map-search-status">{t('Searching…')}</p>}
@@ -1672,7 +1645,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
         </form>
         {driving && <button type="button" className="owned-map-go is-stop" onClick={stopDrive}>{t('Stop')}</button>}
         </div>
-        {queryOpen && !driving && <div className="owned-map-search-dropdown"><div className="owned-map-places-bar">
+        {queryOpen && <div id="map-destination-menu" className="owned-map-search-dropdown"><div className="owned-map-places-bar">
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlaceClick('home')} onPointerDown={event => placePointerDown('home', event)} onPointerMove={placePointerMove} onPointerUp={placePointerUp} onPointerCancel={placePointerUp} onContextMenu={event => event.preventDefault()}>
             <SlotIcon id="home" />
             <span>{t('HOME')}</span>
@@ -1791,7 +1764,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       {routeCard}
       {routeBanner}
       <div className="owned-map-rail">
-        <button type="button" className="owned-map-compass" aria-label={t('Recenter')} onClick={recenter}><span>{heading == null ? 'N' : ['N','NE','E','SE','S','SW','W','NW'][Math.round(heading / 45) % 8]}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3 20 21 12 17 4 21Z"/></svg></button>
         <button type="button" className={`is-chargers${chargersOn ? ' is-on' : ''}`} aria-pressed={chargersOn} aria-label={t('Superchargers')} onClick={toggleChargers}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M13.2 3.4 7.2 12.6h3.6l-1.2 7.2 6.6-10.2h-3.7l.7-6.2z"/></svg>
         </button>
@@ -1802,9 +1774,8 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 4.6 3.8 6.2v12.6l4.4-1.6 6.4 1.6 4.4-1.6V4.6l-4.4 1.6-6.4-1.6z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M8.2 4.6v12.6M14.6 6.2v12.6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
           )}
         </button>
-        <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
         <button type="button" className={following ? 'is-on' : ''} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
         </button>
       </div>
       <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>

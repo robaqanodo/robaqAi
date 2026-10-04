@@ -1507,6 +1507,7 @@ function AppContent() {
     setTeslaOpen(false)
     setHistoryOpen(false)
     setMapLeaving(false)
+    setTeslaMenuCollapsed(true)
     setMapOpen(true)
     setMapEntering(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   }
@@ -1579,7 +1580,7 @@ function AppContent() {
       </div>
 
       {!chatOpen && voiceMode && <div className="landing-voice-status" role="status"><span className="voice-status-dot" />{speaking ? t('robaqAI is speaking…') : thinking ? t('Thinking…') : listening ? t('Listening…') : t('Voice conversation')}</div>}
-      {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false);setMapOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>}
+      {teslaActive&&<button type="button" className="tesla-menu-toggle" aria-expanded={!teslaMenuCollapsed} aria-controls="main-navigation" aria-label={t(teslaMenuCollapsed?'Expand menu':'Collapse menu')} onClick={()=>{setTeslaMenuCollapsed(v=>!v);if(mapOpen)return;setChatOpen(false);setHistoryOpen(false);setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setTeslaOpen(false);setMapOpen(false)}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>}
       <Navigation teslaActive={teslaActive} onTesla={()=>{setLandingPanel(null);setWatchOpen(false);setKasOpen(false);setChatOpen(false);setMapOpen(false);setTeslaOpen(true)}} onMap={openMap} kasActive={kasActive} onKas={() => { setWatchOpen(false); setLandingPanel(null); setChatOpen(false); setMapOpen(false); setKasOpen(true) }} movieSyncActive={movieSyncStage === 'active'} onMovieSync={() => { setChatOpen(false); setLandingPanel(null); setMapOpen(false); setWatchOpen(true) }} hasApiKey={hasApiKey} voiceMode={voiceMode} voiceMoving={voiceMode && (listening || speaking)} voiceDisabled={!voiceMode && (thinking || attachBusy || Boolean(streamingId))} onVoice={toggleVoiceConversation} email={session?.email} historyOpen={historyOpen} onHistory={() => { setHistoryOpen(open => chatOpen ? !open : true); openChat() }} onHome={() => { setWatchOpen(false); setMapOpen(false); collapseChat() }} onLibrary={() => openLandingPanel('store')} onSettings={() => openLandingPanel('settings')} onAbout={() => openLandingPanel('about')} onAccount={() => openLandingPanel('account')} />
 
       {session && chatOpen && historyOpen && !teslaActive && <History chats={chats} activeId={activeChatId} onOpen={selectConversation} onNew={newConversation} onChange={changeConversation} onClose={() => setHistoryOpen(false)} />}
@@ -1957,7 +1958,7 @@ function AppContent() {
             <p className="ai-lab-use-note">{t('For education and lawful use only. You are responsible for how you use these tools. Misuse is prohibited.')}</p>
             <h3 className="store-section-title store-section-title-info">{t('AI Skills')}<details className="store-info inline-store-info"><summary aria-label={t('AI Skills information')}>?</summary><p className="modal-help">{t('Install optional tools for secrets, shared videos and private live rooms. Active tools are ready to use; Delete removes them from this device.')} {t('After installation, type live or crossfire in the chat to start a private room.')}</p></details></h3>
             <div className="ai-skills-list">
-            <TeslaStore active={teslaActive} onChange={active=>{setTeslaActive(active);if(active)skillPreferences.setItem(TESLA_KEY,'true');else{removeTesla();setTeslaOpen(false)}}} onOpen={()=>{if(labMinimized)return;setLandingPanel(null);setTeslaOpen(true)}} />
+            <TeslaStore active={teslaActive} onChange={active=>{setTeslaActive(active);if(active)skillPreferences.setItem(TESLA_KEY,'true');else{removeTesla();setTeslaOpen(false)}}} />
             <KasStore active={kasActive} onChange={active => { setKasActive(active); skillPreferences.setItem('robaq-kas-active', String(active)) }} />
             <MovieSyncStore stage={movieSyncStage} onChange={changeMovieSyncStage} />
 
