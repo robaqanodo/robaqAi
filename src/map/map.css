@@ -755,3 +755,7 @@
 .app-shell .owned-map-rail button.is-basemap{background:#303237;color:#fff;box-shadow:0 3px 14px #0003}
 .app-shell .owned-map-rail button.is-basemap:hover{background:#42454b;color:#fff}
 @media(prefers-reduced-motion:reduce){.app-shell.is-map-open .owned-map-places{transition:none}}
+
+/* Active guidance replaces destination search and its adjacent stop control. */
+.app-shell .owned-map.is-driving .owned-map-places{display:none}
+.app-shell .owned-map.is-driving .owned-map-guide{top:max(16px,env(safe-area-inset-top))}
