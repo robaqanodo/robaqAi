@@ -10,7 +10,12 @@ vi.mock('../server/redis.ts', async importOriginal => ({
     if(cmd==='DEL'){for(const k of args.slice(1))state.data.delete(String(k));return 1}
     if(cmd==='EVAL'){
       const count=Number(args[2]), keys=args.slice(3,3+count).map(String), params=args.slice(3+count).map(String)
-      const old=state.data.get(keys[0]);const matches=old&&JSON.parse(old).generation===params[0]
+      const old=state.data.get(keys[0]);
+      if(key.includes('a.music.token~=ARGV[1]')){
+        if(!old)return null;const a=JSON.parse(old);if(a.music?.token!==params[0])return null;
+        Object.assign(a.music,{ids:JSON.parse(params[1]),index:Number(params[2]),volume:Number(params[3])});state.data.set(keys[0],JSON.stringify(a));return JSON.stringify(a.music)
+      }
+      const matches=old&&JSON.parse(old).generation===params[0]
       if(key.includes("redis.call('DEL',KEYS[2])")){if(matches){const a=JSON.parse(old!);if(a.music)state.data.delete('robaq:music:'+a.music.token);state.data.delete(keys[0])};state.data.delete(keys[1]);return 1}
       if(!matches)return 0;
       if(key.includes("ARGV[3]=='music-save'")){
@@ -77,4 +82,15 @@ it('keeps one music QR across saves and login, protects writes and revokes it on
  await call('delete',{},second.cookie)
  expect((await call('music-public',{token})).status).toBe(404)
  expect(state.data.has('robaq:music:'+token)).toBe(false)
+})
+
+it('allows link holders to edit only its playlist without an account',async()=>{
+ const owner=await call('register',credentials)
+ const token=(await call('music',{},owner.cookie)).body.music.token
+ const saved=await call('music-public-save',{token,ids:['dQw4w9WgXcQ'],volume:50,index:0,firstName:'intruder'})
+ expect(saved.status).toBe(200)
+ expect((await call('music',{},owner.cookie)).body.music.ids).toEqual(['dQw4w9WgXcQ'])
+ expect((await call('me',{},owner.cookie)).body.user.firstName).not.toBe('intruder')
+ expect((await call('music-public-save',{token:'a'.repeat(48),ids:[]})).status).toBe(404)
+ expect((await call('music-public-save',{token,ids:['invalid']})).status).toBe(400)
 })

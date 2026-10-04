@@ -3090,5 +3090,9 @@
   "No charging locations found.": [
     "დამტენები ვერ მოიძებნა.",
     "Зарядные станции не найдены."
+  ],
+  "Thank you for supporting robaqAi. Choose PayPal or Cash App below. Payment opens on their website; robaqAi does not collect your card details.": [
+    "გმადლობთ robaqAi-ის მხარდაჭერისთვის. ქვემოთ აირჩიეთ PayPal ან Cash App. გადახდა მათ ვებსაიტზე გაიხსნება; robaqAi თქვენი ბარათის მონაცემებს არ აგროვებს.",
+    "Спасибо за поддержку robaqAi. Выберите PayPal или Cash App ниже. Оплата откроется на их сайте; robaqAi не собирает данные вашей карты."
   ]
 }

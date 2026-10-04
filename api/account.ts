@@ -17,13 +17,22 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
   try {
     const body = await bodyOf(req, 20000)
     const action = String(body.action)
-    if (action === 'music-public') {
+    if (action === 'music-public' || action === 'music-public-save') {
       const token = String(body.token || '')
       if (!/^[a-f0-9]{48}$/.test(token)) { respond(res, 404, {error: 'Queue unavailable.'}); return }
       const id = await redis<string | null>('GET', `robaq:music:${token}`)
       const raw = id ? await redis<string | null>('GET', `robaq:account:${id}`) : null
       const account: Account | null = raw ? JSON.parse(raw) : null
       if (!account?.music || account.music.token !== token) { respond(res, 404, {error: 'Queue unavailable.'}); return }
+      if (action === 'music-public-save') {
+        const ids = body.ids
+        if (!Array.isArray(ids) || ids.length > 10 || !ids.every(id => typeof id === 'string' && /^[\w-]{11}$/.test(id))) { respond(res,400,{error:'Invalid queue (maximum 10 tracks).'}); return }
+        const saved = await redis<string | null>('EVAL', "local raw=redis.call('GET',KEYS[1]); if not raw then return nil end; local a=cjson.decode(raw); if not a.music or a.music.token~=ARGV[1] then return nil end; a.music.ids=cjson.decode(ARGV[2]); a.music.index=tonumber(ARGV[3]); a.music.volume=tonumber(ARGV[4]); redis.call('SET',KEYS[1],cjson.encode(a)); return cjson.encode(a.music)",1,`robaq:account:${id}`,token,JSON.stringify(ids),Math.max(0,Math.min(ids.length-1,Number(body.index)||0)),Math.max(0,Math.min(100,Number(body.volume)||0)))
+        if (!saved) {respond(res,404,{error:'Queue unavailable.'});return}
+        const music=JSON.parse(saved); if(!Array.isArray(music.ids))music.ids=[]
+        respond(res,200,{music});return
+      }
+      if (!Array.isArray(account.music.ids)) account.music.ids=[]
       respond(res, 200, {music: account.music}); return
     }
     const currentToken = cookie(req)

@@ -787,7 +787,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     map.on('style.load', () => applyMap3d(map))
     const pin = document.createElement('div')
     const initialKind = kindRef.current
-    pin.className = `owned-map-pin${initialKind === 'dot' ? ' is-puck' : ' is-vehicle'}`
+    pin.className = `owned-map-pin${' is-puck'}`
     pin.dataset.kind = initialKind
     pin.innerHTML = markerMarkup(initialKind)
     // auto matches viewport and rotates by heading on top of the camera bearing, so the nose points backward except near north.
@@ -1145,7 +1145,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     const headed = heading != null && heading >= 0
     marker.setLngLat(lngLat)
     if (headed) marker.setRotation(heading)
-    marker.getElement().classList.toggle('is-headed', kindRef.current === 'dot' && headed)
+    marker.getElement().classList.toggle('is-headed', headed)
     if (!marker.getElement().isConnected) marker.addTo(map)
     const coords = routeCoordsRef.current
     if (coords && coords.length >= 2 && active && !arrivalRef.current) {
@@ -1185,9 +1185,9 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   useEffect(() => {
     const el = markerRef.current?.getElement()
     if (!el) return
-    const headed = markerKind === 'dot' && heading != null && heading >= 0
-    el.classList.toggle('is-vehicle', markerKind !== 'dot')
-    el.classList.toggle('is-puck', markerKind === 'dot')
+    const headed = heading != null && heading >= 0
+    el.classList.toggle('is-vehicle', false)
+    el.classList.toggle('is-puck', true)
     el.classList.toggle('is-headed', headed)
     if (el.dataset.kind !== markerKind) {
       el.dataset.kind = markerKind

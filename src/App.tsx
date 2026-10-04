@@ -78,10 +78,7 @@ function GpsIconSetting() {
           onChange={event => setKind(saveMarkerKind(event.target.value as MarkerKind))}
         >
           <option value="dot">{t('Default')}</option>
-          <option value="model3">Model 3</option>
-          <option value="modely">Model Y</option>
-          <option value="models">Model S</option>
-          <option value="cybertruck">Cybertruck</option>
+          <option value="original">{t('Original')}</option>
         </select>
       </label>
     </fieldset>
@@ -1825,8 +1822,10 @@ function AppContent() {
           >
             <h2 id="settings-title">{t("Settings")}</h2>
             <label className="settings-language">{t('Language')}<select value={locale} onChange={event => setLocale(event.target.value as 'en' | 'ka' | 'ru')}><option value="en">English</option>{!teslaActive&&<option value="ka">ქართული</option>}<option value="ru">Русский</option></select></label>
+            {!teslaActive && <>
             <fieldset className="chat-color-options engine-options"><legend>{t('Chat engine')}</legend><label className="color-choice"><input type="radio" name="chat-engine" value="web" checked={chatEngine === 'web'} onChange={() => setChatEngine('web')} />{t('Default (web)')}</label><label className="color-choice"><input type="radio" name="chat-engine" value="offline" checked={chatEngine === 'offline'} onChange={() => setChatEngine('offline')} />{t('Offline AI')}</label></fieldset>
             <p className="modal-help">{t('Default (web) is used until you choose Offline AI. Downloading a model does not switch the engine.')}</p>
+            </>}
             <p className="modal-help">{t("API credentials and updates.")}</p>
             <fieldset className="chat-color-options"><legend>{t('Interior colors')}</legend>{(['system', 'default', 'white'] as const).map(color => <label key={color} className={`color-choice color-${color}`}><input type="radio" name="chat-color" value={color} checked={themeChoice === color} onChange={() => { setChatColor(color); try { localStorage.setItem('robaq-theme-choice', color) } catch { /* Session only. */ } }} /><span aria-hidden="true" />{t(color === 'system' ? 'Automatic' : color === 'default' ? 'Default' : 'White')}</label>)}</fieldset>
             <GpsIconSetting />
@@ -2046,11 +2045,13 @@ function AppContent() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="donate-title">{t('Support robaqAi')}</h2>
-            <p className="donation-assurance">{t("Thank you for supporting an independent idea. This app does not collect card details. A donation link is not connected yet; no payment can be taken here.")}</p>
+            <p className="donation-assurance">{t("Thank you for supporting robaqAi. Choose PayPal or Cash App below. Payment opens on their website; robaqAi does not collect your card details.")}</p>
             <p className="modal-help"> {t("Your voluntary support helps me develop new skills and tools and maintain robaqAi. Thank you for helping the project grow.")} </p>
-            <p className="modal-help"> {t("The donation link will be added here soon. Payments are not available yet.")} </p>
             <p className="modal-help">{t('Support is optional and does not purchase a feature or guarantee future releases.')}</p>
-            <button type="button" className="modal-btn donation-button" disabled>{t('Donation')} · {t('Coming soon')}</button>
+            <div className="donation-options">
+              <a className="donation-option donation-paypal" href="https://www.paypal.com/paypalme/robaqai" target="_blank" rel="noopener noreferrer"><span className="donation-provider-mark" aria-hidden="true">P</span><span><strong>PayPal</strong><small>@robaqai</small></span><span className="donation-open" aria-hidden="true">↗</span></a>
+              <a className="donation-option donation-cash" href="https://cash.app/$nodorobakidze" target="_blank" rel="noopener noreferrer"><span className="donation-provider-mark" aria-hidden="true">$</span><span><strong>Cash App</strong><small>$nodorobakidze</small></span><span className="donation-open" aria-hidden="true">↗</span></a>
+            </div>
             <div className="modal-actions">
               <button
                 type="button"

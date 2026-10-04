@@ -3725,3 +3725,14 @@
 .engine-fallback-btn { margin-top: 8px; }
 .engine-options { flex-wrap: wrap; }
 .engine-options .color-choice { display: flex; align-items: center; gap: 8px; }
+
+/* About signature and donation destinations. */
+.about-premium .about-author.version-label{width:100%;box-sizing:border-box;text-align:right;transform:none;margin-top:32px;padding-top:10px;font-size:10px}
+.donation-options{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0}
+.donation-option{display:flex;align-items:center;gap:14px;min-height:88px;padding:18px;border:1px solid #ffffff26;border-radius:18px;background:linear-gradient(145deg,#ffffff0b,#ffffff03);color:#f5f6fa;text-decoration:none;transition:background .18s,border-color .18s}
+.donation-option:hover{background:#ffffff12;border-color:#ffffff60}.donation-option:focus-visible{outline:2px solid #9fbaff;outline-offset:4px}
+.donation-option strong{display:block;font-size:17px;font-weight:600}.donation-option small{display:block;margin-top:6px;font-size:12px;overflow-wrap:anywhere;color:#c2c7d3}
+.donation-provider-mark{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;border-radius:13px;font-size:28px;font-weight:750;background:#1669b6;color:white}.donation-cash .donation-provider-mark{background:#00b83e;color:white}.donation-open{margin-left:auto;font-size:20px;opacity:.7}
+.app-shell.theme-white .donation-option{background:#ffffffa6;color:#20242d;border-color:#0002}.app-shell.theme-white .donation-option small{color:#526174}
+@media(max-width:600px){.donation-options{grid-template-columns:1fr}.donation-option{min-height:76px;padding:14px}}
+@media(prefers-reduced-motion:reduce){.donation-option{transition:none}}
