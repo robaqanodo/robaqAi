@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 import type { ServerResponse } from 'node:http'
 import { bodyOf, limit, redis, respond, sameOrigin, type ApiRequest } from '../server/redis.ts'
 const derive = promisify(scrypt)
-type Account = { id: string; email: string; firstName: string; lastName: string; salt: string; hash: string; generation: string; keyVault?: { iv: string; data: string } }
+type Account = { id: string; email: string; firstName: string; lastName: string; salt: string; hash: string; generation: string; music?: {token: string; ids: string[]; index: number; volume: number}; keyVault?: { iv: string; data: string } }
 type Login = { id: string; generation: string }
 const hash = (s: string) => createHash('sha256').update(s).digest('hex')
 const cookieName = 'robaq_session'
@@ -15,8 +15,17 @@ function setCookie(res: ServerResponse, value: string, age?: number) {
 export default async function handler(req: ApiRequest, res: ServerResponse) {
   if (!sameOrigin(req)) { respond(res, 403, { error: 'Same-origin requests only.' }); return }
   try {
-    const body = await bodyOf(req, 4000)
+    const body = await bodyOf(req, 20000)
     const action = String(body.action)
+    if (action === 'music-public') {
+      const token = String(body.token || '')
+      if (!/^[a-f0-9]{48}$/.test(token)) { respond(res, 404, {error: 'Queue unavailable.'}); return }
+      const id = await redis<string | null>('GET', `robaq:music:${token}`)
+      const raw = id ? await redis<string | null>('GET', `robaq:account:${id}`) : null
+      const account: Account | null = raw ? JSON.parse(raw) : null
+      if (!account?.music || account.music.token !== token) { respond(res, 404, {error: 'Queue unavailable.'}); return }
+      respond(res, 200, {music: account.music}); return
+    }
     const currentToken = cookie(req)
     const sessionKey = /^[a-f0-9]{64}$/.test(currentToken) ? `robaq:login:${hash(currentToken)}` : ''
     const sessionRaw = sessionKey ? await redis<string | null>('GET', sessionKey) : null
@@ -28,10 +37,20 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
       if (sessionKey) await redis('DEL', sessionKey)
       setCookie(res, '', 0); respond(res, 200, { ok: true }); return
     }
-    if (['me', 'profile', 'delete', 'key-vault'].includes(action)) {
+    if (['me', 'profile', 'delete', 'key-vault', 'music', 'music-save'].includes(action)) {
       if (!authenticated) { setCookie(res, '', 0); respond(res, 401, { error: 'Sign in again.' }); return }
+      if (action === 'music' || action === 'music-save') {
+        const ids = body.ids
+        if (action === 'music-save' && (!Array.isArray(ids) || ids.length > 1000 || !ids.every(id => typeof id === 'string' && /^[\w-]{11}$/.test(id)))) { respond(res, 400, {error: 'Invalid queue (maximum 1000 tracks).'}); return }
+        const proposal = {token: randomBytes(24).toString('hex'), ids: [], index: 0, volume: 70}
+        // Atomic merge preserves concurrent profile/key updates and the permanent share token.
+        const raw = await redis<string | null>('EVAL', "local raw=redis.call('GET',KEYS[1]); if not raw then return nil end; local a=cjson.decode(raw); if a.generation~=ARGV[1] then return nil end; if not a.music then a.music=cjson.decode(ARGV[2]) end; if ARGV[3]=='music-save' then a.music.ids=cjson.decode(ARGV[4]); a.music.index=tonumber(ARGV[5]); a.music.volume=tonumber(ARGV[6]) end; redis.call('SET',KEYS[1],cjson.encode(a)); redis.call('SET','robaq:music:'..a.music.token,a.id); return cjson.encode(a.music)", 1, `robaq:account:${authenticated.id}`, authenticated.generation, JSON.stringify(proposal), action, JSON.stringify(ids || []), Math.max(0, Math.min(999, Number(body.index) || 0)), Math.max(0, Math.min(100, Number(body.volume) || 0)))
+        if (!raw) { respond(res, 401, {error: 'Sign in again.'}); return }
+        const music = JSON.parse(raw); if (!Array.isArray(music.ids)) music.ids = []
+        respond(res, 200, {music}); return
+      }
       if (action === 'delete') {
-        await redis('EVAL', "local old=redis.call('GET',KEYS[1]); if old and cjson.decode(old).generation==ARGV[1] then redis.call('DEL',KEYS[1]) end; redis.call('DEL',KEYS[2]); return 1", 2, `robaq:account:${authenticated.id}`, sessionKey, authenticated.generation)
+        await redis('EVAL', "local old=redis.call('GET',KEYS[1]); if old and cjson.decode(old).generation==ARGV[1] then local a=cjson.decode(old); if a.music then redis.call('DEL','robaq:music:'..a.music.token) end; redis.call('DEL',KEYS[1]) end; redis.call('DEL',KEYS[2]); return 1", 2, `robaq:account:${authenticated.id}`, sessionKey, authenticated.generation)
         setCookie(res, '', 0); respond(res, 200, { ok: true }); return
       }
       if (action === 'profile' || action === 'key-vault') {
@@ -46,7 +65,7 @@ export default async function handler(req: ApiRequest, res: ServerResponse) {
           authenticated.keyVault = { iv, data }
         }
         // Update only the existing generation; deletion cannot be undone by a concurrent save.
-        const saved = await redis<number>('EVAL', "local old=redis.call('GET',KEYS[1]); if not old or cjson.decode(old).generation~=ARGV[1] then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1", 1, `robaq:account:${authenticated.id}`, authenticated.generation, JSON.stringify(authenticated))
+        const saved = await redis<number>('EVAL', "local old=redis.call('GET',KEYS[1]); if not old or cjson.decode(old).generation~=ARGV[1] then return 0 end; local updated=cjson.decode(ARGV[2]); updated.music=cjson.decode(old).music; redis.call('SET',KEYS[1],cjson.encode(updated)); return 1", 1, `robaq:account:${authenticated.id}`, authenticated.generation, JSON.stringify(authenticated))
         if (!saved) { respond(res, 401, { error: 'Sign in again.' }); return }
         if (action === 'key-vault') { respond(res, 200, { ok: true }); return }
       }

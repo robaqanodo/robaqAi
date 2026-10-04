@@ -1,3 +1,4 @@
+import {MusicPlayer} from '../music/MusicPlayer'
 import {useEffect, useRef, useState, type PointerEvent as ReactPointerEvent} from 'react'
 import {Map, Marker, Popup, setWorkerUrl, type GeoJSONSource} from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
@@ -434,7 +435,8 @@ function commitRoute(map: Map, data: RouteData): boolean {
 
 
 
-export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; speedUnit?: 'km/h' | 'mph'}) {
+export function MapPage({onClose, speedUnit = 'mph', musicAccount = false}: {onClose: () => void; speedUnit?: 'km/h' | 'mph'; musicAccount?: boolean}) {
+  const [musicOpen, setMusicOpen] = useState(false)
   const {t, locale} = useLocale()
   const tRef = useRef(t)
   tRef.current = t
@@ -1761,6 +1763,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
           <div className="owned-map-arrival-count" aria-hidden="true">{arrival.left}</div>
         </div>
       )}
+      {musicOpen && <MusicPlayer account={musicAccount} onClose={() => setMusicOpen(false)} />}
       {routeCard}
       {routeBanner}
       <div className="owned-map-rail">
@@ -1774,6 +1777,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
             <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="m9 8 7 7-3 3-7-7zM10 7l4-4 7 7-4 4M7 10l-4 4 7 7 4-4M14 3l7 7M17.5 6.5l-4 4M6.5 17.5l4-4M5 3a4 4 0 0 1 4 4M3 3a6 6 0 0 1 6 6"/></g></svg>
           )}
         </button>
+        <button type="button" className="is-music" aria-label="Music" aria-pressed={musicOpen} onClick={() => setMusicOpen(open => !open)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12M9 9l11-2" fill="none" stroke="currentColor" strokeWidth="1.8"/><ellipse cx="6" cy="17" rx="3" ry="2.5" fill="currentColor"/><ellipse cx="17" cy="15" rx="3" ry="2.5" fill="currentColor"/></svg></button>
         <button type="button" className={`is-gps${following ? ' is-on' : ''}`} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
         </button>

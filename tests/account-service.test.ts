@@ -11,8 +11,14 @@ vi.mock('../server/redis.ts', async importOriginal => ({
     if(cmd==='EVAL'){
       const count=Number(args[2]), keys=args.slice(3,3+count).map(String), params=args.slice(3+count).map(String)
       const old=state.data.get(keys[0]);const matches=old&&JSON.parse(old).generation===params[0]
-      if(key.includes("redis.call('DEL',KEYS[2])")){if(matches)state.data.delete(keys[0]);state.data.delete(keys[1]);return 1}
-      if(!matches)return 0;state.data.set(keys[0],params[1]);return 1
+      if(key.includes("redis.call('DEL',KEYS[2])")){if(matches){const a=JSON.parse(old!);if(a.music)state.data.delete('robaq:music:'+a.music.token);state.data.delete(keys[0])};state.data.delete(keys[1]);return 1}
+      if(!matches)return 0;
+      if(key.includes("ARGV[3]=='music-save'")){
+        const a=JSON.parse(old!);a.music ||= JSON.parse(params[1]);
+        if(params[2]==='music-save')Object.assign(a.music,{ids:JSON.parse(params[3]),index:Number(params[4]),volume:Number(params[5])});
+        state.data.set(keys[0],JSON.stringify(a));state.data.set('robaq:music:'+a.music.token,a.id);return JSON.stringify(a.music)
+      }
+      const updated=JSON.parse(params[1]);updated.music=JSON.parse(old!).music;state.data.set(keys[0],JSON.stringify(updated));return 1
     }
     throw Error('Unexpected command')
   }
@@ -55,4 +61,20 @@ it('delete needs authentication and revokes all sessions even after re-registrat
   expect((await call('login',credentials)).status).toBe(404)
   expect((await call('register',credentials)).status).toBe(200)
   expect((await call('profile',{firstName:'stale'},second.cookie)).status).toBe(401)
+})
+
+it('keeps one music QR across saves and login, protects writes and revokes it on account deletion',async()=>{
+ const login=await call('register',credentials)
+ expect((await call('music')).status).toBe(401)
+ const first=await call('music',{},login.cookie),token=first.body.music.token
+ expect((await call('music-save',{ids:['bad']},login.cookie)).status).toBe(400)
+ const saved=await call('music-save',{ids:['dQw4w9WgXcQ'],index:0,volume:42},login.cookie)
+ expect(saved.body.music.token).toBe(token)
+ await call('profile',{firstName:'New'},login.cookie)
+ expect((await call('music-public',{token})).body.music.ids).toEqual(['dQw4w9WgXcQ'])
+ const second=await call('login',credentials)
+ expect((await call('music',{},second.cookie)).body.music.token).toBe(token)
+ await call('delete',{},second.cookie)
+ expect((await call('music-public',{token})).status).toBe(404)
+ expect(state.data.has('robaq:music:'+token)).toBe(false)
 })

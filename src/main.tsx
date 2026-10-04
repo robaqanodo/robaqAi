@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import {PlayPage} from './music/MusicPlayer'
 import { initializeMobile } from './mobile'
 import './mobile.css'
 import { migrateBrandPreferences } from './brandMigration'
@@ -11,7 +12,7 @@ initializeMobile()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {location.pathname.replace(/\/$/, '') === '/play' ? <PlayPage /> : <App />}
   </StrictMode>,
 )
 
