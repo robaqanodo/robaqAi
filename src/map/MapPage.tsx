@@ -279,21 +279,8 @@ function readMap3d() {
   try { return localStorage.getItem(MAP_3D_KEY) !== '0' } catch { return true }
 }
 
-function shellIsDark() {
-  return document.querySelector('.app-shell')?.classList.contains('theme-default') ?? false
-}
-
-/** Theme picks the basemap. A manual toggle is kept only until the theme changes. */
-function bootBasemap(): BasemapMode {
-  const theme = shellIsDark() ? 'default' : 'white'
-  try {
-    const manual = sessionStorage.getItem('robaq-map-basemap-manual') === '1'
-    const storedTheme = sessionStorage.getItem('robaq-map-basemap-theme')
-    const stored = localStorage.getItem(MAP_BASEMAP_KEY)
-    if (manual && storedTheme === theme && (stored === 'street' || stored === 'satellite')) return stored
-  } catch { /* Use the theme. */ }
-  return shellIsDark() ? 'street' : 'satellite'
-}
+/** Navigation starts in dark street mode, independently of the app theme. */
+function bootBasemap(): BasemapMode { return 'street' }
 
 function basemapStyle(mode: BasemapMode) {
   return mode === 'street' ? DARK_STYLE_URL : satelliteStyle
@@ -309,7 +296,7 @@ function chargerBolt(): ImageData {
   const pen = canvas.getContext('2d')
   if (!pen) return new ImageData(size, size)
   pen.clearRect(0, 0, size, size)
-  pen.fillStyle = '#111'
+  pen.fillStyle = '#e82137'
   pen.strokeStyle = '#fff'
   pen.lineWidth = 4
   pen.beginPath()
@@ -369,20 +356,21 @@ function applyMap3d(map: Map, on: boolean, animate: boolean) {
 }
 
 /** Positive Y shifts the target down so the GPS marker sits in the lower part of the screen. */
-function behindOffset(map: Map): [number, number] {
-  const height = map.getContainer().clientHeight
-  return [0, Math.max(120, Math.round(height * 0.28))]
-}
+function behindOffset(_map: Map): [number, number] { return [0, 0] }
 
 function cameraBearing(next: Fix): number | undefined {
   return next.heading != null && next.heading >= 0 ? next.heading : undefined
 }
 
-/** Behind-the-car follow. The marker stays in the lower third.
+/** Centered follow. The marker stays at the camera center.
  *  The first frame sets zoom 16 and pitch 50. Later ticks update center and bearing only.
  *  Recenter restores the pitch without forcing zoom again. */
 function easeBehind(map: Map, next: Fix, zoom: number | false, restorePitch = false) {
   const bearing = cameraBearing(next)
+  if (zoom === false && !restorePitch) {
+    map.jumpTo({center: [next.lon, next.lat], ...(bearing != null ? {bearing} : {})})
+    return
+  }
   map.easeTo({
     center: [next.lon, next.lat],
     offset: behindOffset(map),
@@ -505,6 +493,11 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   const [buildings3d, setBuildings3d] = useState(map3dOn)
   const [basemap, setBasemap] = useState<BasemapMode>(bootBasemap)
   const [chargersOn, setChargersOn] = useState(false)
+  const [nearbyChargers, setNearbyChargers] = useState<{site: Charger; distance: number}[]>([])
+  const [chargerError, setChargerError] = useState(false)
+  const [chargersLoaded, setChargersLoaded] = useState(false)
+  const [searchTab, setSearchTab] = useState<'Recents' | 'Favorites'>('Recents')
+  const [recents, setRecents] = useState<SavedPlace[]>([])
   const [driving, setDriving] = useState(mapMemory.driving)
   const [query, setQuery] = useState(mapMemory.query)
   const [queryHits, setQueryHits] = useState<Hit[]>([])
@@ -715,6 +708,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
   }
 
   async function navigate(id: TripId, place: SavedPlace, andDrive = false) {
+    setRecents(old => [place, ...old.filter(item => item.lat !== place.lat || item.lon !== place.lon)].slice(0, 8))
     if (id === 'home' || id === 'work') setSelected(id)
     setEditing(false)
     arrivedRef.current = false
@@ -825,7 +819,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     map.on('idle', flush)
     // Only a real one-finger pan stops follow. Pinch, rotate, pitch, and easeTo must not.
     map.on('dragstart', (event) => {
-      if (!isOneFingerPan(event.originalEvent)) return
+      if (drivingRef.current || !isOneFingerPan(event.originalEvent)) return
       followRef.current = false
       setFollowing(false)
     })
@@ -969,25 +963,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       for (const marker of placeMarkersRef.current) marker.remove()
       placeMarkersRef.current = []
     }
-  }, [])
-
-  useEffect(() => {
-    const shell = document.querySelector('.app-shell')
-    if (!shell) return
-    let seen = shell.classList.contains('theme-default') ? 'default' : 'white'
-    const apply = () => {
-      const theme = shell.classList.contains('theme-default') ? 'default' : 'white'
-      if (theme === seen) return
-      seen = theme
-      try {
-        sessionStorage.removeItem('robaq-map-basemap-manual')
-        sessionStorage.setItem('robaq-map-basemap-theme', theme)
-      } catch { /* The map still follows the theme. */ }
-      applyBasemap(theme === 'default' ? 'street' : 'satellite')
-    }
-    const observer = new MutationObserver(apply)
-    observer.observe(shell, {attributes: true, attributeFilter: ['class']})
-    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -1211,7 +1186,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 700})
       return
     }
-    if (!followRef.current) return
+    if (!followRef.current && !drivingRef.current) return
     if (drivingRef.current) {
       easeBehind(map, {lat, lon, heading}, driveZoomedRef.current ? false : START_ZOOM)
       driveZoomedRef.current = true
@@ -1221,7 +1196,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       framedRef.current = true
       map.easeTo({center: lngLat, zoom: OPEN_ZOOM, pitch: 0, bearing: 0, duration: 700})
     } else {
-      map.easeTo({center: lngLat, duration: 400})
+      map.jumpTo({center: lngLat})
     }
   }, [lat, lon, heading, following, driving])
 
@@ -1426,8 +1401,9 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     }
     void loadChargers().then(sites => {
       if (!chargersOnRef.current || mapRef.current !== map) return
+      setChargersLoaded(true)
       paintChargers(map, sites)
-    }).catch(() => { /* Leave the layer empty until the next toggle. */ })
+    }).catch(() => { setChargerError(true) })
   }
 
   function paintChargers(map: Map, sites: Charger[]) {
@@ -1437,6 +1413,8 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     const origin = pointRef.current ?? {lat: center.lat, lon: center.lng}
     const ranked = sites.map(site => ({site, distance: metersBetween(origin.lat, origin.lon, site.lat, site.lon)}))
     ranked.sort((a, b) => a.distance - b.distance)
+    setNearbyChargers(ranked.slice(0, 12))
+    setChargerError(false)
     const near = new Set(ranked.slice(0, CHARGER_NEAR).map(row => row.site.id))
     const features = []
     for (const site of sites) {
@@ -1456,6 +1434,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
     const next = !chargersOnRef.current
     chargersOnRef.current = next
     setChargersOn(next)
+    if (next) { setQueryOpen(false); setChargerError(false) }
     const map = mapRef.current
     if (!map) return
     syncChargers(map)
@@ -1471,10 +1450,6 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
 
   function toggleBasemap() {
     const next: BasemapMode = basemap === 'satellite' ? 'street' : 'satellite'
-    try {
-      sessionStorage.setItem('robaq-map-basemap-manual', '1')
-      sessionStorage.setItem('robaq-map-basemap-theme', shellIsDark() ? 'default' : 'white')
-    } catch { /* The toggle still applies for this view. */ }
     applyBasemap(next)
   }
 
@@ -1671,7 +1646,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
           <input
             value={query}
             onChange={event => { setQuery(event.target.value); setQueryOpen(true) }}
-            onFocus={() => { if (!driving) setQueryOpen(true) }}
+            onFocus={() => { if (!driving) {setQueryOpen(true); if (chargersOnRef.current) toggleChargers()} }}
             placeholder={t('Search address')}
             aria-label={t('Search address')}
             autoComplete="off"
@@ -1697,7 +1672,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
         </form>
         {driving && <button type="button" className="owned-map-go is-stop" onClick={stopDrive}>{t('Stop')}</button>}
         </div>
-        <div className="owned-map-places-bar">
+        {queryOpen && !driving && <div className="owned-map-search-dropdown"><div className="owned-map-places-bar">
           <button type="button" className={`owned-map-pill${homeOn ? ' is-on' : ''}`} aria-pressed={homeOn} onClick={() => onPlaceClick('home')} onPointerDown={event => placePointerDown('home', event)} onPointerMove={placePointerMove} onPointerUp={placePointerUp} onPointerCancel={placePointerUp} onContextMenu={event => event.preventDefault()}>
             <SlotIcon id="home" />
             <span>{t('HOME')}</span>
@@ -1721,6 +1696,14 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
             <button type="button" className="owned-map-pill owned-map-add" aria-label={t('Add place')} onClick={openAdd}>+</button>
           )}
         </div>
+        <div className="owned-map-search-tabs">
+          {(['Recents', 'Favorites'] as const).map(tab => <button type="button" key={tab} aria-pressed={searchTab === tab} onClick={() => setSearchTab(tab)}>{t(tab)}</button>)}
+          <button type="button" onClick={toggleChargers}>{t('Charging')}</button>
+        </div>
+        <div className="owned-map-place-results">
+          {(searchTab === 'Recents' ? recents : Object.values(places).filter((place): place is SavedPlace => Boolean(place))).map(place => <button type="button" key={`${place.lat},${place.lon}`} onClick={() => {setQueryOpen(false); void navigate('search', place, true)}}><strong>{place.label}</strong></button>)}
+          {searchTab === 'Recents' && !recents.length && <p>{t('No recent destinations')}</p>}
+        </div></div>}
         {editing && (
           <form className="owned-map-edit" onSubmit={event => event.preventDefault()}>
             <div className="owned-map-edit-head">
@@ -1789,6 +1772,14 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
         )}
         {hint && !editing && !adding && <p className="owned-map-hint">{t(hint)}</p>}
       </div>
+      {chargersOn && <aside className="owned-map-charging-panel" aria-label={t('Nearby charging')}>
+        <header><h2>{t('Nearby charging')}</h2><button type="button" aria-label={t('Close')} onClick={toggleChargers}>×</button></header>
+        <p>{t('Tesla Superchargers · community map')}</p>
+        <small>{t('Prices and live availability are not provided.')}</small>
+        {!point && <small>{t('Distances are measured from the map center.')}</small>}
+        {chargerError ? <p role="status">{t('Could not load charging locations.')} <button type="button" onClick={() => {setChargerError(false); if(mapRef.current) syncChargers(mapRef.current)}}>{t('Retry')}</button></p> : !nearbyChargers.length ? <p role="status">{t(chargersLoaded ? 'No charging locations found.' : 'Searching…')}</p> :
+          <div className="owned-map-charging-results">{nearbyChargers.map(({site, distance}) => <button type="button" key={site.id} onClick={() => {toggleChargers(); void navigate('search', {label:site.name,lat:site.lat,lon:site.lon}, true)}}><span><strong>{site.name}</strong><small>Tesla Supercharger</small></span><span className="owned-map-charge-distance">ϟ<small>{formatDistance(distance)}</small></span></button>)}</div>}
+      </aside>}
       {arrival && (
         <div className="owned-map-arrival" role="status" aria-live="polite">
           <button type="button" className="owned-map-arrival-x" aria-label={t('Close')} onClick={dismissArrival}>×</button>
@@ -1800,6 +1791,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
       {routeCard}
       {routeBanner}
       <div className="owned-map-rail">
+        <button type="button" className="owned-map-compass" aria-label={t('Recenter')} onClick={recenter}><span>{heading == null ? 'N' : ['N','NE','E','SE','S','SW','W','NW'][Math.round(heading / 45) % 8]}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3 20 21 12 17 4 21Z"/></svg></button>
         <button type="button" className={`is-chargers${chargersOn ? ' is-on' : ''}`} aria-pressed={chargersOn} aria-label={t('Superchargers')} onClick={toggleChargers}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" strokeWidth="1.6"/><path fill="currentColor" d="M13.2 3.4 7.2 12.6h3.6l-1.2 7.2 6.6-10.2h-3.7l.7-6.2z"/></svg>
         </button>
@@ -1812,7 +1804,7 @@ export function MapPage({onClose, speedUnit = 'mph'}: {onClose: () => void; spee
         </button>
         <button type="button" className={`is-3d${buildings3d ? ' is-on' : ''}`} aria-pressed={buildings3d} aria-label={t('3D')} onClick={toggle3d}>3D</button>
         <button type="button" className={following ? 'is-on' : ''} aria-pressed={following} aria-label={t('Recenter')} onClick={recenter}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.7"/><path d="M12 3.5v3.2M12 17.3v3.2M3.5 12h3.2M17.3 12h3.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 10a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg>
         </button>
       </div>
       <button type="button" className="owned-map-close" aria-label={t('Clear route')} onClick={() => setClearAsk(true)}>

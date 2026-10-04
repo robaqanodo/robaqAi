@@ -34,7 +34,7 @@
 }
 .owned-map .maplibregl-popup-close-button{font-size:16px;padding:2px 6px}
 .owned-map .maplibregl-ctrl-attrib a{color:#fff}
-.owned-map-pin{position:relative;width:22px;height:22px}
+.owned-map-pin{position:absolute;width:22px;height:22px}
 .owned-map-pin.is-puck{width:28px;height:34px}
 .owned-map-puck{display:block;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 1px 1px #000) drop-shadow(0 3px 5px #000a)}
 
@@ -623,71 +623,100 @@
   background:rgba(255,255,255,.9);color:#111;border-radius:12px;
   box-shadow:0 8px 22px rgba(0,0,0,.16);z-index:2;
 }
-.app-shell.theme-default .owned-map-close,
-.app-shell.theme-default .owned-map-search,
-.app-shell.theme-default .owned-map-edit,
-.app-shell.theme-default .owned-map-hint,
-.app-shell.theme-default .owned-map-guide,
-.app-shell.theme-default .owned-map-banner,
-.app-shell.theme-default .owned-map-rail button,
-.app-shell.theme-default .owned-map-places-bar .owned-map-pill{
+.app-shell .owned-map-close,
+.app-shell .owned-map-search,
+.app-shell .owned-map-edit,
+.app-shell .owned-map-hint,
+.app-shell .owned-map-guide,
+.app-shell .owned-map-banner,
+.app-shell .owned-map-rail button,
+.app-shell .owned-map-places-bar .owned-map-pill{
   background:rgba(28,28,30,.9);color:#f4f7fb;border:1px solid rgba(255,255,255,.14);
   box-shadow:0 8px 22px rgba(0,0,0,.35);
 }
-.app-shell.theme-default .owned-map-search input,
-.app-shell.theme-default .owned-map-search input:disabled{
+.app-shell .owned-map-search input,
+.app-shell .owned-map-search input:disabled{
   color:#f4f7fb;-webkit-text-fill-color:#f4f7fb;
 }
-.app-shell.theme-default .owned-map-search input::placeholder,
-.app-shell.theme-default .owned-map-edit input::placeholder{color:rgba(255,255,255,.5)}
-.app-shell.theme-default .owned-map-search .owned-map-suggest,
-.app-shell.theme-default .owned-map-search .owned-map-search-status,
-.app-shell.theme-default .owned-map-edit input{
+.app-shell .owned-map-search input::placeholder,
+.app-shell .owned-map-edit input::placeholder{color:rgba(255,255,255,.5)}
+.app-shell .owned-map-search .owned-map-suggest,
+.app-shell .owned-map-search .owned-map-search-status,
+.app-shell .owned-map-edit input{
   background:rgba(17,17,17,.9);color:#f4f7fb;border-color:rgba(255,255,255,.12);
 }
-.app-shell.theme-default .owned-map-suggest button{color:#f4f7fb}
-.app-shell.theme-default .owned-map-suggest-address{color:rgba(255,255,255,.62)}
-.app-shell.theme-default .owned-map-suggest button:hover,
-.app-shell.theme-default .owned-map-suggest button:focus-visible{background:rgba(255,255,255,.08)}
-.app-shell.theme-default .owned-map-guide-dist,
-.app-shell.theme-default .owned-map-guide-road,
-.app-shell.theme-default .owned-map-guide-step-name,
-.app-shell.theme-default .owned-map-guide-dest strong,
-.app-shell.theme-default .owned-map-turn,
-.app-shell.theme-default .owned-map-close,
-.app-shell.theme-default .owned-map-rail button{color:#f4f7fb}
-.app-shell.theme-default .owned-map-guide-step-dist,
-.app-shell.theme-default .owned-map-guide-dest span,
-.app-shell.theme-default .owned-map-guide-meta,
-.app-shell.theme-default .owned-map-edit-for,
-.app-shell.theme-default .owned-map-search-status{color:rgba(255,255,255,.66)}
-.app-shell.theme-default .owned-map-guide-list{border-top-color:rgba(255,255,255,.12)}
-.app-shell.theme-default .owned-map-guide-list li{border-bottom-color:rgba(255,255,255,.08)}
-.app-shell.theme-default .owned-map-guide-cancel,
-.app-shell.theme-default .owned-map-guide-cancel:hover,
-.app-shell.theme-default .owned-map-guide-cancel:focus-visible{background:#8e1b1b;color:#fff}
-.app-shell.theme-default .owned-map-go{background:#111;color:#fff;border:1px solid rgba(255,255,255,.28)}
-.app-shell.theme-default .owned-map-go.is-stop{background:#8e1b1b;border:0;color:#fff}
-.app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on,
-.app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on:hover,
-.app-shell.theme-default .owned-map-places-bar .owned-map-pill.is-on:focus-visible{
+.app-shell .owned-map-suggest button{color:#f4f7fb}
+.app-shell .owned-map-suggest-address{color:rgba(255,255,255,.62)}
+.app-shell .owned-map-suggest button:hover,
+.app-shell .owned-map-suggest button:focus-visible{background:rgba(255,255,255,.08)}
+.app-shell .owned-map-guide-dist,
+.app-shell .owned-map-guide-road,
+.app-shell .owned-map-guide-step-name,
+.app-shell .owned-map-guide-dest strong,
+.app-shell .owned-map-turn,
+.app-shell .owned-map-close,
+.app-shell .owned-map-rail button{color:#f4f7fb}
+.app-shell .owned-map-guide-step-dist,
+.app-shell .owned-map-guide-dest span,
+.app-shell .owned-map-guide-meta,
+.app-shell .owned-map-edit-for,
+.app-shell .owned-map-search-status{color:rgba(255,255,255,.66)}
+.app-shell .owned-map-guide-list{border-top-color:rgba(255,255,255,.12)}
+.app-shell .owned-map-guide-list li{border-bottom-color:rgba(255,255,255,.08)}
+.app-shell .owned-map-guide-cancel,
+.app-shell .owned-map-guide-cancel:hover,
+.app-shell .owned-map-guide-cancel:focus-visible{background:#8e1b1b;color:#fff}
+.app-shell .owned-map-go{background:#111;color:#fff;border:1px solid rgba(255,255,255,.28)}
+.app-shell .owned-map-go.is-stop{background:#8e1b1b;border:0;color:#fff}
+.app-shell .owned-map-places-bar .owned-map-pill.is-on,
+.app-shell .owned-map-places-bar .owned-map-pill.is-on:hover,
+.app-shell .owned-map-places-bar .owned-map-pill.is-on:focus-visible{
   background:rgba(17,17,17,.9);color:#fff;border-color:rgba(255,255,255,.28);
 }
-.app-shell.theme-default .owned-map-places-bar .owned-map-pill:hover,
-.app-shell.theme-default .owned-map-places-bar .owned-map-pill:focus-visible,
-.app-shell.theme-default .owned-map-close:hover,
-.app-shell.theme-default .owned-map-close:focus-visible,
-.app-shell.theme-default .owned-map-rail button:hover,
-.app-shell.theme-default .owned-map-rail button:focus-visible{
+.app-shell .owned-map-places-bar .owned-map-pill:hover,
+.app-shell .owned-map-places-bar .owned-map-pill:focus-visible,
+.app-shell .owned-map-close:hover,
+.app-shell .owned-map-close:focus-visible,
+.app-shell .owned-map-rail button:hover,
+.app-shell .owned-map-rail button:focus-visible{
   background:rgba(20,20,24,.96);color:#fff;border-color:rgba(255,255,255,.18);
 }
-.app-shell.theme-default .owned-map-rail button{background:rgba(8,8,10,.94)}
-.app-shell.theme-default .owned-map-rail button.is-on{color:#fff}
-.app-shell.theme-default .owned-map-rail button.is-3d.is-on,
-.app-shell.theme-default .owned-map-rail button.is-basemap.is-on,
-.app-shell.theme-default .owned-map-rail button.is-chargers.is-on{
+.app-shell .owned-map-rail button{background:rgba(8,8,10,.94)}
+.app-shell .owned-map-rail button.is-on{color:#fff}
+.app-shell .owned-map-rail button.is-3d.is-on,
+.app-shell .owned-map-rail button.is-basemap.is-on,
+.app-shell .owned-map-rail button.is-chargers.is-on{
   background:#050506;color:#fff;
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.7), 0 8px 20px rgba(0,0,0,.35);
 }
 
 
+
+/* Dark navigation controls in both application themes. */
+.owned-map {color-scheme:dark;color:#f5f5f5}
+.owned-map-search-dropdown,.owned-map-charging-panel{background:#25272b;color:#f5f5f5;border-radius:12px;box-shadow:0 12px 36px #0006;overflow:hidden}
+.owned-map-search-dropdown{margin-top:8px;padding:12px;max-height:65vh;overflow-y:auto}
+.owned-map-search-tabs{display:flex;gap:8px;border-top:1px solid #ffffff20;margin-top:12px;padding-top:12px}
+.owned-map-search-tabs button,.owned-map-place-results button{border:0;background:transparent;color:inherit;min-height:48px;padding:10px 12px;text-align:left;font:inherit}
+.owned-map-search-tabs button[aria-pressed=true]{border-bottom:2px solid #fff}
+.owned-map-place-results button{display:block;width:100%;border-bottom:1px solid #ffffff14}
+.owned-map-charging-panel{position:absolute;z-index:5;top:90px;bottom:24px;left:20px;width:min(380px,calc(100vw - 106px));display:flex;flex-direction:column;padding:20px}
+.owned-map-charging-panel header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.owned-map-charging-panel h2{font-size:21px;margin:0}
+.owned-map-charging-panel header button{border:0;background:none;color:inherit;font-size:28px;width:44px;height:44px}
+.owned-map-charging-panel>p{font-size:14px;margin:10px 0}.owned-map-charging-panel small{font-size:12px;color:#b8bcc3}
+.owned-map-charging-results{overflow:auto;margin-top:16px;min-height:0}
+.owned-map-charging-results>button{display:flex;align-items:center;justify-content:space-between;gap:14px;background:none;color:inherit;border:0;border-bottom:1px solid #ffffff20;width:100%;text-align:left;padding:20px 0;min-height:94px}
+.owned-map-charging-results strong{display:block;font-size:17px}.owned-map-charging-results small{display:block;margin-top:8px}
+.owned-map-charge-distance{flex-shrink:0;background:#e82137;border-radius:10px;padding:8px;min-width:65px;text-align:center;font-size:25px}.owned-map-charge-distance small{color:white}
+.app-shell .owned-map-rail button{width:56px;height:56px;border-radius:10px;background:#303237;color:white;border:0;box-shadow:0 3px 14px #0003}
+.app-shell .owned-map-rail button.is-on{background:#42454b;color:white}
+.owned-map-rail{gap:8px}
+.owned-map-pin.is-puck{width:32px;height:38px;transform-origin:center}
+@media(max-width:600px){.owned-map-charging-panel{left:10px;padding:12px;bottom:12px}.owned-map-search-tabs{gap:0}.owned-map-search-tabs button{font-size:13px;padding:8px}.app-shell .owned-map-rail button{width:48px;height:48px}}
+
+.app-shell .owned-map-rail .owned-map-compass{order:-2;height:74px;display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:700;margin-bottom:8px}.owned-map-compass svg{width:22px!important;height:22px!important}
+.owned-map-places{width:min(400px,calc(100vw - 100px))}.owned-map-search{width:100%;margin-inline:0}.owned-map-search-dropdown .owned-map-places-bar{display:flex;flex-wrap:wrap;width:100%}
+.owned-map-search-dropdown .owned-map-places-bar .owned-map-pill{flex:1;min-width:105px;min-height:52px;border-radius:6px}
+
+.owned-map.is-driving .owned-map-rail{display:flex}

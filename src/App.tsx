@@ -47,7 +47,6 @@ import {
   generateReply,
   loadStoredCredentials,
   normalizeApiKey,
-  preparePendingFile,
   PROVIDER_OPTIONS,
   providerThemeClass,
   saveCredentials,
@@ -187,8 +186,6 @@ function preferredRecognitionLang(hintText?: string): string {
 }
 
 const TEXTAREA_MAX_LINES = 5
-const ACCEPT_FILES =
-  'image/*,application/pdf,text/plain,text/markdown,text/csv,application/json,.txt,.md,.csv,.json,.pdf'
 const TEXT_FILE_ACCEPT = '.txt,.md,.csv,.json,text/plain'
 
 function isChatTextFile(file: File): boolean {
@@ -286,20 +283,6 @@ function IconPlug() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
         d="M9 7V3m6 4V3M8 7h8v4a4 4 0 0 1-4 4v4m0 0H9m3 0h3"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function IconPaperclip() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="m21.44 11.05-8.49 8.49a5.25 5.25 0 0 1-7.42-7.42l8.84-8.84a3.5 3.5 0 0 1 4.95 4.95l-8.84 8.84a1.75 1.75 0 0 1-2.47-2.47l7.78-7.78"
         stroke="currentColor"
         strokeWidth="1.7"
         strokeLinecap="round"
@@ -1395,40 +1378,25 @@ function AppContent() {
     setLandingPanel(kind)
   }
 
-  const onPickFiles = async (list: FileList | null) => {
-    if (!list || list.length === 0 || !hasApiKey) return
-    setAttachBusy(true)
-    try {
-      const prepared: PendingFile[] = []
-      for (const file of Array.from(list)) {
-        prepared.push(await preparePendingFile(file, uid()))
-      }
-      setPendingFiles((prev) => [...prev, ...prepared].slice(0, 6))
-    } catch {
-      setMicHint("Couldn't read that file. Try another.")
-      window.setTimeout(() => setMicHint(null), 3500)
-    } finally {
-      setAttachBusy(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const removePendingFile = (id: string) => {
-    setPendingFiles((prev) => prev.filter((f) => f.id !== id))
-  }
+  const removePendingFile = (id: string) => setPendingFiles(prev => prev.filter(file => file.id !== id))
 
   const onPickTextFile = (list: FileList | null) => {
     const file = list?.[0]
     if (textFileInputRef.current) textFileInputRef.current.value = ''
-    if (!file || !isChatTextFile(file)) return
+    if (!file) return
+    if (!isChatTextFile(file)) { setMicHint('Only text files are supported.'); return }
+    if (file.size > 512000) { setMicHint('This text file is too large.'); return }
+    setAttachBusy(true)
     const reader = new FileReader()
     reader.onload = () => {
-      if (typeof reader.result !== 'string' || reader.result.includes('\0')) return
+      setAttachBusy(false)
+      if (typeof reader.result !== 'string' || /[\u0000-\u0008\u000e-\u001f]/.test(reader.result)) { setMicHint('Only text files are supported.'); return }
       const text = reader.result
       if (!text) return
       setInput(current => current ? (current.endsWith('\n') ? current + text : `${current}\n${text}`) : text)
       inputRef.current?.focus()
     }
+    reader.onerror = () => {setAttachBusy(false); setMicHint("Couldn't read that file. Try another.")}
     reader.readAsText(file)
   }
 
@@ -1727,30 +1695,7 @@ function AppContent() {
           onSubmit={onSubmit}>
           <div className="composer-left">
             {translatorReady && <button type="button" className={`translator-composer-btn${translationMode ? ' is-on' : ''}`} disabled={thinking || Boolean(streamingId)} aria-label="#Translator" title={t(translationMode ? 'Translator ON' : 'Translator OFF')} aria-pressed={translationMode} onClick={() => setTranslationMode(enabled => !enabled)}><IconTranslator /></button>}
-            {hasApiKey && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="sr-only"
-                  accept={ACCEPT_FILES}
-                  multiple
-                  tabIndex={-1}
-                  aria-hidden
-                  onChange={(e) => void onPickFiles(e.target.files)}
-                />
-                <button
-                  type="button"
-                  className="file-btn"
-                  aria-label={t("Attach file")}
-                  title={t("Attach image or document")}
-                  disabled={isBusy}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <IconPaperclip />
-                </button>
-              </>
-            )}
+
 
           </div>
 
@@ -1776,7 +1721,7 @@ function AppContent() {
           </div>
 
           <div className="composer-right">
-            {!hasApiKey && <div className="offline-model-menu">
+            {<div className="offline-model-menu">
               <input
                 ref={textFileInputRef}
                 type="file"
